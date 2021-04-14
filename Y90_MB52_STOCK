@@ -1,0 +1,427 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_MB52_STOCK
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT Y90_MB52_STOCK.
+
+TABLES : mchb, mch1, ausp.
+
+type-pools: slis.
+
+data: g_repid     like sy-repid,
+      gt_events   type slis_t_event,
+      gt_sort     type slis_t_sortinfo_alv,
+      gs_layout   type slis_layout_alv,
+      gt_fieldcat type slis_t_fieldcat_alv,
+      fieldcat_ln like line of gt_fieldcat.
+
+TYPES: BEGIN OF ty_mchb,
+        matnr TYPE mchb-matnr,
+        werks TYPE mchb-werks,
+        lgort TYPE mchb-lgort,
+        charg TYPE mchb-charg,
+        clabs TYPE mchb-clabs,
+        ERSDA TYPE mchb-ERSDA,
+        CINSM TYPE mchb-CINSM,
+        CSPEM TYPE mchb-CSPEM,
+      END OF ty_mchb.
+
+TYPES: BEGIN OF ty_mch1,
+        matnr     TYPE mch1-matnr,
+        charg     TYPE mch1-charg,
+        cuobj_bm  TYPE mch1-cuobj_bm,
+      END OF ty_mch1.
+
+TYPES: BEGIN OF ty_mska,
+        matnr TYPE mska-matnr,
+        werks TYPE mska-werks,
+        lgort TYPE mska-lgort,
+        charg TYPE mska-charg,
+        sobkz TYPE mska-sobkz,
+        vbeln TYPE mska-vbeln,
+        posnr TYPE mska-posnr,
+        kalab TYPE mska-kalab,
+        ERSDA TYPE mska-ERSDA,
+        KAINS TYPE mska-KAINS,
+        KASPE TYPE mska-KASPE,
+      END OF ty_mska.
+
+TYPES: BEGIN OF ty_ausp,
+        objek TYPE ausp-objek,
+        atinn TYPE ausp-atinn,
+        atzhl TYPE ausp-atzhl,
+        mafid TYPE ausp-mafid,
+        klart TYPE ausp-klart,
+        adzhl TYPE ausp-adzhl,
+        atwrt TYPE ausp-atwrt,
+      END OF ty_ausp.
+
+DATA : ATFLV TYPE AUSP-ATFLV.
+DATA : it_ausp TYPE STANDARD TABLE OF ty_ausp,
+       wa_ausp TYPE ty_ausp,
+       it_mch1 TYPE STANDARD TABLE OF ty_mch1,
+       wa_mch1 TYPE ty_mch1,
+       it1_mch1 TYPE STANDARD TABLE OF ty_mch1,
+       wa1_mch1 TYPE ty_mch1,
+       it_mchb TYPE STANDARD TABLE OF ty_mchb,
+       wa_mchb TYPE ty_mchb,
+       it_mska TYPE STANDARD TABLE OF ty_mska,
+       wa_mska TYPE ty_mska.
+
+
+TYPES : BEGIN OF ty_fin,
+        matnr TYPE mchb-matnr,
+        werks TYPE mchb-werks,
+        lgort TYPE mchb-lgort,
+        charg TYPE mchb-charg,
+        clabs TYPE mchb-clabs,
+        width TYPE cha_class_view-sollwert,
+        THICK TYPE cha_class_view-sollwert,
+        sobkz TYPE mska-sobkz,
+        vbeln TYPE mska-vbeln,
+        posnr TYPE mska-posnr,
+        MAKTX TYPE MAKT-MAKTX,
+        ERSDA TYPE mchb-ERSDA,
+        CINSM TYPE mchb-CINSM,
+        CSPEM TYPE mchb-CSPEM,
+        END OF ty_fin.
+
+data : it_fin type standard table of ty_fin,
+       wa_fin type ty_fin.
+
+data : objecy_key TYPE c LENGTH 18.
+
+DATA : LV_CLASSNUM LIKE KLAH-CLASS VALUE 'FGBATCH',
+       LV_CLASS LIKE BAPI1003_KEY-CLASSTYPE VALUE '023' ,
+       LV_OBJECTKEY LIKE BAPI1003_KEY-OBJECT ,
+       LV_TAB LIKE BAPI1003_KEY-OBJECTTABLE VALUE 'EQUI',
+       LT_CLASS TYPE STANDARD TABLE OF SCLASS,
+       LT_VAL_CHAR TYPE STANDARD TABLE OF CLOBJDAT,
+       LW_VAL_CHAR TYPE CLOBJDAT .
+
+DATA : ATFLV1 TYPE ausp-ATFLV.
+start-of-selection.
+  selection-screen skip 1.
+  selection-screen begin of block v-1 with frame title text-025.
+  select-options:
+  matnr for mchb-matnr,
+  werks for mchb-werks DEFAULT 1000,
+  lgort for mchb-lgort,
+  charg for mchb-charg.
+  selection-screen skip 1.
+  selection-screen end of block v-1.
+  selection-screen skip 1.
+
+start-of-selection.
+
+  perform data.
+  perform build.
+  perform call_alv.
+
+form data.
+
+
+SELECT matnr
+       werks
+       lgort
+       charg
+       clabs
+       ERSDA
+       CINSM
+       CSPEM FROM mchb INTO TABLE it_mchb WHERE matnr in matnr and
+                                                werks in werks and
+                                                lgort in lgort and
+                                                charg in charg and
+                                                ( clabs ne ' ' OR CINSM ne ' ' OR CSPEM NE ' ' ).
+
+
+IF NOT it_mchb is INITIAL.
+SELECT matnr
+       charg
+       cuobj_bm FROM mch1 INTO TABLE it_mch1 FOR ALL ENTRIES IN it_mchb
+                              WHERE matnr = it_mchb-matnr and
+                                    charg = it_mchb-charg.
+
+ENDIF.
+
+SELECT matnr
+       werks
+       lgort
+       charg
+       sobkz
+       vbeln
+       posnr
+       kalab
+       ERSDA
+       KAINS
+       KASPE
+        FROM mska INTO TABLE it_mska WHERE matnr in matnr and
+                                                werks in werks and
+                                                lgort in lgort and
+                                                charg in charg and
+                                               ( kalab ne ' ' OR KAINS ne ' ' OR KASPE ne ' ' ).
+
+
+IF NOT it_mska is INITIAL.
+SELECT matnr
+       charg
+       cuobj_bm FROM mch1 INTO TABLE it1_mch1 FOR ALL ENTRIES IN it_mska
+                              WHERE matnr = it_mska-matnr and
+                                    charg = it_mska-charg.
+
+ENDIF.
+
+
+LOOP AT it_mska INTO wa_mska.
+
+wa_fin-matnr = wa_mska-matnr.
+wa_fin-werks = wa_mska-werks.
+wa_fin-lgort = wa_mska-lgort.
+wa_fin-charg = wa_mska-charg.
+wa_fin-clabs = wa_mska-kalab.
+wa_fin-sobkz = wa_mska-sobkz.
+wa_fin-vbeln = wa_mska-vbeln.
+wa_fin-posnr = wa_mska-posnr.
+wa_fin-ERSDA = wa_mska-ERSDA.
+wa_fin-CINSM = wa_mska-KAINS.
+wa_fin-CSPEM = wa_mska-KASPE.
+
+CLEAR wa1_mch1.
+READ TABLE it1_mch1 INTO wa1_mch1 with key matnr = wa_mska-matnr
+                                           charg = wa_mska-charg.
+IF sy-subrc eq 0.
+
+CLEAR ausp-ATFLV.
+SELECT SINGLE ATFLV FROM ausp INTO (ausp-ATFLV) WHERE objek =  WA1_MCH1-cuobj_bm and atinn = '0000000851'.
+IF SY-SUBRC EQ 0.
+
+  CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+    EXPORTING
+      i_number_of_digits             = 2
+      i_fltp_value                   = ausp-ATFLV
+     I_VALUE_NOT_INITIAL_FLAG       = 'X'
+     I_SCREEN_FIELDLENGTH           = 16
+   IMPORTING
+     E_CHAR_FIELD                   = WA_FIN-WIDTH
+            .
+
+ENDIF.
+
+CLEAR ATFLV1.
+SELECT SINGLE ATFLV FROM ausp INTO ATFLV1 WHERE objek = WA1_MCH1-cuobj_bm and atinn = '0000000884'.
+IF SY-SUBRC EQ 0.
+  CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+    EXPORTING
+      i_number_of_digits             = 2
+      i_fltp_value                   = ATFLV1
+     I_VALUE_NOT_INITIAL_FLAG       = 'X'
+     I_SCREEN_FIELDLENGTH           = 16
+   IMPORTING
+     E_CHAR_FIELD                   = WA_FIN-THICK
+            .
+
+ENDIF.
+ENDIF.
+
+APPEND WA_FIN TO IT_FIN.
+CLEAR WA_FIN.
+ENDLOOP.
+
+
+LOOP AT it_mchb INTO wa_mchb.
+
+wa_fin-matnr = wa_mchb-matnr.
+wa_fin-werks = wa_mchb-werks.
+wa_fin-lgort = wa_mchb-lgort.
+wa_fin-charg = wa_mchb-charg.
+wa_fin-clabs = wa_mchb-clabs.
+wa_fin-ERSDA = wa_mchb-ERSDA.
+wa_fin-CINSM = wa_mchb-CINSM.
+wa_fin-CSPEM = wa_mchb-CSPEM.
+
+CLEAR wa_mch1.
+READ TABLE it_mch1 INTO wa_mch1 with key matnr = wa_mchb-matnr
+                                         charg = wa_mchb-charg.
+IF sy-subrc eq 0.
+
+CLEAR ausp-ATFLV.
+SELECT SINGLE ATFLV FROM ausp INTO (ausp-ATFLV) WHERE objek =  WA_MCH1-cuobj_bm and atinn = '0000000851'.
+IF SY-SUBRC EQ 0.
+
+  CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+    EXPORTING
+      i_number_of_digits             = 2
+      i_fltp_value                   = ausp-ATFLV
+     I_VALUE_NOT_INITIAL_FLAG       = 'X'
+     I_SCREEN_FIELDLENGTH           = 16
+   IMPORTING
+     E_CHAR_FIELD                   = WA_FIN-WIDTH
+            .
+
+ENDIF.
+
+CLEAR ATFLV1.
+SELECT SINGLE ATFLV FROM ausp INTO ATFLV1 WHERE objek = WA_MCH1-cuobj_bm and atinn = '0000000884'.
+IF SY-SUBRC EQ 0.
+  CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+    EXPORTING
+      i_number_of_digits             = 2
+      i_fltp_value                   = ATFLV1
+     I_VALUE_NOT_INITIAL_FLAG       = 'X'
+     I_SCREEN_FIELDLENGTH           = 16
+   IMPORTING
+     E_CHAR_FIELD                   = WA_FIN-THICK
+            .
+
+ENDIF.
+ENDIF.
+
+APPEND WA_FIN TO IT_FIN.
+CLEAR WA_FIN.
+ENDLOOP.
+
+sort it_fin by matnr charg.
+LOOP AT IT_FIN INTO WA_FIN.
+*delete it_fin WHERE THICK = 0.
+SELECT SINGLE maktx FROM makt INTO wa_fin-maktx WHERE matnr = wa_fin-matnr.
+MODIFY it_fin FROM wa_fin.
+CLEAR wa_fin.
+ENDLOOP.
+
+
+endform.
+
+form build .
+
+  data: fieldcat_in type slis_fieldcat_alv.
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MATNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'MATERIAL NO.'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MAKTX'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DESCRIPTION'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'LGORT'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'ST. LOCATION'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'CHARG'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'BATCH NO.'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'ERSDA'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DATE'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'SOBKZ'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'SPECIAL STOCK IND.'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'VBELN'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DOCUMENT NO.'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'POSNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'ITEM NO.'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'CLABS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'STOCK'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'CINSM'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'QUALITY'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'CSPEM'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'BLOCK QTY'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'WIDTH'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'WIDTH'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'THICK'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'THICKNESS'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  gs_layout-no_input          = 'X'.
+  gs_layout-colwidth_optimize = 'X'.
+  gs_layout-totals_text       = 'TOTALS'(201).
+  gs_layout-zebra             = 'X'.
+
+endform.
+
+form call_alv.
+  g_repid = sy-repid.
+  call function 'REUSE_ALV_GRID_DISPLAY'
+    exporting
+      i_callback_program     = g_repid
+*     I_CALLBACK_USER_COMMAND = 'FRM_ALV_USER_COMMAND'
+*      i_callback_top_of_page = 'TOP_OF_PAGE'
+*     I_STRUCTURE_NAME       = 'IT_FIN'
+      is_layout              = gs_layout
+      it_fieldcat            = gt_fieldcat[]
+      i_default              = 'X'
+      i_save                 = 'A'
+*     IS_VARIANT             = GT_VARIANT
+    tables
+      t_outtab               = it_fin.
+endform. "CALL_ALV
+

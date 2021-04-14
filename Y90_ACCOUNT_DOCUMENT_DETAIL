@@ -1,0 +1,347 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_ACCOUNT_DOCUMENT_DETAIL
+*& Developer Milly
+*&---------------------------------------------------------------------*
+*& Dated : 02.01.2018
+*&
+*&---------------------------------------------------------------------*
+REPORT Y90_ACCOUNT_DOCUMENT_DETAIL.
+tables : bkpf, bseg ,lfa1, vbsegk.
+
+type-pools: slis.
+
+data: g_repid     like sy-repid,
+      gt_events   type slis_t_event,
+      gt_sort     type slis_t_sortinfo_alv,
+      gs_layout   type slis_layout_alv,
+      gt_fieldcat type slis_t_fieldcat_alv,
+      fieldcat_ln like line of gt_fieldcat.
+
+types : begin of ty_bkpf,
+          bukrs like bkpf-bukrs,
+          belnr like bkpf-belnr,
+          gjahr like bkpf-gjahr,
+          blart like bkpf-blart,
+          bldat like bkpf-bldat,
+          budat like bkpf-budat,
+          xblnr like bkpf-xblnr,
+          USNAM like bkpf-USNAM,
+          BSTAT LIKE BKPF-BSTAT,
+        end of ty_bkpf.
+
+data : it_bkpf type standard table of ty_bkpf,
+       wa_bkpf type ty_bkpf.
+
+data : it_bkpf1 type standard table of ty_bkpf,
+       wa_bkpf1 type ty_bkpf.
+
+types : begin of ty_bseg,
+          bukrs like bkpf-bukrs,
+          belnr like bkpf-belnr,
+          gjahr like bkpf-gjahr,
+          buzei like bseg-buzei,
+          shkzg like bseg-shkzg,
+          dmbtr like bseg-dmbtr,
+          zuonr like bseg-zuonr,
+          sgtxt like bseg-sgtxt,
+          hkont like bseg-hkont,
+          lifnr like bseg-lifnr,
+          KOART LIKE bseg-KOART,
+        end of ty_bseg.
+
+data : it_bseg type standard table of ty_bseg,
+       wa_bseg type ty_bseg.
+
+types : begin of ty_vbsegk,
+          bukrs like bkpf-bukrs,
+          belnr like bkpf-belnr,
+          gjahr like bkpf-gjahr,
+          buzei like bseg-buzei,
+          shkzg like bseg-shkzg,
+          dmbtr like bseg-dmbtr,
+          zuonr like bseg-zuonr,
+          sgtxt like bseg-sgtxt,
+          hkont like bseg-hkont,
+          lifnr like bseg-lifnr,
+        end of ty_vbsegk.
+
+data : it_vbsegk TYPE STANDARD TABLE OF ty_vbsegk,
+       wa_vbsegk TYPE ty_vbsegk.
+
+types : begin of ty_fin,
+          belnr  like bkpf-belnr,
+          bldat  like bkpf-bldat,
+          budat  like bkpf-budat,
+          xblnr  like bkpf-xblnr,
+          blart  like bkpf-blart,
+          sgtxt  like bseg-sgtxt,
+          hkont  like bseg-hkont,
+          kunnr  like bseg-kunnr,
+          lifnr  like bseg-lifnr,
+          AMT    like bseg-dmbtr,
+          name1  like lfa1-name1,
+        end of ty_fin.
+
+data : it_fin type standard table of ty_fin,
+       wa_fin type ty_fin.
+
+start-of-selection.
+  selection-screen skip 1.
+  selection-screen begin of block v-1 with frame title text-025.
+  select-options:
+  bukrs for bkpf-bukrs default 1000,
+  belnr for bkpf-belnr,
+  gjahr for bkpf-gjahr,
+  BUDAT for bkpf-BUDAT obligatory,
+  USNAM for bkpf-USNAM.
+  selection-screen skip 1.
+  selection-screen end of block v-1.
+  selection-screen skip 1.
+
+*  SELECTION-SCREEN BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-004.
+*
+*  SELECTION-SCREEN BEGIN OF LINE.
+*  PARAMETERS : R1 RADIOBUTTON GROUP G1 DEFAULT 'X'.
+*  SELECTION-SCREEN COMMENT 5(20) TEXT-002 FOR FIELD R1.
+*  SELECTION-SCREEN END OF LINE.
+*
+*  SELECTION-SCREEN BEGIN OF LINE.
+*  PARAMETERS : R2 RADIOBUTTON GROUP G1.
+*  SELECTION-SCREEN COMMENT 5(20) TEXT-003 FOR FIELD R2.
+*  SELECTION-SCREEN END OF LINE.
+*
+*  SELECTION-SCREEN END OF BLOCK B2.
+*
+* AT SELECTION-SCREEN OUTPUT.
+*
+*  LOOP AT SCREEN.
+*
+*    IF R1 EQ 'X' AND SCREEN-GROUP1 EQ 'S2'.
+*      SCREEN-INPUT = 0.
+*      MODIFY SCREEN.
+*    ENDIF.
+*
+*    IF R2 EQ 'X' AND SCREEN-GROUP1 EQ 'S1'.
+*      SCREEN-INPUT = 0.
+*      MODIFY SCREEN.
+*    ENDIF.
+*
+*  ENDLOOP.
+
+start-of-selection.
+
+  perform data.
+  perform build.
+  perform call_alv.
+
+form data.
+
+
+   select bukrs
+         belnr
+         gjahr
+         blart
+         bldat
+         budat
+         xblnr
+         USNAM
+         BSTAT from bkpf into table it_bkpf where bukrs in bukrs and
+                                                  belnr in belnr and
+                                                  gjahr in gjahr and
+                                                  BUDAT in BUDAT and
+                                                  USNAM in USNAM and
+                                                  ( blart eq 'RE' OR blart EQ 'SA' ).
+
+  if not it_bkpf is initial.
+    select bukrs
+           belnr
+           gjahr
+           buzei
+           shkzg
+           dmbtr
+           zuonr
+           sgtxt
+           hkont
+           lifnr
+           KOART from bseg into table it_bseg for all entries in it_bkpf
+                                        where bukrs eq it_bkpf-bukrs and
+                                              belnr eq it_bkpf-belnr and
+                                              gjahr eq it_bkpf-gjahr AND
+                                              KOART eq 'K' and
+                                              LIFNR NE ' '.
+
+  endif.
+
+  loop at it_bseg into wa_bseg.
+
+    wa_fin-AMT   = wa_bseg-dmbtr.
+    wa_fin-belnr = wa_bseg-belnr.
+    wa_fin-lifnr = wa_bseg-lifnr.
+
+    select single name1 from lfa1 into (lfa1-name1) where lifnr = wa_bseg-lifnr.
+    if sy-subrc eq 0.
+    wa_fin-name1 = lfa1-name1.
+    endif.
+
+    clear wa_bkpf.
+    read table it_bkpf into wa_bkpf with key bukrs = wa_bseg-bukrs
+                                             belnr = wa_bseg-belnr
+                                             gjahr = wa_bseg-gjahr.
+    if sy-subrc eq 0.
+    wa_fin-blart = wa_bkpf-blart.
+    wa_fin-bldat = wa_bkpf-bldat.
+    wa_fin-budat = wa_bkpf-budat.
+    wa_fin-xblnr = wa_bkpf-xblnr.
+    endif.
+
+    append wa_fin to it_fin.
+    clear: wa_fin.
+    clear lfa1-name1.
+  endloop.
+
+     select bukrs
+         belnr
+         gjahr
+         blart
+         bldat
+         budat
+         xblnr
+         USNAM
+         BSTAT from bkpf into table it_bkpf1 where bukrs in bukrs and
+                                                  belnr in belnr and
+                                                  gjahr in gjahr and
+                                                  BUDAT in BUDAT and
+                                                  USNAM in USNAM and
+                                                  BSTAT EQ 'V' AND
+                                                  ( blart eq 'RE' OR blart EQ 'SA' ).
+
+  if not it_bkpf1 is initial.
+    select bukrs
+           belnr
+           gjahr
+           buzei
+           shkzg
+           dmbtr
+           zuonr
+           sgtxt
+           hkont
+           lifnr
+            from vbsegk into table it_vbsegk for all entries in it_bkpf1
+                                        where bukrs eq it_bkpf1-bukrs and
+                                              belnr eq it_bkpf1-belnr and
+                                              gjahr eq it_bkpf1-gjahr AND
+                                              LIFNR NE ' '.
+   endif.
+
+   LOOP AT it_vbsegk INTO WA_vbsegk.
+    wa_fin-AMT   = wa_vbsegk-dmbtr.
+    wa_fin-belnr = wa_vbsegk-belnr.
+    wa_fin-lifnr = wa_vbsegk-lifnr.
+
+    select single name1 from lfa1 into (lfa1-name1) where lifnr = wa_vbsegk-lifnr.
+    if sy-subrc eq 0.
+    wa_fin-name1 = lfa1-name1.
+    endif.
+
+    clear wa_bkpf1.
+    read table it_bkpf1 into wa_bkpf1 with key bukrs = wa_vbsegk-bukrs
+                                               belnr = wa_vbsegk-belnr
+                                               gjahr = wa_vbsegk-gjahr.
+    if sy-subrc eq 0.
+    wa_fin-blart = wa_bkpf1-blart.
+    wa_fin-bldat = wa_bkpf1-bldat.
+    wa_fin-budat = wa_bkpf1-budat.
+    wa_fin-xblnr = wa_bkpf1-xblnr.
+    endif.
+
+    append wa_fin to it_fin.
+    clear: wa_fin.
+   ENDLOOP.
+
+ENDFORM.
+
+form build .
+
+
+  data: fieldcat_in type slis_fieldcat_alv.
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'BLDAT'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DOCUMENT DATE'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'BELNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DOCUMENT NUMBER'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'BLART'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DOCUMENT TYPE'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'XBLNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'REFERENCE'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'AMT'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'AMOUNT'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'LIFNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'VENDOR'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'NAME1'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'VENDOR NAME'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+
+  gs_layout-no_input          = 'X'.
+  gs_layout-colwidth_optimize = 'X'.
+  gs_layout-totals_text       = 'TOTALS'(201).
+  gs_layout-zebra             = 'X'.
+
+endform.
+
+form call_alv.
+  g_repid = sy-repid.
+  call function 'REUSE_ALV_GRID_DISPLAY'
+    exporting
+      i_callback_program     = g_repid
+*     I_CALLBACK_USER_COMMAND = 'FRM_ALV_USER_COMMAND'
+*      i_callback_top_of_page = 'TOP_OF_PAGE'
+*     I_STRUCTURE_NAME       = 'IT_FIN'
+      is_layout              = gs_layout
+      it_fieldcat            = gt_fieldcat[]
+      i_default              = 'X'
+      i_save                 = 'A'
+*     IS_VARIANT             = GT_VARIANT
+    tables
+      t_outtab               = it_fin.
+endform. "CALL_ALV
+

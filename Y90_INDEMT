@@ -1,0 +1,637 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_INDEMT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT y90_indemt.
+
+TABLES : zindent, makt.
+
+TYPE-POOLS: slis.
+
+DATA:BEGIN OF pdf OCCURS 0.
+        INCLUDE STRUCTURE tline.
+DATA:END OF pdf,
+g_spool      TYPE tsp01-rqident,
+  w_print      TYPE slis_print_alv,
+  w_print_ctrl TYPE alv_s_pctl.
+DATA :  get_pp TYPE pri_params.
+
+
+DATA: lv_filename      TYPE string,
+      lv_path          TYPE string,
+      lv_fullpath      TYPE string,
+      lv_result        TYPE i,
+      lv_default_fname TYPE string,
+      lv_fname         TYPE localfile.
+
+DATA : matnr TYPE matnr.
+DATA: gd_repid            LIKE sy-repid,
+      gs_print            TYPE slis_print_alv,
+      gt_list_top_of_page TYPE slis_t_listheader,
+      gt_events           TYPE slis_t_event,
+      gt_sort             TYPE slis_t_sortinfo_alv,
+      gd_layout           TYPE slis_layout_alv,
+      gt_fieldcat         TYPE slis_t_fieldcat_alv,
+      gt_variant          LIKE disvariant,
+      fieldcat_ln         LIKE LINE OF gt_fieldcat,
+      col_pos             TYPE i,
+      x_events            TYPE slis_alv_event,
+      it_events           TYPE slis_t_event.
+
+
+
+TYPES : BEGIN OF ty_zindent,
+          indent          TYPE zindent-indent,
+          matnr           TYPE zindent-matnr,
+          aedat           TYPE zindent-aedat,
+          lgort           TYPE zindent-lgort,
+          menge           TYPE zindent-menge,
+          meins           TYPE zindent-meins,
+          werks           TYPE zindent-werks,
+          ernam           TYPE zindent-ernam,
+          required_date   TYPE zindent-required_date,
+          remarks         TYPE zindent-remarks,
+          strip_size      TYPE zindent-strip_size,
+          strip_thickness TYPE zindent-strip_thickness,
+          tube_size       TYPE zindent-tube_size,
+          tube_thickness  TYPE zindent-tube_thickness,
+        END OF ty_zindent.
+
+DATA : it_zindent TYPE STANDARD TABLE OF ty_zindent,
+       wa_zindent TYPE ty_zindent.
+
+TYPES : BEGIN OF ty_fin,
+          indent          TYPE zindent-indent,
+          matnr           TYPE zindent-matnr,
+          aedat           TYPE zindent-aedat,
+          lgort           TYPE zindent-lgort,
+          menge           TYPE P DECIMALS 0,
+          meins           TYPE zindent-meins,
+          werks           TYPE zindent-werks,
+          ernam           TYPE zindent-ernam,
+          required_date   TYPE zindent-required_date,
+          remarks         TYPE zindent-remarks,
+          strip_size      TYPE zindent-strip_size,
+          strip_thickness TYPE zindent-strip_thickness,
+          tube_size       TYPE zindent-tube_size,
+          tube_thickness  TYPE zindent-tube_thickness,
+        END OF ty_fin.
+
+DATA : it_fin TYPE STANDARD TABLE OF ty_fin,
+       wa_fin TYPE ty_fin.
+
+SELECTION-SCREEN SKIP 1.
+SELECTION-SCREEN BEGIN OF BLOCK v-1 WITH FRAME TITLE text-025.
+SELECT-OPTIONS:
+s_plant  FOR zindent-werks DEFAULT 1000,
+s_indent FOR zindent-indent,
+s_matnr  FOR zindent-matnr,
+s_date   FOR zindent-aedat. "OBLIGATORY.
+SELECTION-SCREEN SKIP 1.
+SELECTION-SCREEN END OF BLOCK v-1.
+SELECTION-SCREEN SKIP 1.
+
+START-OF-SELECTION.
+
+  PERFORM data.
+  PERFORM disp.
+  PERFORM alv.
+
+FORM data.
+
+  SELECT indent
+         matnr
+         aedat
+         lgort
+         menge
+         meins
+         werks
+         ernam
+         required_date
+         remarks
+         strip_size
+         strip_thickness
+         tube_size
+         tube_thickness
+          FROM zindent INTO TABLE it_zindent WHERE werks  IN s_plant
+                                                    AND  indent IN s_indent
+                                                    AND  matnr  IN s_matnr
+                                                    AND  aedat  IN s_date.
+
+  LOOP AT it_zindent INTO wa_zindent.
+    wa_fin-indent           =   wa_zindent-indent.
+    wa_fin-matnr            =   wa_zindent-matnr.
+    wa_fin-aedat            =   wa_zindent-aedat.
+    wa_fin-lgort            =   wa_zindent-lgort.
+    wa_fin-menge            =   wa_zindent-menge.
+    wa_fin-meins            =   wa_zindent-meins.
+    wa_fin-werks            =   wa_zindent-werks.
+    wa_fin-ernam            =   wa_zindent-ernam.
+    wa_fin-required_date    =   wa_zindent-required_date.
+    wa_fin-remarks          =   wa_zindent-remarks.
+    wa_fin-strip_size       =   wa_zindent-strip_size.
+    wa_fin-strip_thickness  =   wa_zindent-strip_thickness.
+    wa_fin-tube_size        =   wa_zindent-tube_size.
+    wa_fin-tube_thickness   =   wa_zindent-tube_thickness.
+
+    APPEND wa_fin TO it_fin.
+    CLEAR  wa_fin.
+  ENDLOOP.
+
+ENDFORM.
+
+
+FORM disp.
+  DATA: fieldcat_ln TYPE slis_fieldcat_alv.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'MATNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'MATERIAL'.
+  fieldcat_ln-no_zero  = 'X'.
+  fieldcat_ln-outputlen   =  15.
+*  fieldcat_ln-uline = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'STRIP_SIZE'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'STP WDH'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  30.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'STRIP_THICKNESS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'STP THK'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  30.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'MENGE'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'QTY'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  10.
+  fieldcat_ln-do_sum      = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'MEINS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'UOM'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  10.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'TUBE_SIZE'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'TB SIZE'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  30.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'TUBE_THICKNESS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'TB THK'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  30.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'REQUIRED_DATE'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'REQ DATE'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  10.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname   = 'REMARKS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l   = 'REMARKS'.
+*  fieldcat_ln-hotspot = 'X'.
+  fieldcat_ln-outputlen   =  40.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+
+  x_events-name = slis_ev_end_of_page.
+  x_events-form = 'END_OF_PAGE'.
+  APPEND x_events  TO it_events.
+  CLEAR x_events .
+
+  x_events-name = slis_ev_top_of_page.
+  x_events-form = 'TOP_OF_PAGE'.
+  APPEND x_events  TO it_events.
+  CLEAR x_events .
+
+  x_events-name = slis_ev_end_of_list.
+  x_events-form = 'END_OF_LIST'.
+  APPEND x_events  TO it_events.
+  CLEAR x_events .
+
+*  GD_LAYOUT-NO_INPUT          = 'X'.
+*  GD_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+*  GD_LAYOUT-TOTALS_TEXT       = 'TOTALS'(201).
+  gd_layout-zebra             = 'X'.
+  gd_layout-no_uline_hs       = 'X'.
+
+  DATA: gs_sort TYPE slis_sortinfo_alv.
+  CLEAR gs_sort.
+  gs_sort-fieldname = 'INDENT'.
+  gs_sort-up = 'X'.
+  APPEND gs_sort TO gt_sort.
+
+
+ENDFORM.
+
+FORM alv.
+
+
+  gd_repid = sy-repid.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_background_id          = 'ALV_BACKGROUND'
+      i_callback_program       = gd_repid
+      i_callback_pf_status_set = 'FORM_MENU'
+      i_callback_user_command  = 'USER_COMMAND'
+      i_callback_top_of_page   = 'TOP_OF_PAGE'  "see FORM
+      is_layout                = gd_layout
+*     IT_FIELDCAT              = T_HEAD
+      is_print                 = w_print
+      it_fieldcat              = gt_fieldcat[]
+*     it_sort                  = it_sortcat
+*     it_special_groups        = gd_tabgroup
+      it_events                = it_events
+      i_save                   = 'X'
+      is_variant               = gt_variant
+    TABLES
+      t_outtab                 = it_fin
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+ENDFORM. "CALL_ALV
+
+FORM top_of_page.
+  DATA : t_head TYPE slis_t_listheader,
+         w_head TYPE slis_listheader,
+         t_line LIKE w_head-info.
+  DATA : date1(12) TYPE c.
+  DATA : date2(12) TYPE c.
+  DATA : date(12)  TYPE c.
+  DATA : sec_line_c TYPE string.
+  w_head-typ = 'H'.
+  w_head-info = 'AVON STEEL INDUSTRIES PRIVATE LIMITED'.
+  APPEND w_head TO t_head.
+  CLEAR w_head.
+
+  READ TABLE it_fin INTO wa_fin INDEX sy-tabix.
+  DATA : indt LIKE zindent-indent.
+  WRITE wa_fin-indent TO indt.
+  CONCATENATE 'Indent number : ' indt INTO sec_line_c SEPARATED BY space.
+  w_head-typ = 'S'.
+  w_head-info = sec_line_c.
+  APPEND w_head TO t_head.
+  CLEAR w_head.
+
+  WRITE wa_fin-aedat TO date DD/MM/YYYY.
+  w_head-typ = 'S'.
+  CONCATENATE 'Created on : ' date INTO w_head-info SEPARATED BY space.
+  APPEND w_head TO t_head.
+  CLEAR w_head.
+
+  DATA : werks LIKE zindent-werks.
+  WRITE wa_fin-werks TO werks.
+  w_head-typ = 'S'.
+  CONCATENATE 'Plant : ' werks INTO w_head-info SEPARATED BY space.
+  APPEND w_head TO t_head.
+  CLEAR w_head.
+
+  DATA : lgort LIKE zindent-lgort.
+  WRITE wa_fin-lgort TO lgort.
+  w_head-typ = 'S'.
+  CONCATENATE 'Storage Location : ' lgort INTO w_head-info SEPARATED BY space.
+  APPEND w_head TO t_head.
+  CLEAR w_head.
+
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = t_head
+*     I_LOGO             = 'AVONLOGO'
+*     I_END_OF_LIST_GRID = GT_LIST_TOP_OF_PAGE
+*     I_ALV_FORM         =
+    .
+ENDFORM.
+
+FORM end_of_list.
+* BREAK-POINT.
+  "here you can use this for footer
+  SKIP.
+  WRITE: / 'NOTE :'.
+  SKIP.
+  WRITE: / 'QTY Mentioned above are firm and not to reduce or increase in case any other '.
+  SKIP.
+  WRITE: / 'combination is required please discuss with MD.'.
+  SKIP.
+  WRITE: / 'Thickness and tolerance to maintain as per office order unless and otherwise '.
+  SKIP.
+  WRITE: / 'specifically specified in INDENT.'.
+  SKIP.
+  WRITE: / 'Material to be delivered as per the priority given by TUBE PLANT or as agreed '.
+  SKIP.
+  WRITE: / 'mutually of urgency.'.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  SKIP.
+  WRITE: / 'Marketing              Tube Mill               P.P.C.               M.D.'.
+
+ENDFORM.
+
+
+
+FORM end_of_page.
+* BREAK-POINT.
+  WRITE: / 'END_OF_PAGE'.
+ENDFORM.
+
+
+*       text
+*----------------------------------------------------------------------*
+*      -->RT_EXTAB   text
+*----------------------------------------------------------------------*
+FORM form_menu USING rt_extab TYPE slis_t_extab.
+*SET PF STATUS to ALV
+  SET PF-STATUS 'MENU'." EXCLUDING PFSTAT. "GUI status...double click to create
+ENDFORM.                               " SET_PF_STATUS
+
+*&---------------------------------------------------------------------*
+*&      Form  USER_COMMAND
+*&---------------------------------------------------------------------*
+*       text
+
+FORM user_command USING r_ucomm LIKE sy-ucomm
+                        rs_selfield TYPE slis_selfield.
+
+  r_ucomm = sy-ucomm.
+  CASE r_ucomm.
+    WHEN 'EPDF'. "Function code for export which we created in MENU
+      PERFORM sub_print.
+      PERFORM alv.
+      PERFORM alv_2_pdf.
+      PERFORM delete_spool.
+    WHEN 'EXCEL'.
+*      PERFORM ALV.
+      PERFORM alv_2_excel.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+    WHEN 'CANCEL'.
+      LEAVE PROGRAM.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+ENDFORM.
+FORM sub_print .
+  CALL FUNCTION 'GET_PRINT_PARAMETERS'
+    EXPORTING
+*     ARCHIVE_ID             = C_CHAR_UNKNOWN
+*     ARCHIVE_INFO           = C_CHAR_UNKNOWN
+*     ARCHIVE_MODE           = C_CHAR_UNKNOWN
+*     ARCHIVE_TEXT           = C_CHAR_UNKNOWN
+*     AR_OBJECT              = C_CHAR_UNKNOWN
+*     ARCHIVE_REPORT         = C_CHAR_UNKNOWN
+*     AUTHORITY              = C_CHAR_UNKNOWN
+*     COPIES                 = C_NUM3_UNKNOWN
+*     COVER_PAGE             = C_CHAR_UNKNOWN
+*     DATA_SET               = C_CHAR_UNKNOWN
+*     DEPARTMENT             = C_CHAR_UNKNOWN
+*     DESTINATION            = C_CHAR_UNKNOWN
+*     EXPIRATION             = C_NUM1_UNKNOWN
+*     IMMEDIATELY            = 'X'
+*     IN_ARCHIVE_PARAMETERS  = ' '
+*     IN_PARAMETERS          = ' '
+      layout                 = 'X_65_132' "C_CHAR_UNKNOWN
+      line_count             = 65 "C_INT_UNKNOWN
+      line_size              = 132 "C_INT_UNKNOWN
+*     LIST_NAME              = C_CHAR_UNKNOWN
+*     LIST_TEXT              = C_CHAR_UNKNOWN
+*     MODE                   = ' '
+*     NEW_LIST_ID            = C_CHAR_UNKNOWN
+*     PROTECT_LIST           = C_CHAR_UNKNOWN
+      no_dialog              = 'X'
+*     RECEIVER               = C_CHAR_UNKNOWN
+      release                = abap_true
+*     REPORT                 = C_CHAR_UNKNOWN
+*     SAP_COVER_PAGE         = C_CHAR_UNKNOWN
+*     HOST_COVER_PAGE        = C_CHAR_UNKNOWN
+*     PRIORITY               = C_NUM1_UNKNOWN
+*     SAP_OBJECT             = C_CHAR_UNKNOWN
+*     TYPE                   = C_CHAR_UNKNOWN
+*     USER                   = SY-UNAME
+*     USE_OLD_LAYOUT         = ' '
+*     UC_DISPLAY_MODE        = C_CHAR_UNKNOWN
+*     DRAFT                  = C_CHAR_UNKNOWN
+*     ABAP_LIST              = ' '
+*     USE_ARCHIVENAME_DEF    = ' '
+*     DEFAULT_SPOOL_SIZE     = C_CHAR_UNKNOWN
+*     WITH_STRUCTURE         = C_CHAR_UNKNOWN
+*     SUPPRESS_SHADING       = C_CHAR_UNKNOWN
+*     PO_FAX_STORE           = ' '
+*     NO_FRAMES              = C_CHAR_UNKNOWN
+    IMPORTING
+*     OUT_ARCHIVE_PARAMETERS =
+      out_parameters         = get_pp
+*     VALID                  =
+*     VALID_FOR_SPOOL_CREATION =
+    EXCEPTIONS
+      archive_info_not_found = 1
+      invalid_print_params   = 2
+      invalid_archive_params = 3
+      OTHERS                 = 4.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+  NEW-PAGE PRINT ON PARAMETERS get_pp NO DIALOG .
+
+  w_print-print = 'X'.
+  w_print-no_coverpage = 'X'.
+  w_print-no_print_listinfos = 'X'.
+  w_print-prnt_title = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ALV_2_PDF
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM alv_2_pdf .
+  " Added On 24.12.2017 By Satwinderpal
+  DATA: bytecount LIKE tst01-dsize,
+        spool_no  LIKE tsp01-rqident.
+
+  g_spool = sy-spono.
+  CALL FUNCTION 'CONVERT_ABAPSPOOLJOB_2_PDF'
+    EXPORTING
+      src_spoolid              = g_spool
+      no_dialog                = space
+*     DST_DEVICE               = device
+*     PDF_DESTINATION          =
+*     NO_BACKGROUND            =
+*     GET_SIZE_FROM_FORMAT     =
+*     USE_CASCADING            = ' '
+    IMPORTING
+      pdf_bytecount            = bytecount
+*     PDF_SPOOLID              =
+*     LIST_PAGECOUNT           =
+*     BTC_JOBNAME              =
+*     BTC_JOBCOUNT             =
+*     BIN_FILE                 =
+    TABLES
+      pdf                      = pdf
+    EXCEPTIONS
+      err_no_abap_spooljob     = 1
+      err_no_spooljob          = 2
+      err_no_permission        = 3
+      err_conv_not_possible    = 4
+      err_bad_destdevice       = 5
+      user_cancelled           = 6
+      err_spoolerror           = 7
+      err_temseerror           = 8
+      err_btcjob_open_failed   = 9
+      err_btcjob_submit_failed = 10
+      err_btcjob_close_failed  = 11
+      OTHERS                   = 12.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ELSE.
+
+    CALL FUNCTION 'GUI_DOWNLOAD'
+      EXPORTING
+        bin_filesize = ' '
+        filename     = 'C:\SAP_Downloads\indent.pdf'
+        filetype     = 'BIN'
+*       APPEND       = ' '
+*       WRITE_FIELD_SEPARATOR           = ' '
+*       HEADER       = '00'
+*       TRUNC_TRAILING_BLANKS           = ' '
+*       WRITE_LF     = 'X'
+*       COL_SELECT   = ' '
+*       COL_SELECT_MASK                 = ' '
+*       DAT_MODE     = ' '
+*       CONFIRM_OVERWRITE               = ' '
+*       NO_AUTH_CHECK                   = ' '
+*       CODEPAGE     = ' '
+*       IGNORE_CERR  = ABAP_TRUE
+*       REPLACEMENT  = '#'
+*       WRITE_BOM    = ' '
+*       TRUNC_TRAILING_BLANKS_EOL       = 'X'
+*       WK1_N_FORMAT = ' '
+*       WK1_N_SIZE   = ' '
+*       WK1_T_FORMAT = ' '
+*       WK1_T_SIZE   = ' '
+*       WRITE_LF_AFTER_LAST_LINE        = ABAP_TRUE
+*       SHOW_TRANSFER_STATUS            = ABAP_TRUE
+*       VIRUS_SCAN_PROFILE              = '/SCET/GUI_DOWNLOAD'
+*       IMPORTING
+*       FILELENGTH   =
+      TABLES
+        data_tab     = pdf
+*       FIELDNAMES   =
+*       EXCEPTIONS
+*       FILE_WRITE_ERROR                = 1
+*       NO_BATCH     = 2
+*       GUI_REFUSE_FILETRANSFER         = 3
+*       INVALID_TYPE = 4
+*       NO_AUTHORITY = 5
+*       UNKNOWN_ERROR                   = 6
+*       HEADER_NOT_ALLOWED              = 7
+*       SEPARATOR_NOT_ALLOWED           = 8
+*       FILESIZE_NOT_ALLOWED            = 9
+*       HEADER_TOO_LONG                 = 10
+*       DP_ERROR_CREATE                 = 11
+*       DP_ERROR_SEND                   = 12
+*       DP_ERROR_WRITE                  = 13
+*       UNKNOWN_DP_ERROR                = 14
+*       ACCESS_DENIED                   = 15
+*       DP_OUT_OF_MEMORY                = 16
+*       DISK_FULL    = 17
+*       DP_TIMEOUT   = 18
+*       FILE_NOT_FOUND                  = 19
+*       DATAPROVIDER_EXCEPTION          = 20
+*       CONTROL_FLUSH_ERROR             = 21
+*       OTHERS       = 22
+      .
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+  ENDIF.
+
+ENDFORM.
+
+
+FORM delete_spool .
+
+  DATA: del_spool TYPE tsp01_sp0r-rqid_char.
+  del_spool = g_spool.
+  CALL FUNCTION 'RSPO_R_RDELETE_SPOOLREQ'
+    EXPORTING
+      spoolid = del_spool.
+
+ENDFORM.
+
+FORM alv_2_excel.
+
+  CALL FUNCTION 'WS_DOWNLOAD'
+    EXPORTING
+      bin_filesize            = ' '
+      filename                = 'C:\SAP_Downloads\indent.xls'
+      filetype                = 'DAT'
+    TABLES
+      data_tab                = it_fin[]
+*     fieldnames              = t_header
+    EXCEPTIONS
+      file_open_error         = 1
+      file_write_error        = 2
+      invalid_filesize        = 3
+      invalid_type            = 4
+      no_batch                = 5
+      unknown_error           = 6
+      invalid_table_width     = 7
+      gui_refuse_filetransfer = 8
+      customer_error          = 9
+      no_authority            = 10
+      OTHERS                  = 11.
+
+ENDFORM.
+

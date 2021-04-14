@@ -1,0 +1,928 @@
+*&---------------------------------------------------------------------*
+*& REPORT  Y90_AUDITOR_PO
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT Y90_AUDITOR_PO.
+*&---------------------------------------------------------------------*
+*& REPORT  ZPO103105
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+TABLES : EKBE,EKPO ,EKKO,LFA1,BKPF,BSEG,MKPF,MSEG,ZTMM_REPORT,ZGPASSR,T005U.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+
+SELECT-OPTIONS : EBELN FOR EKBE-EBELN,
+                 EBELP FOR EKBE-EBELP,  "LINE ITEM
+                 BUDAT FOR EKBE-BUDAT OBLIGATORY,
+                 WERKS FOR EKBE-WERKS,
+                 MATNR FOR EKBE-MATNR,
+                  VEND FOR EKKO-LIFNR.
+
+SELECTION-SCREEN END OF BLOCK B1.
+
+  SELECTION-SCREEN BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-004.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  PARAMETERS : R1 RADIOBUTTON GROUP G1 MODIF ID MD1.
+  SELECTION-SCREEN COMMENT 5(20) TEXT-002 FOR FIELD R1.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  PARAMETERS : R2 RADIOBUTTON GROUP G1 MODIF ID MD1.
+  SELECTION-SCREEN COMMENT 5(20) TEXT-003 FOR FIELD R2.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN END OF BLOCK B2.
+
+DATA : WA-MATNR TYPE MATNR,
+       WA-HSNCO LIKE MARC-STEUC.
+
+DATA : BEGIN OF IT_EKBE OCCURS 0,
+         WERKS LIKE EKBE-WERKS, "PLANT
+         EBELN LIKE EKBE-EBELN, "PO NO
+         EBELP LIKE EKBE-EBELP, "LINE ITEM
+         BUDAT LIKE EKBE-BUDAT, "POSTING DATE
+         BELNR LIKE EKBE-BELNR, "MAT DOC NO-Q
+         GJAHR LIKE EKBE-GJAHR,
+         BUZEI LIKE EKBE-BUZEI,
+         MWSKZ LIKE EKBE-MWSKZ,
+         BEWTP LIKE EKBE-BEWTP, "PO CATEGARY
+         BWART LIKE EKBE-BWART, "MOVEMENT TYPE
+         LFBNR LIKE EKBE-LFBNR, "REFRENCE DOC
+         MATNR LIKE EKBE-MATNR, "MATERIAL NO
+         XBLNR LIKE EKBE-XBLNR, "INVOICE
+         MENGE LIKE EKBE-MENGE, "INVOICE QUATITY
+*       WRBTR LIKE EKBE-WRBTR,"INVOICE VALUE
+         REEWR LIKE EKBE-REEWR, "INVOICE VALUE
+         WAERS LIKE EKBE-WAERS,
+         WRBTR LIKE EKBE-WRBTR,
+         BLDAT LIKE EKBE-BLDAT,
+       END OF IT_EKBE.
+
+DATA : BEGIN OF IT_EKBE1 OCCURS 0,
+         EBELN  LIKE EKBE-EBELN, "PO NO
+         EBELP  LIKE EKBE-EBELP, "LINE ITEM
+         BELNR1 LIKE EKBE-BELNR, "MAT DOC NO-105
+         GJAHR  LIKE EKBE-GJAHR,
+         BUZEI  LIKE EKBE-BUZEI,
+         MWSKZ  LIKE EKBE-MWSKZ,
+         BWART  LIKE EKBE-BWART, "MOVEMENT TYPE
+         LFBNR  LIKE EKBE-LFBNR, "REFRENCE DOC
+         MENGE1 LIKE EKBE-MENGE, " QUATITY RECIVED
+*      WRBTR1 LIKE EKBE-WRBTR,"GR VALUE
+         REEWR1 LIKE EKBE-REEWR, "GR VALUE
+         WAERS  LIKE EKBE-WAERS,
+         XBLNR LIKE EKBE-XBLNR, "INVOICE
+       END OF IT_EKBE1.
+
+DATA : BEGIN OF IT_EKPO OCCURS 0,
+         EBELN LIKE EKPO-EBELN , "PURCHASE ORDER NO(C)
+         EBELP LIKE EKPO-EBELP , "PO LINE ITEM NO
+         TXZ01 LIKE EKPO-TXZ01 , "PO TEXT
+         MEINS LIKE EKPO-MEINS , "UNIT OF MEASURE
+         NETPR LIKE EKPO-NETPR , "UNIT PRICE
+         MATNR LIKE EKPO-MATNR , "MATERIAL NO
+         MTART LIKE EKPO-MTART , "MATERIAL TYPE
+         MATKL LIKE EKPO-MATKL , "MATERIAL GROUP
+         ELIKZ LIKE EKPO-ELIKZ, "PO STATUS
+         WERKS LIKE EKPO-WERKS,
+       END OF IT_EKPO.
+
+DATA :BEGIN OF IT_EKKO OCCURS 0,
+        EBELN LIKE EKKO-EBELN , "PURCHASE ORDER
+        BSART LIKE EKKO-BSART , "PO TYPE
+        AEDAT LIKE EKKO-AEDAT , " PO CREATE DATE
+        KDATB LIKE EKKO-KDATB , "EXPEXTED DATE OF SETALMENT
+        KDATE LIKE EKKO-KDATE , " ACTUAL DATE OF SETALMENT
+        WAERS LIKE EKKO-WAERS , "CURRENCY
+        WKURS LIKE EKKO-WKURS , " EXCHANGE RATE
+        EKGRP LIKE EKKO-EKGRP , "VENDOR GROUP
+        LIFNR LIKE EKKO-LIFNR , "VENDOR NO
+      END OF IT_EKKO.
+
+DATA: IT_A791 TYPE STANDARD TABLE OF A791,
+      WA_A791 TYPE A791,
+      IT_A792 TYPE STANDARD TABLE OF A792,
+      WA_A792 TYPE A792,
+      IT_A794 TYPE STANDARD TABLE OF A794,
+      WA_A794 TYPE A794,
+      IT_KONP TYPE STANDARD TABLE OF KONP,
+      WA_KONP TYPE KONP.
+DATA : WA_T001W TYPE T001W.
+
+DATA : BEGIN OF IT_LFA1 OCCURS 0,
+         LIFNR LIKE LFA1-LIFNR , "VENDOR NO (C)
+         KTOKK LIKE LFA1-KTOKK , "VENDOR GROUP
+         NAME1 LIKE LFA1-NAME1 , "VENDOR NAME
+         STRAS LIKE LFA1-STRAS , "VENDOR ADDRESS
+         ORT01 LIKE LFA1-ORT01 , "VENDOR CITY
+         REGIO LIKE LFA1-REGIO,
+         LAND1 LIKE LFA1-LAND1,
+         STCD3 LIKE LFA1-STCD3,
+       END OF IT_LFA1.
+
+DATA : BEGIN OF ITAB OCCURS 0,
+         EBELN     LIKE EKBE-EBELN, "PO NO
+         EBELP     LIKE EKBE-EBELP, "LINE ITEM
+         BUDAT     LIKE EKBE-BUDAT, "POSTING DATE
+         BELNR     LIKE EKBE-BELNR, "MAT DOC NO-Q
+         GJAHR     LIKE EKBE-GJAHR,
+         BUZEI     LIKE EKBE-BUZEI,
+         MWSKZ     LIKE EKBE-MWSKZ,
+         BUKRS     LIKE BKPF-BUKRS,
+         BELNR1    LIKE EKBE-BELNR, "MAT DOC NO-105
+         MATNR     LIKE EKBE-MATNR, "MATERIAL NO
+         XBLNR     LIKE EKBE-XBLNR, "INVOICE
+         MENGE     LIKE EKBE-MENGE, "INVOICE QUATITY
+         WRBTR     LIKE EKBE-WRBTR, "INVOICE VALUE
+         REEWR     LIKE EKBE-REEWR, "INVOICE VALUE
+         MENGE1    LIKE EKBE-MENGE, " QUATITY RECIVED
+         WERKS     LIKE EKBE-WERKS,
+         REEWR1    LIKE EKBE-REEWR, "GR VALUE
+         TXZ01     LIKE EKPO-TXZ01 , "PO TEXT
+         MEINS     LIKE EKPO-MEINS , "UNIT OF MEASURE
+         NETPR     LIKE EKPO-NETPR , "UNIT PRICE
+         MTART     LIKE EKPO-MTART , "MATERIAL TYPE
+         MATKL     LIKE EKPO-MATKL , "MATERIAL GROUP
+         ELIKZ     LIKE EKPO-ELIKZ, "PO STATUS
+         BSART     LIKE EKKO-BSART, "PO TYPE
+         AEDAT     LIKE EKKO-AEDAT , " PO CREATE DATE
+         KDATB     LIKE EKKO-KDATB , "EXPEXTED DATE OF SETALMENT
+         KDATE     LIKE EKKO-KDATE , " ACTUAL DATE OF SETALMENT
+         WAERS     LIKE EKKO-WAERS , "CURRENCY
+         WKURS     LIKE EKKO-WKURS , " EXCHANGE RATE
+         EKGRP     LIKE EKKO-EKGRP , "VENDOR GROUP
+         LIFNR     LIKE EKKO-LIFNR , "VENDOR NO
+         NAME1     LIKE LFA1-NAME1 , "VENDOR NAME
+         KTOKK     LIKE LFA1-KTOKK , "VENDOR GROUP
+         STRAS     LIKE LFA1-STRAS , "VENDOR ADDRESS
+         ORT01     LIKE LFA1-ORT01 , "VENDOR CITY
+         REGIO     LIKE LFA1-REGIO,
+         COMBO     LIKE BKPF-AWKEY,
+         ACCDOC    LIKE  BKPF-BELNR,
+         BLART     LIKE BKPF-BLART,
+         IGSTR     TYPE KONP-KBETR,
+         IGSTV     TYPE BSET-HWSTE,
+         SGSTR     TYPE KONP-KBETR,
+         SGSTV     TYPE BSET-HWSTE,
+         CGSTR     TYPE KONP-KBETR,
+         CGSTV     TYPE BSET-HWSTE,
+         TDS       LIKE BSEG-DMBTR,
+         CESS      LIKE BSEG-DMBTR,
+         TXGRP     LIKE BSEG-TXGRP,
+         KTOSL     LIKE BSEG-KTOSL,
+         DMBTRJP4  LIKE BSEG-DMBTR,
+         DMBTRJP5  LIKE BSEG-DMBTR,
+         DMBTRJI1  LIKE BSEG-DMBTR,
+         DMBTRJI5  LIKE BSEG-DMBTR,
+         DMBTRJI6  LIKE BSEG-DMBTR,
+         CGST_D    LIKE BSEG-DMBTR,
+         SGST_D    LIKE BSEG-DMBTR,
+         IGST_D    LIKE BSEG-DMBTR,
+         gross_value LIKE BSEG-DMBTR,
+         IMPGST_D  LIKE BSEG-DMBTR,
+         CGST_ND   LIKE BSEG-DMBTR,
+         SGST_ND   LIKE BSEG-DMBTR,
+         IGST_ND   LIKE BSEG-DMBTR,
+         UTGST_ND  LIKE BSEG-DMBTR,
+         IMPGST_ND LIKE BSEG-DMBTR,
+         RCM_SGST  LIKE BSEG-DMBTR,
+         RCM_CGST  LIKE BSEG-DMBTR,
+         RCM_IGST  LIKE BSEG-DMBTR,
+         MWSKZ1    LIKE BSEG-MWSKZ,
+         TRUCKNO   LIKE ZGPASSR-TRUCKNO,
+         REPDT     LIKE ZGPASSR-REPDT,
+         REPID     LIKE ZGPASSR-REPID,
+         BKTXT     TYPE MKPF-BKTXT,
+         BEZEI     TYPE T005U-BEZEI,
+         BILL_QTY  TYPE ZGPASS_HDR-BILL_QTY,
+         BLDAT     TYPE EKBE-BLDAT,
+         STCD3     LIKE LFA1-STCD3,
+       END OF ITAB.
+
+DATA: CESS      LIKE BSEG-DMBTR,
+      CESS1     LIKE BSEG-DMBTR,
+      CESSV     LIKE BSEG-DMBTR,
+      CESS1V    LIKE BSEG-DMBTR,
+      TDS       LIKE BSEG-DMBTR,
+      CGST_ND   LIKE BSEG-DMBTR,
+      SGST_ND   LIKE BSEG-DMBTR,
+      IGST_ND   LIKE BSEG-DMBTR,
+      IGSTR     TYPE KONP-KBETR,
+      IGSTV     TYPE BSET-HWSTE,
+      SGSTR     TYPE KONP-KBETR,
+      SGSTV     TYPE BSET-HWSTE,
+      CGSTR     TYPE KONP-KBETR,
+      CGSTV     TYPE BSET-HWSTE,
+      RCM_SGST  LIKE BSEG-DMBTR,
+      RCM_CGST  LIKE BSEG-DMBTR,
+      RCM_IGST  LIKE BSEG-DMBTR,
+      GROSS_VALUE LIKE BSEG-DMBTR.
+
+types: BEGIN OF ty_rbkp,
+        belnr TYPE rbkp-belnr,
+        gjahr TYPE rbkp-gjahr,
+        blart TYPE rbkp-blart,
+        budat TYPE rbkp-budat,
+        BLDAT TYPE rbkp-bldat,
+        XBLNR TYPE RBKP-XBLNR,
+      END OF ty_rbkp.
+
+TYPES: BEGIN OF ty_rseg,
+        belnr TYPE rseg-belnr,
+        gjahr TYPE rseg-gjahr,
+        buzei TYPE rseg-buzei,
+        ebeln TYPE rseg-ebeln,
+        ebelp TYPE rseg-ebelp,
+        matnr TYPE rseg-matnr,
+        bukrs TYPE rseg-bukrs,
+        werks TYPE rseg-werks,
+        wrbtr TYPE rseg-wrbtr,
+        shkzg TYPE rseg-shkzg,
+        menge TYPE rseg-menge,
+        bstme TYPE rseg-bstme,
+        LFBNR TYPE RSEG-LFBNR,
+        XBLNR TYPE RSEG-XBLNR,
+        MWSKZ TYPE RSEG-MWSKZ,
+      END OF ty_rseg.
+
+DATA: IT_RBKP TYPE STANDARD TABLE OF TY_RBKP,
+      WA_RBKP TYPE TY_RBKP,
+      IT_RSEG TYPE STANDARD TABLE OF TY_RSEG,
+      WA_RSEG TYPE TY_RSEG.
+
+
+DATA :  COM(20) TYPE C.
+DATA : YR(4) TYPE C.
+DATA : BEL(10) TYPE C.
+DATA : TMWDAT LIKE  RTAX1U15 OCCURS 0 WITH HEADER LINE.
+
+DATA : W_FCAT TYPE SLIS_FIELDCAT_ALV .
+DATA : T_FCAT   TYPE SLIS_T_FIELDCAT_ALV,
+       W_LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+TYPES : BEGIN OF TY_MKPF,
+          MBLNR TYPE MKPF-MBLNR,
+          MJAHR TYPE MKPF-MJAHR,
+          BKTXT TYPE MKPF-BKTXT,
+        END OF TY_MKPF.
+
+DATA : IT_MKPF TYPE STANDARD TABLE OF TY_MKPF,
+       WA_MKPF TYPE TY_MKPF.
+
+TYPES : BEGIN OF TY_ZGPASSR,
+          REPID      LIKE ZGPASSR-REPID,
+          PLANT_DESC LIKE ZGPASSR-PLANT_DESC,
+          WERKS      LIKE ZGPASSR-WERKS,
+          LIFNR      LIKE ZGPASSR-LIFNR,
+          LIFNR_DESC LIKE ZGPASSR-LIFNR_DESC,
+          DRVADD     LIKE ZGPASSR-DRVADD,
+          TRUCKNO    LIKE ZGPASSR-TRUCKNO,
+          REPDT      LIKE ZGPASSR-REPDT,
+        END OF TY_ZGPASSR.
+
+DATA :  IT_ZGPASSR TYPE STANDARD TABLE OF TY_ZGPASSR,
+        WA_ZGPASSR TYPE TY_ZGPASSR.
+
+DATA : VENCL TYPE J_1IMOVEND-VEN_CLASS.
+DATA : BEDAT TYPE EKKO-BEDAT.
+
+DATA : SGST_RATE TYPE KOMV-KBETR,
+       CGST_RATE TYPE KOMV-KBETR,
+       IGST_RATE TYPE KOMV-KBETR,
+       UGST_RATE TYPE KOMV-KBETR.
+
+START-OF-SELECTION .
+  PERFORM GET_DATA.
+  PERFORM PROCESS_DATA .
+
+END-OF-SELECTION.
+  PERFORM GET_FCAT USING :
+       '01' 'EBELN' 'PURCHASE ORDER' ' ' 'X ',
+       '02' 'EBELP' 'LINE ITEM' ' ' 'X ',
+       '03' 'AEDAT' 'PO CREATE DATE' ' ' 'X ',
+       '04' 'BSART' 'PO TYPE' ' ' 'X ',
+       '05' 'REPID   ' 'GATE RECORD' ' ' ' X ',
+       '06' 'TRUCKNO ' 'TRUCK NO ' ' ' ' X ',
+       '07' 'REPDT   ' 'GATE DATE' ' ' ' X ',
+       '08' 'BILL_QTY' 'GATE QTY' ' ' ' X ',
+       '09' 'BELNR1' 'G/R MAT-DOC' ' ' 'X ',
+       '10' 'BELNR' 'I/R MAT-DOC' ' ' ' X',
+       '11' 'MATNR' 'MATERIAL NO' ' ' 'X ',
+       '12' 'TXZ01' 'MAT DESC' ' ' 'X ',
+       '13' 'BUDAT' 'POSTING DATE' ' ' ' X',
+       '14' 'BLDAT' 'INVOICE DATE' ' ' ' X',
+       '15' 'BKTXT' 'INVOICE NO' ' ' 'X ',
+       '16' 'MENGE' 'INVOICE QUANTITY' ' ' 'X ',
+       '17' 'MEINS' 'UOM' ' ' 'X ',
+       '18' 'NETPR' 'UNIT PRICE' ' ' 'X ',
+       '19' 'WRBTR' 'INVOICE AMOUNT' ' ' 'X ',
+       '20' 'WAERS' 'CURRENACY' ' ' 'X ',
+       '21' 'LIFNR' 'VENDOR NO' ' ' 'X ',
+       '22' 'NAME1' 'VENDOR NAME' ' ' 'X ',
+       '23' 'STCD3' 'VENDOR GST' ' ' 'X ',
+       '24' 'BEZEI ' 'STATE' ' ' ' X ',
+       '25' 'GJAHR' 'YEAR' ' ' 'X ',
+       '26' 'ACCDOC' 'ACC DOCU' ' ' 'X ',
+       '27' 'MWSKZ' 'GROUP' ' ' 'X ',
+       '28' 'CGST_ND' 'CGST_ND' ' ' 'X ',
+       '29' 'SGST_ND' 'SGST_ND' ' ' 'X ',
+       '30' 'IGSTV'  'IGST VALUE'   ' '      ' X ',
+       '31' 'CGSTV'  'CGST VALUE'    ' '     ' X ',
+       '32' 'SGSTV'  'SGST/UTGST VALUE'  ' ' ' X ',
+       '33' 'CESS' 'CESS' ' ' 'X ',
+       '34' 'TDS' 'TDS' ' ' 'X ',
+       '35' 'RCM_SGST' 'RCM_SGST' ' ' ' X ',
+       '36' 'RCM_CGST' 'RCM_CGST' ' ' ' X ',
+       '37' 'RCM_IGST' 'RCM_IGST' ' ' ' X ',
+       '38' 'GROSS_VALUE' 'GOSS VALUE' ' ' ' X '.
+
+  W_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK  = ' '
+*     I_BYPASSING_BUFFER = ' '
+*     I_BUFFER_ACTIVE    = ' '
+      I_CALLBACK_PROGRAM = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME   =
+*     I_BACKGROUND_ID    = ' '
+*     I_GRID_TITLE       =
+*     I_GRID_SETTINGS    =
+      IS_LAYOUT          = W_LAYOUT
+      IT_FIELDCAT        = T_FCAT
+*     IT_EXCLUDING       =
+*     IT_SPECIAL_GROUPS  =
+*     IT_SORT            =
+*     IT_FILTER          =
+*     IS_SEL_HIDE        =
+*     I_DEFAULT          = 'X'
+*     I_SAVE             = ' '
+*     IS_VARIANT         =
+*     IT_EVENTS          =
+*     IT_EVENT_EXIT      =
+*     IS_PRINT           =
+*     IS_REPREP_ID       =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE  = 0
+*     I_HTML_HEIGHT_TOP  = 0
+*     I_HTML_HEIGHT_END  = 0
+*     IT_ALV_GRAPHICS    =
+*     IT_HYPERLINK       =
+*     IT_ADD_FIELDCAT    =
+*     IT_EXCEPT_QINFO    =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB           = ITAB[]
+    EXCEPTIONS
+      PROGRAM_ERROR      = 1
+      OTHERS             = 2.
+  IF SY-SUBRC <> 0.
+* IMPLEMENT SUITABLE ERROR HANDLING HERE
+  ENDIF.
+
+*  *&---------------------------------------------------------------------*
+*&      FORM  GET_DATA
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM GET_DATA .
+
+  SELECT belnr
+         gjahr
+         blart
+         budat
+         BLDAT
+         XBLNR FROM RBKP INTO TABLE IT_RBKP WHERE BUDAT IN BUDAT AND ( blart = 'RE' or  blart = 'RZ' ).
+
+  IF NOT IT_RBKP IS INITIAL.
+
+   SELECT belnr
+          gjahr
+          buzei
+          ebeln
+          ebelp
+          matnr
+          bukrs
+          werks
+          wrbtr
+          shkzg
+          menge
+          bstme
+          LFBNR
+          XBLNR
+          MWSKZ
+          FROM RSEG INTO TABLE IT_RSEG FOR ALL ENTRIES IN IT_RBKP WHERE belnr = IT_RBKP-belnr AND
+                                                                              gjahr = IT_RBKP-gjahr AND
+                                                                              EBELN IN EBELN AND
+                                                                              WERKS IN WERKS AND
+                                                                              MATNR IN MATNR AND
+                                                                              EBELP IN EBELP .
+   ENDIF.
+
+  IF NOT IT_RSEG IS INITIAL.
+
+
+    SELECT EBELN EBELP BELNR GJAHR BUZEI MWSKZ BWART LFBNR MENGE REEWR WAERS XBLNR
+                         FROM EKBE INTO TABLE IT_EKBE1
+                         FOR ALL ENTRIES IN IT_RSEG
+                         WHERE BWART IN ('101')
+*                         AND  LFBNR = IT_RSEG-LFBNR
+                         AND  EBELN = IT_RSEG-EBELN
+                         AND EBELP = IT_RSEG-EBELP .
+
+     IF SY-SUBRC EQ 0.
+          SELECT MBLNR
+           MJAHR
+           BKTXT FROM MKPF INTO TABLE IT_MKPF FOR ALL ENTRIES IN IT_EKBE1
+                                        WHERE MBLNR = IT_EKBE1-BELNR1
+                                         AND  MJAHR = IT_EKBE1-GJAHR.
+     ENDIF.
+
+    SELECT EBELN EBELP TXZ01 MEINS  NETPR MATNR MTART MATKL ELIKZ WERKS
+                             FROM EKPO INTO TABLE IT_EKPO
+                             FOR ALL ENTRIES IN IT_RSEG
+                             WHERE EBELN = IT_RSEG-EBELN
+                             AND EBELP = IT_RSEG-EBELP.
+
+      SELECT REPID
+             PLANT_DESC
+             WERKS
+             LIFNR
+             LIFNR_DESC
+             DRVADD
+             TRUCKNO
+             REPDT
+            FROM ZGPASSR INTO TABLE IT_ZGPASSR
+            FOR ALL ENTRIES IN IT_RSEG
+            WHERE PLANT_DESC EQ IT_RSEG-EBELN
+             AND  WERKS EQ IT_RSEG-WERKS.
+    ENDIF.
+
+    SELECT EBELN BSART AEDAT KDATB KDATE WAERS WKURS EKGRP LIFNR
+                         FROM EKKO INTO TABLE IT_EKKO
+                          FOR ALL ENTRIES IN IT_RSEG
+                          WHERE  EBELN = IT_RSEG-EBELN AND
+                                   LIFNR IN VEND.
+
+    IF SY-SUBRC = 0.
+      SELECT LIFNR KTOKK NAME1 STRAS ORT01 REGIO LAND1 STCD3
+                             FROM LFA1 INTO TABLE IT_LFA1
+                             FOR ALL ENTRIES IN IT_EKKO
+                             WHERE LIFNR = IT_EKKO-LIFNR.
+    ENDIF.
+
+ENDFORM.                    " GET_DATA
+*&---------------------------------------------------------------------*
+*&      FORM  PROCESS_DATA
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM PROCESS_DATA .
+
+  SORT : IT_EKBE BY EBELN EBELP,
+        IT_EKBE1 BY EBELN EBELP.
+
+  LOOP AT IT_RSEG INTO WA_RSEG.
+    ITAB-EBELN = WA_RSEG-EBELN.
+    ITAB-EBELP = WA_RSEG-EBELP.
+*    ITAB-BUDAT = WA_RSEG-BUDAT.
+    ITAB-BELNR = WA_RSEG-BELNR.
+    ITAB-GJAHR = WA_RSEG-GJAHR.
+    ITAB-MWSKZ = WA_RSEG-MWSKZ.
+*    ITAB-BUZEI = WA_RSEG-BUZEI.
+    ITAB-MATNR = WA_RSEG-MATNR.
+*    ITAB-REEWR = WA_RSEG-REEWR.
+    ITAB-MENGE = WA_RSEG-MENGE.
+    ITAB-XBLNR = WA_RSEG-XBLNR.
+    ITAB-WRBTR = WA_RSEG-WRBTR.
+    ITAB-WERKS = WA_RSEG-WERKS.
+*
+    ITAB-NETPR = WA_RSEG-WRBTR.
+
+    CLEAR WA_RBKP.
+    READ TABLE IT_RBKP INTO WA_RBKP WITH KEY BELNR = WA_RSEG-BELNR
+                                             GJAHR = WA_RSEG-GJAHR.
+    IF SY-SUBRC EQ 0.
+    ITAB-budat = WA_RBKP-budat.
+    ITAB-BLDAT = WA_RBKP-BLDAT.
+    ENDIF.
+
+ if wa_rseg-lfbnr is INITIAL .
+
+    READ TABLE IT_EKBE1 WITH KEY EBELN = WA_RSEG-EBELN
+                                 EBELP = WA_RSEG-EBELP
+                                 XBLNR = WA_RBKP-XBLNR .
+    IF SY-SUBRC = 0 .
+      ITAB-BELNR1 = IT_EKBE1-BELNR1.
+      ITAB-MENGE1 = IT_EKBE1-MENGE1.
+      ITAB-REEWR1 = IT_EKBE1-REEWR1.
+    ENDIF.
+
+
+    ELSE.
+    READ TABLE IT_EKBE1 WITH KEY EBELN = WA_RSEG-EBELN
+                                 EBELP = WA_RSEG-EBELP
+                                 LFBNR = WA_RSEG-LFBNR .
+    IF SY-SUBRC = 0 .
+      ITAB-BELNR1 = IT_EKBE1-BELNR1.
+      ITAB-MENGE1 = IT_EKBE1-MENGE1.
+      ITAB-REEWR1 = IT_EKBE1-REEWR1.
+    ENDIF.
+
+ENDIF.
+
+    SELECT SINGLE ABLAD FROM MSEG INTO ITAB-REPID WHERE MBLNR = IT_EKBE1-BELNR1 AND
+                                                        MJAHR = IT_EKBE1-GJAHR.
+    SELECT SINGLE REPDT TRUCKNO BILL_QTY FROM ZTMM_REPORT INTO (ITAB-REPDT,ITAB-TRUCKNO,ITAB-BILL_QTY)
+                                                WHERE  REPID = ITAB-REPID.
+
+    CLEAR WA_MKPF.
+    READ TABLE IT_MKPF INTO WA_MKPF WITH KEY MBLNR = IT_EKBE1-BELNR1
+                                             MJAHR = IT_EKBE1-GJAHR.
+    IF SY-SUBRC EQ 0.
+      ITAB-BKTXT = WA_MKPF-BKTXT.
+    ENDIF.
+
+    CLEAR WA_ZGPASSR.
+    READ TABLE IT_ZGPASSR INTO WA_ZGPASSR WITH KEY PLANT_DESC = ITAB-EBELN
+                                                   DRVADD     = ITAB-BKTXT.
+    IF SY-SUBRC EQ 0.
+      ITAB-REPID    = WA_ZGPASSR-REPID.
+      ITAB-TRUCKNO  = WA_ZGPASSR-TRUCKNO.
+      ITAB-REPDT    = WA_ZGPASSR-REPDT.
+    ENDIF.
+
+    SELECT SINGLE BILL_QTY FROM ZGPASS_HDR INTO ITAB-BILL_QTY WHERE REPID = WA_ZGPASSR-REPID.
+
+    READ TABLE IT_EKPO WITH KEY EBELN = WA_RSEG-EBELN
+                                EBELP = WA_RSEG-EBELP
+                                MATNR = WA_RSEG-MATNR.
+    IF SY-SUBRC = 0.
+      ITAB-TXZ01 = IT_EKPO-TXZ01.
+      ITAB-MEINS = IT_EKPO-MEINS.
+      ITAB-NETPR = IT_EKPO-NETPR.
+      ITAB-MTART = IT_EKPO-MTART.
+      ITAB-MATKL = IT_EKPO-MATKL.
+      ITAB-ELIKZ = IT_EKPO-ELIKZ.
+    ENDIF.
+
+    READ TABLE IT_EKKO WITH KEY EBELN = WA_RSEG-EBELN.
+    IF SY-SUBRC = 0.
+      ITAB-AEDAT = IT_EKKO-AEDAT.
+      ITAB-BSART = IT_EKKO-BSART.
+      ITAB-KDATB = IT_EKKO-KDATB.
+      ITAB-KDATE = IT_EKKO-KDATE.
+      ITAB-WAERS = IT_EKKO-WAERS.
+      ITAB-WKURS = IT_EKKO-WKURS.
+      ITAB-EKGRP = IT_EKKO-EKGRP.
+      ITAB-LIFNR = IT_EKKO-LIFNR.
+    ENDIF.
+
+    READ TABLE IT_LFA1 WITH KEY LIFNR = IT_EKKO-LIFNR .
+    IF SY-SUBRC = 0.
+      ITAB-KTOKK = IT_LFA1-KTOKK.
+      ITAB-NAME1 = IT_LFA1-NAME1.
+      ITAB-STRAS = IT_LFA1-STRAS.
+      ITAB-ORT01 = IT_LFA1-ORT01.
+      ITAB-REGIO = IT_LFA1-REGIO.
+      ITAB-STCD3 = IT_LFA1-STCD3.
+    ENDIF.
+
+    SELECT SINGLE BEZEI FROM T005U INTO (itab-BEZEI) WHERE LAND1 = it_lfa1-LAND1 AND BLAND = it_lfa1-REGIO.
+
+    APPEND ITAB.
+    CLEAR : IT_EKBE,IT_EKBE1,IT_EKPO,ITAB.
+  ENDLOOP.
+
+  LOOP AT ITAB.
+    BEL = ITAB-BELNR.
+    YR = ITAB-GJAHR.
+    CONCATENATE BEL YR INTO COM.
+    ITAB-COMBO = COM.
+    MODIFY ITAB.
+  ENDLOOP.
+
+ IF R1 EQ 'X'.
+
+  LOOP AT ITAB.
+
+    SELECT BELNR BUKRS BLART BUDAT INTO (ITAB-ACCDOC,ITAB-BUKRS,ITAB-BLART,ITAB-BUDAT)
+      FROM BKPF WHERE AWKEY = ITAB-COMBO AND ( BLART = 'RE' or BLART = 'RZ' ).
+      MODIFY ITAB.
+    ENDSELECT.
+  ENDLOOP.
+
+ ELSEIF R2 EQ 'X' .
+   LOOP AT ITAB.
+
+    SELECT BELNR BUKRS BLART BUDAT INTO (ITAB-ACCDOC,ITAB-BUKRS,ITAB-BLART,ITAB-BUDAT)
+      FROM BKPF WHERE AWKEY = ITAB-COMBO AND  BLART = 'RD'.
+      MODIFY ITAB.
+    ENDSELECT.
+  ENDLOOP.
+
+  LOOP AT ITAB.
+   DELETE ITAB WHERE BLART NE 'RD'.
+  ENDLOOP.
+
+endif.
+
+  LOOP AT ITAB.
+    CLEAR: BSEG-SHKZG,SGSTV.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (SGSTV,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                  AND   BUKRS = ITAB-BUKRS
+                                                  AND   GJAHR = ITAB-GJAHR
+                                                  AND  ( HKONT = '0000209206' OR HKONT = '0000209209' ).
+    IF BSEG-SHKZG = 'H'.
+       ITAB-SGSTV = SGSTV * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-SGSTV = SGSTV.
+    ENDIF.
+
+
+    CLEAR : BSEG-SHKZG,CGSTV.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (CGSTV,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000209207'.
+    IF BSEG-SHKZG = 'H'.
+       ITAB-CGSTV = CGSTV * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-CGSTV = CGSTV.
+    ENDIF.
+
+    CLEAR :BSEG-SHKZG,IGSTV.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (IGSTV,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000209208'.
+    IF BSEG-SHKZG = 'H'.
+       ITAB-IGSTV = IGSTV * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-IGSTV = IGSTV.
+    ENDIF.
+
+    CLEAR :BSEG-SHKZG,CESS.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (CESS,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   XAUTO = ' '
+                                                   AND   HKONT = '0000209211'.
+    IF BSEG-SHKZG = 'H'.
+       CESSV = CESS * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       CESSV = CESS.
+    ENDIF.
+
+    CLEAR: BSEG-SHKZG,CESS1.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (CESS1,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   XAUTO = 'X'
+                                                   AND   HKONT = '0000209211'.
+    IF BSEG-SHKZG = 'H'.
+       CESS1V = CESS1 * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       CESS1V = CESS1.
+    ENDIF.
+
+    CLEAR :BSEG-SHKZG,RCM_SGST.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (RCM_SGST,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000209216'.
+     IF BSEG-SHKZG = 'H'.
+       ITAB-RCM_SGST = RCM_SGST * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-RCM_SGST = RCM_SGST.
+    ENDIF.
+
+    CLEAR: BSEG-SHKZG,RCM_CGST.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (RCM_CGST,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000209217'.
+     IF BSEG-SHKZG = 'H'.
+       ITAB-RCM_CGST = RCM_CGST * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-RCM_CGST = RCM_CGST.
+    ENDIF.
+
+    CLEAR: BSEG-SHKZG,RCM_IGST.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (RCM_IGST,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000209218'.
+     IF BSEG-SHKZG = 'H'.
+       ITAB-RCM_IGST = RCM_IGST * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-RCM_IGST = RCM_IGST.
+    ENDIF.
+
+    CLEAR: BSEG-SHKZG,gross_value.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (itab-gross_value,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   KOART = 'K'.
+*    IF BSEG-SHKZG = 'H'.
+*       ITAB-gross_value = gross_value * -1.
+*    ELSEIF BSEG-SHKZG = 'S'.
+*       ITAB-gross_value = gross_value.
+*    ENDIF.
+
+    CLEAR :BSEG-SHKZG,TDS.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (TDS,BSEG-SHKZG)  WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND  ( HKONT = '0000105105' OR  HKONT = '0000105103').
+    IF BSEG-SHKZG = 'H'.
+       ITAB-TDS = TDS * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-TDS = TDS.
+    ENDIF.
+
+    CLEAR :BSEG-SHKZG,CGST_ND.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (CGST_ND,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000105141'.
+    IF BSEG-SHKZG = 'H'.
+       ITAB-CGST_ND = CGST_ND * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-CGST_ND = CGST_ND.
+    ENDIF.
+
+    CLEAR :BSEG-SHKZG,SGST_ND.
+    SELECT SINGLE WRBTR SHKZG FROM BSEG INTO (SGST_ND,BSEG-SHKZG) WHERE BELNR = ITAB-ACCDOC
+                                                   AND   BUKRS = ITAB-BUKRS
+                                                   AND   GJAHR = ITAB-GJAHR
+                                                   AND   HKONT = '0000105140'.
+
+    IF BSEG-SHKZG = 'H'.
+       ITAB-SGST_ND = SGST_ND * -1.
+    ELSEIF BSEG-SHKZG = 'S'.
+       ITAB-SGST_ND = SGST_ND.
+    ENDIF.
+
+
+    ITAB-CESS = CESSV + CESS1V.
+
+    MODIFY ITAB.
+    CLEAR: ITAB,CESS,CESS1,TDS,BSEG-SHKZG,SGST_ND,CGST_ND,CESSV,CESS1V.
+  ENDLOOP.
+
+******** LOOP AT ITAB.
+********
+********   CLEAR: VENCL, IT_A791[], IT_A791, WA_A791, IT_A792[], IT_A792, WA_A792,
+********             BEDAT, IT_A794[], IT_A794, WA_A794, IT_KONP[], IT_KONP, WA_KONP,WA-MATNR,WA-HSNCO.
+********
+********      SELECT SINGLE VEN_CLASS INTO VENCL FROM J_1IMOVEND WHERE LIFNR EQ ITAB-LIFNR.
+********      SELECT SINGLE * FROM T001W INTO WA_T001W WHERE WERKS EQ ITAB-WERKS.
+*********      SELECT SINGLE BEDAT INTO BEDAT FROM EKKO WHERE EBELN EQ WA_RSEG-EBELN.
+********
+********      BEDAT = ITAB-BUDAT.
+********      IF ITAB-MATNR IS NOT INITIAL.
+********        WA-MATNR = ITAB-MATNR.
+*********        READ TABLE IT_MAKT INTO WA_MAKT WITH KEY MATNR = WA_RSEG-MATNR.
+*********        WA-MAKTX = WA_MAKT-MAKTX.
+*********        IF WA_RSEG-HSN_SAC IS INITIAL.
+********          SELECT SINGLE STEUC FROM MARC INTO WA-HSNCO WHERE MATNR EQ WA-MATNR.
+*********        ENDIF.
+********        IF VENCL IS NOT INITIAL.
+********          SELECT * FROM A792 INTO TABLE IT_A792 WHERE STEUC EQ WA-HSNCO
+********            AND MWSKZ EQ ITAB-MWSKZ AND KAPPL EQ 'TX'
+********            AND DATAB LE BEDAT AND DATBI GE BEDAT AND LLAND EQ 'IN'
+********            AND REGIO EQ ITAB-REGIO AND WKREG EQ WA_T001W-REGIO AND VEN_CLASS EQ VENCL.
+********        ELSE.
+********          SELECT * FROM A792 INTO TABLE IT_A792 WHERE STEUC EQ WA-HSNCO
+********            AND MWSKZ EQ ITAB-MWSKZ AND KAPPL EQ 'TX'
+********            AND DATAB LE BEDAT AND DATBI GE BEDAT AND LLAND EQ 'IN'
+********            AND REGIO EQ ITAB-REGIO AND WKREG EQ WA_T001W-REGIO  AND  VEN_CLASS EQ SPACE.
+********        ENDIF.
+********        IF IT_A792[] IS NOT INITIAL.
+********          SELECT * FROM KONP INTO TABLE IT_KONP FOR ALL ENTRIES IN IT_A792
+********                  WHERE KNUMH EQ IT_A792-KNUMH AND LOEVM_KO NE 'X'.
+********        ELSE.
+********          IF VENCL IS NOT INITIAL.
+********            SELECT * FROM A794 INTO TABLE IT_A794 WHERE STEUC EQ WA-HSNCO
+********              AND WERKS EQ ITAB-WERKS AND KAPPL EQ 'TX' AND DATAB LE BEDAT
+********              AND DATBI GE BEDAT AND LLAND EQ 'IN' AND REGIO EQ ITAB-REGIO
+********              AND WKREG EQ WA_T001W-REGIO AND VEN_CLASS EQ VENCL.
+********          ELSE.
+********            SELECT * FROM A794 INTO TABLE IT_A794 WHERE STEUC EQ WA-HSNCO
+********              AND WERKS EQ ITAB-WERKS AND KAPPL EQ 'TX' AND DATAB LE BEDAT
+********              AND DATBI GE BEDAT AND LLAND EQ 'IN' AND REGIO EQ ITAB-REGIO
+********              AND WKREG EQ WA_T001W-REGIO AND VEN_CLASS EQ VENCL.
+********          ENDIF.
+********          IF IT_A794[] IS NOT INITIAL.
+********            SELECT * FROM KONP INTO TABLE IT_KONP FOR ALL ENTRIES IN IT_A794
+********              WHERE KNUMH EQ IT_A794-KNUMH AND LOEVM_KO NE 'X'.
+********          ENDIF.
+********        ENDIF.
+********      ELSE.
+********        SELECT * FROM A791 INTO TABLE IT_A791 WHERE STEUC EQ WA-HSNCO
+********                  AND MWSKZ EQ ITAB-MWSKZ AND KAPPL EQ 'TX'
+********                  AND DATAB LE BEDAT AND DATBI GE BEDAT
+********                  AND REGIO EQ ITAB-REGIO .
+********        IF IT_A791[] IS NOT INITIAL.
+********          SELECT * FROM KONP INTO TABLE IT_KONP FOR ALL ENTRIES IN IT_A791
+********            WHERE KNUMH EQ IT_A791-KNUMH AND LOEVM_KO NE 'X'.
+********        ENDIF.
+********      ENDIF.
+********
+********      IF IT_KONP[] IS NOT INITIAL.
+********        LOOP AT IT_KONP INTO WA_KONP WHERE KSCHL EQ 'JISG' OR KSCHL EQ 'JICG' OR KSCHL EQ 'JIIG' OR
+********                                           KSCHL EQ 'JIUG' OR KSCHL EQ 'JCIS' OR KSCHL EQ 'JISN' OR
+********                                           KSCHL EQ 'JICN' OR KSCHL EQ 'JIIN' OR KSCHL EQ 'JCIN'.
+********          IF WA_KONP-KSCHL EQ 'JISG' OR WA_KONP-KSCHL EQ 'JISN'  OR WA_KONP-KSCHL EQ 'JIUG'.
+********            IF WA_KONP-KBETR IS NOT INITIAL.
+********              ITAB-SGSTR = WA_KONP-KBETR / 10.
+********              ITAB-SGSTV = ( ITAB-WRBTR * ITAB-SGSTR ) / 100.
+********            ENDIF.
+********          ELSEIF WA_KONP-KSCHL EQ 'JICG' OR WA_KONP-KSCHL EQ 'JICN'.
+********            IF WA_KONP-KBETR IS NOT INITIAL.
+********              ITAB-CGSTR = WA_KONP-KBETR / 10.
+********              ITAB-CGSTV = ( ITAB-WRBTR * ITAB-CGSTR ) / 100.
+********            ENDIF.
+********          ELSEIF WA_KONP-KSCHL EQ 'JIIG' OR WA_KONP-KSCHL EQ 'JIIN'.
+********            IF WA_KONP-KBETR IS NOT INITIAL.
+********              ITAB-IGSTR = WA_KONP-KBETR / 10.
+********              ITAB-IGSTV = ( ITAB-WRBTR * ITAB-IGSTR ) / 100.
+********            ENDIF.
+********          ENDIF.
+********          CLEAR: WA_KONP.
+********        ENDLOOP.
+********      ENDIF.
+********
+********  MODIFY ITAB.
+********  CLEAR ITAB.
+******** ENDLOOP.
+
+*  LOOP AT ITAB.
+*
+*    SELECT DMBTR INTO (ITAB-DMBTR) FROM BSEG WHERE BELNR = ITAB-ACCDOC AND TXGRP = ITAB-BUZEI
+*        AND KTOSL = 'JP4'.
+*MODIFY ITAB.
+*      ENDSELECT.
+*
+*  ENDLOOP.
+*
+*
+*
+*    LOOP AT ITAB.
+*
+*    SELECT DMBTR INTO (ITAB-DMBTR1) FROM BSEG WHERE BELNR = ITAB-ACCDOC AND TXGRP = ITAB-BUZEI AND
+*    KTOSL = 'JP5'.
+*MODIFY ITAB.
+*      ENDSELECT.
+*
+*  ENDLOOP.
+
+
+ENDFORM.                    " PROCESS_DATA
+*&---------------------------------------------------------------------*
+*&      FORM  GET_FCAT
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*      -->P_FORM  TEXT
+*      -->P_GET_DATA  TEXT
+*----------------------------------------------------------------------*
+FORM GET_FCAT  USING    COL_POS   LIKE SY-CUCOL
+                     FNAME     TYPE SLIS_FIELDNAME
+                     SELTEXT_L LIKE  DD03P-SCRTEXT_L
+                     DO_SUM
+                      NO_ZERO.
+  W_FCAT-COL_POS = COL_POS .
+  W_FCAT-FIELDNAME =  FNAME.
+  W_FCAT-SELTEXT_L = SELTEXT_L.
+  W_FCAT-DO_SUM    = DO_SUM.
+  W_FCAT-NO_ZERO   = 'X'.
+  APPEND W_FCAT TO T_FCAT .
+  CLEAR W_FCAT .
+
+ENDFORM.                    " GET_FCAT
+

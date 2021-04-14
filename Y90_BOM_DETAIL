@@ -1,0 +1,219 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_BOM_DETAIL
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT Y90_BOM_DETAIL.
+
+TABLES : MAST, STPO, MAKT.
+
+type-pools: slis.
+
+data: g_repid     like sy-repid,
+      gt_events   type slis_t_event,
+      gt_sort     type slis_t_sortinfo_alv,
+      gs_layout   type slis_layout_alv,
+      gt_fieldcat type slis_t_fieldcat_alv,
+      fieldcat_ln like line of gt_fieldcat.
+
+
+
+TYPES: BEGIN OF ty_mast,
+        matnr LIKE mast-matnr,
+        werks LIKE mast-werks,
+        stlan LIKE mast-stlan,
+        stlnr LIKE mast-stlnr,
+        stlal LIKE mast-stlal,
+        losvn LIKE mast-losvn,
+        losbs LIKE mast-losbs,
+        andat LIKE mast-andat,
+        cslty LIKE mast-cslty,
+      END OF ty_mast.
+
+DATA : IT_MAST TYPE STANDARD TABLE OF TY_MAST,
+       WA_MAST TYPE TY_MAST.
+
+TYPES: BEGIN OF ty_stpo,
+        stlty TYPE stpo-stlty,
+        stlnr TYPE stpo-stlnr,
+        stlkn TYPE stpo-stlkn,
+        stpoz TYPE stpo-stpoz,
+        lkenz TYPE stpo-lkenz,
+        idnrk TYPE stpo-idnrk,
+        posnr TYPE stpo-posnr,
+        fmeng TYPE stpo-fmeng,
+        MENGE TYPE STPO-MENGE,
+        MEINS TYPE STPO-MEINS,
+      END OF ty_stpo.
+
+DATA : IT_STPO TYPE STANDARD TABLE OF TY_STPO,
+       WA_STPO TYPE TY_STPO.
+
+TYPES : BEGIN OF TY_FIN,
+        stlnr TYPE stpo-stlnr,
+        idnrk TYPE stpo-idnrk,
+        MENGE TYPE stpo-MENGE,
+        MEINS TYPE stpo-MEINS,
+        matnr TYPE MAST-matnr,
+        MAKTX TYPE MAKT-MAKTX,
+        MAKTG TYPE MAKT-MAKTX,
+        END OF TY_FIN.
+
+DATA : IT_FIN  TYPE STANDARD TABLE OF TY_FIN,
+       WA_FIN TYPE TY_FIN.
+
+start-of-selection.
+  selection-screen skip 1.
+  selection-screen begin of block v-1 with frame title text-025.
+  select-options:matnr FOR MAST-matnr,
+                 werks FOR MAST-werks OBLIGATORY,
+                 ANDAT FOR MAST-ANDAT.
+  selection-screen skip 1.
+  selection-screen end of block v-1.
+  selection-screen skip 1.
+
+start-of-selection.
+
+  perform data.
+  perform build.
+  perform call_alv.
+
+form data.
+
+SELECT matnr
+       werks
+       stlan
+       stlnr
+       stlal
+       losvn
+       losbs
+       andat
+       cslty FROM MAST INTO TABLE IT_MAST WHERE matnr IN matnr AND
+                                                werks IN werks AND
+                                                ANDAT IN ANDAT.
+
+  IF SY-SUBRC EQ 0.
+   SELECT stlty
+          stlnr
+          stlkn
+          stpoz
+          lkenz
+          idnrk
+          posnr
+          fmeng
+          MENGE
+          MEINS
+     FROM STPO INTO TABLE IT_STPO FOR ALL ENTRIES IN IT_MAST WHERE stlnr EQ IT_MAST-stlnr AND STLTY EQ 'M'.
+
+
+  ENDIF.
+
+  LOOP AT IT_STPO INTO WA_STPO.
+  WA_FIN-stlnr = WA_STPO-stlnr.
+  WA_FIN-idnrk = WA_STPO-idnrk.
+  WA_FIN-MENGE = WA_STPO-MENGE.
+  WA_FIN-MEINS = WA_STPO-MEINS.
+
+  CLEAR WA_MAST.
+  READ TABLE IT_MAST INTO WA_MAST WITH KEY STLNR = WA_STPO-STLNR.
+  WA_FIN-matnr = WA_MAST-matnr.
+
+  CLEAR MAKT-MAKTX.
+  SELECT SINGLE MAKTX FROM MAKT INTO MAKT-MAKTX WHERE MATNR = WA_MAST-matnr.
+  IF SY-SUBRC EQ 0.
+  WA_FIN-MAKTX = MAKT-MAKTX.
+  ENDIF.
+
+  CLEAR MAKT-MAKTG.
+  SELECT SINGLE MAKTX FROM MAKT INTO MAKT-MAKTG WHERE MATNR = WA_stpo-idnrk.
+  IF SY-SUBRC EQ 0.
+  WA_FIN-MAKTG = MAKT-MAKTG.
+  ENDIF.
+
+  APPEND WA_FIN TO IT_FIN.
+  CLEAR WA_FIN.
+
+  ENDLOOP.
+
+ENDFORM.
+
+
+form build .
+
+
+  data: fieldcat_in type slis_fieldcat_alv.
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MATNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'MATERIAL'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MAKTX'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DESCRIPTION'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'IDNRK'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'COMPONENT'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MAKTG'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'COM DESCRIPTION'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MENGE'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'QTY'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  clear fieldcat_in.
+  fieldcat_ln-fieldname = 'MEINS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'UNIT'.
+  fieldcat_ln-no_zero = 'X'.
+  append fieldcat_ln to gt_fieldcat.
+
+  gs_layout-no_input          = 'X'.
+  gs_layout-colwidth_optimize = 'X'.
+  gs_layout-totals_text       = 'TOTALS'(201).
+  gs_layout-zebra             = 'X'.
+
+endform.
+
+
+form call_alv.
+  g_repid = sy-repid.
+  call function 'REUSE_ALV_GRID_DISPLAY'
+    exporting
+      i_callback_program     = g_repid
+*     I_CALLBACK_USER_COMMAND = 'FRM_ALV_USER_COMMAND'
+*      i_callback_top_of_page = 'TOP_OF_PAGE'
+*     I_STRUCTURE_NAME       = 'IT_FIN'
+      is_layout              = gs_layout
+      it_fieldcat            = gt_fieldcat[]
+      i_default              = 'X'
+      i_save                 = 'A'
+*     IS_VARIANT             = GT_VARIANT
+    tables
+      t_outtab               = it_fin.
+endform. "CALL_ALV
+

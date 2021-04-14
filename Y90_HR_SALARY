@@ -1,0 +1,536 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_HR_SALARY
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT y90_hr_salary.
+
+TABLES : pa0008, PA0001, T528T, PA0000.
+
+TYPE-POOLS: slis.
+
+DATA: g_repid     LIKE sy-repid,
+      gt_events   TYPE slis_t_event,
+      gt_sort     TYPE slis_t_sortinfo_alv,
+      gs_layout   TYPE slis_layout_alv,
+      gt_fieldcat TYPE slis_t_fieldcat_alv,
+      fieldcat_ln LIKE LINE OF gt_fieldcat.
+
+DATA : BEGIN OF IT_pa0008 OCCURS 0,
+         pernr TYPE pa0008-pernr,
+         subty TYPE pa0008-subty,
+         objps TYPE pa0008-objps,
+         sprps TYPE pa0008-sprps,
+         endda TYPE pa0008-endda,
+         begda TYPE pa0008-begda,
+         seqnr TYPE pa0008-seqnr,
+         trfgr TYPE pa0008-trfgr,
+         lga01 TYPE pa0008-lga01,
+         bet01 TYPE pa0008-bet01,
+         lga02 TYPE pa0008-lga02,
+         bet02 TYPE pa0008-bet02,
+         lga03 TYPE pa0008-lga03,
+         bet03 TYPE pa0008-bet03,
+         lga04 TYPE pa0008-lga04,
+         bet04 TYPE pa0008-bet04,
+         lga05 TYPE pa0008-lga05,
+         bet05 TYPE pa0008-bet05,
+         lga06 TYPE pa0008-lga06,
+         bet06 TYPE pa0008-bet06,
+         lga07 TYPE pa0008-lga07,
+         bet07 TYPE pa0008-bet07,
+         lga08 TYPE pa0008-lga08,
+         bet08 TYPE pa0008-bet08,
+         lga09 TYPE pa0008-lga09,
+         bet09 TYPE pa0008-bet09,
+         lga10 TYPE pa0008-lga10,
+         bet10 TYPE pa0008-bet10,
+       END OF IT_pa0008.
+
+*DATA : it_pa0008 TYPE STANDARD TABLE OF ty_pa0008,
+*       IT_PA0008 TYPE ty_pa0008.
+
+TYPES : BEGIN OF TY_PA,
+        PERNR TYPE pa0000-PERNR,
+        SUBTY TYPE pa0000-SUBTY,
+        OBJPS TYPE pa0000-OBJPS,
+        SPRPS TYPE pa0000-SPRPS,
+        ENDDA TYPE pa0000-ENDDA,
+        BEGDA TYPE pa0000-BEGDA,
+        SEQNR TYPE pa0000-SEQNR,
+        MASSN TYPE pa0000-MASSN,
+        END OF TY_PA.
+
+DATA : IT_PA TYPE STANDARD TABLE OF TY_PA,
+       WA_PA TYPE TY_PA.
+
+TYPES : BEGIN OF ty_fin,
+          pernr TYPE pa0008-pernr,
+          subty TYPE pa0008-subty,
+          objps TYPE pa0008-objps,
+          sprps TYPE pa0008-sprps,
+          endda TYPE pa0008-endda,
+          begda TYPE pa0008-begda,
+          seqnr TYPE pa0008-seqnr,
+          trfgr TYPE pa0008-trfgr,
+          1BAS  TYPE pa0008-bet01,
+          9HRA  TYPE pa0008-bet02,
+          9220  TYPE pa0008-bet03,
+          M260  TYPE pa0008-bet04,
+          9260  TYPE pa0008-bet05,
+          1SPL  TYPE pa0008-bet06,
+          9221  TYPE pa0008-bet03,
+          9WAL  TYPE pa0008-bet04,
+          9SPL  TYPE pa0008-bet05,
+          M220  TYPE pa0008-bet06,
+          ENAME TYPE PA0001-ENAME,
+          TOTAL TYPE pa0008-bet06,
+          PLSTX TYPE T528T-PLSTX,
+          PLANS TYPE PA0001-PLANS,
+        END OF ty_fin.
+
+DATA : it_fin TYPE STANDARD TABLE OF ty_fin,
+       wa_fin TYPE ty_fin.
+
+*DATA : IT_PA0 TYPE TY_PA0008 OCCURS 0 WITH HEADER LINE.
+
+*----------------------------------------------------------------------*
+SELECTION-SCREEN: BEGIN OF BLOCK block1 WITH FRAME TITLE text-001.
+PARAMETERS : s_endda TYPE pa0008-endda."OBLIGATORY.
+SELECT-OPTIONS : s_pernr FOR pa0008-pernr.
+SELECTION-SCREEN: END OF BLOCK block1.
+
+START-OF-SELECTION.
+
+  PERFORM data.
+  PERFORM build.
+  PERFORM call_alv.
+
+FORM data.
+
+  SELECT pernr
+         subty
+         objps
+         sprps
+         endda
+         begda
+         seqnr
+         trfgr
+         lga01
+         bet01
+         lga02
+         bet02
+         lga03
+         bet03
+         lga04
+         bet04
+         lga05
+         bet05
+         lga06
+         bet06
+         lga07
+         bet07
+         lga08
+         bet08
+         lga09
+         bet09
+         lga10
+         bet10
+     FROM pa0008 INTO TABLE it_pa0008 WHERE endda = s_endda AND pernr IN s_pernr.
+     IF SY-SUBRC EQ 0.
+       SORT IT_PA0008 BY PERNR.
+     ENDIF.
+
+    IF IT_PA0008[] IS NOT INITIAL.
+     SELECT PERNR
+            SUBTY
+            OBJPS
+            SPRPS
+            ENDDA
+            BEGDA
+            SEQNR
+            MASSN FROM PA0000 INTO TABLE IT_PA FOR ALL ENTRIES IN IT_PA0008 WHERE PERNR = IT_PA0008-PERNR AND MASSN = '06'.
+    ENDIF.
+
+
+
+
+  LOOP AT IT_PA0008.
+  CLEAR WA_PA.
+  READ TABLE IT_PA INTO WA_PA WITH KEY PERNR = IT_PA0008-PERNR.
+  IF SY-SUBRC EQ 0.
+   DELETE IT_PA0008[].
+*  DELETE ADJACENT DUPLICATES FROM IT_PA0008[] COMPARING PERNR.
+*  MODIFY IT_PA0008 FROM IT_PA0008.
+  ENDIF.
+  ENDLOOP.
+
+  LOOP AT it_pa0008.
+  WA_FIN-pernr = IT_PA0008-pernr.
+  WA_FIN-trfgr = IT_PA0008-trfgr.
+  WA_FIN-1BAS  = IT_PA0008-bet01.
+
+  CLEAR PA0001-ENAME.
+  SELECT SINGLE ENAME PLANS FROM PA0001 INTO (PA0001-ENAME,PA0001-PLANS) WHERE PERNR = IT_PA0008-pernr.
+  WA_FIN-ENAME = PA0001-ENAME.
+
+  CLEAR T528T-PLSTX.
+  SELECT SINGLE PLSTX FROM T528T INTO T528T-PLSTX WHERE PLANS = PA0001-PLANS.
+  WA_FIN-PLSTX = T528T-PLSTX.
+
+  CLEAR PA0001-BEGDA.
+  SELECT SINGLE MIN( BEGDA ) FROM PA0001 INTO PA0001-BEGDA WHERE PERNR = IT_PA0008-pernr.
+  WA_FIN-BEGDA = PA0001-BEGDA.
+
+  IF IT_PA0008-lga02 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet02.
+    ELSEIF IT_PA0008-lga02 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet02.
+  ENDIF.
+
+    IF IT_PA0008-lga03 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga03 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet03.
+  ENDIF.
+
+   IF IT_PA0008-lga04 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet04.
+    ELSEIF IT_PA0008-lga04 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet04.
+  ENDIF.
+
+    IF IT_PA0008-lga05 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet05.
+    ELSEIF IT_PA0008-lga05 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet05.
+  ENDIF.
+
+    IF IT_PA0008-lga06 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet06.
+    ELSEIF IT_PA0008-lga06 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet06.
+  ENDIF.
+
+    IF IT_PA0008-lga07 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet03.
+    ELSEIF IT_PA0008-lga07 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet07.
+    ELSEIF IT_PA0008-lga07 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet07.
+  ENDIF.
+
+    IF IT_PA0008-lga08 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet08.
+    ELSEIF IT_PA0008-lga08 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet08.
+  ENDIF.
+
+    IF IT_PA0008-lga09 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet09.
+    ELSEIF IT_PA0008-lga09 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet09.
+  ENDIF.
+
+    IF IT_PA0008-lga10 = '9HRA'.
+  WA_FIN-9HRA  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '9220'.
+  WA_FIN-9220  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = 'M260'.
+  WA_FIN-M260  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '9260'.
+  WA_FIN-9260  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '1SPL'.
+  WA_FIN-1SPL  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '9221'.
+  WA_FIN-9221  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '9WAL'.
+  WA_FIN-9WAL  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = '9SPL'.
+  WA_FIN-9SPL  = IT_PA0008-bet10.
+    ELSEIF IT_PA0008-lga10 = 'M220'.
+  WA_FIN-M220  = IT_PA0008-bet10.
+  ENDIF.
+
+ APPEND WA_FIN TO IT_FIN.
+ CLEAR WA_FIN.
+
+ENDLOOP.
+
+SORT IT_FIN BY PERNR.
+
+LOOP AT IT_FIN INTO WA_FIN.
+
+WA_FIN-TOTAL = WA_FIN-1BAS + WA_FIN-9HRA + WA_FIN-9220 + WA_FIN-M260 + WA_FIN-9260 + WA_FIN-1SPL + WA_FIN-9221 + WA_FIN-9WAL + WA_FIN-9SPL + WA_FIN-M220.
+MODIFY IT_FIN FROM WA_FIN.
+CLEAR WA_FIN.
+ENDLOOP.
+
+
+ENDFORM.
+
+FORM build .
+
+
+  DATA: fieldcat_in TYPE slis_fieldcat_alv.
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'PERNR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Person No.'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-OUTPUTLEN = 7.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'ENAME'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Employee Name'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-OUTPUTLEN = 25.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'TRFGR'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Group Area'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'PLSTX'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Position'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'BEGDA'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Joining Date'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '1BAS'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Basic'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9HRA'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'HRA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9220'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'Convience'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'M260'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'CA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9260'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'DA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '1SPL'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'SA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9221'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'FA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9WAL'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'WA'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = '9SPL'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'SA1'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'M220'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'M220'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_in.
+  fieldcat_ln-fieldname = 'TOTAL'.
+  fieldcat_ln-tabname = 'IT_FIN'.
+  fieldcat_ln-no_out = ' '.
+  fieldcat_ln-seltext_l = 'TOTAL'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+ENDFORM.
+
+FORM call_alv.
+  g_repid = sy-repid.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = g_repid
+*     I_CALLBACK_USER_COMMAND = 'FRM_ALV_USER_COMMAND'
+*     i_callback_top_of_page = 'TOP_OF_PAGE'
+*     I_STRUCTURE_NAME   = 'IT_FIN'
+      is_layout          = gs_layout
+      it_fieldcat        = gt_fieldcat[]
+      i_default          = 'X'
+      i_save             = 'A'
+*     IS_VARIANT         = GT_VARIANT
+    TABLES
+      t_outtab           = it_fin.
+ENDFORM. "CALL_ALV
+

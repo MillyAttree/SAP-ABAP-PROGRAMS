@@ -1,0 +1,1083 @@
+**&---------------------------------------------------------------------*
+**& Report  Y90_OUSTANDING_SALE
+**&
+**&---------------------------------------------------------------------*
+**&
+**&
+**&---------------------------------------------------------------------*
+REPORT Y90_OUSTANDING_SALE.
+
+TYPE-POOLS: slis.
+TABLES: knvv.
+
+DATA: g_repid LIKE sy-repid,
+      gs_print            TYPE slis_print_alv,
+      t_list_top_of_page TYPE slis_t_listheader,
+      gt_events           TYPE slis_t_event,
+      i_sort TYPE slis_t_sortinfo_alv,
+      gs_layout           TYPE slis_layout_alv,
+      fcat                TYPE slis_t_fieldcat_alv,
+      flayout             TYPE slis_layout_alv,
+      gt_fieldcat         TYPE slis_t_fieldcat_alv,
+      gs_cell TYPE slis_lineinfo,
+      fieldcat_ln LIKE LINE OF gt_fieldcat.
+
+DATA : gs_variant LIKE disvariant,
+       g_save.
+
+DATA : it_events   TYPE slis_t_event WITH HEADER LINE.
+DATA : l_list(105) TYPE c.        "Store the Top-of-page headings
+DATA : t_formname_top_of_page TYPE slis_formname VALUE 'TOP_OF_PAGE'.
+DATA : it_fieldcat TYPE slis_t_fieldcat_alv WITH HEADER LINE.
+DATA : ls_sort     TYPE TABLE OF slis_sortinfo_alv.
+DATA : wa_sort      LIKE LINE OF ls_sort.
+
+TABLES : bsid ,
+         bsad,
+         j_1iexcdtl,
+         faglflexa.
+
+TYPES : BEGIN OF ty_s,
+        kunnr LIKE bsid-kunnr,
+        zuonr LIKE bsid-zuonr,
+        blart LIKE bsid-blart,
+        budat LIKE bsid-budat,
+        vbeln LIKE bsid-vbeln,
+        bldat LIKE bsid-bldat,
+        xblnr LIKE bsid-xblnr,
+        belnr LIKE bsid-belnr,
+        wrbtr LIKE bsid-wrbtr,
+        shkzg LIKE bsid-shkzg,
+        augbl LIKE bsid-augbl,
+        augdt LIKE bsid-augdt,
+        name1 LIKE kna1-name1,
+        ort01 LIKE kna1-ort01,
+        bzirk LIKE knvv-bzirk,
+        dmbtr LIKE bsid-dmbtr,
+        exnum LIKE j_1iexcdtl-exnum,
+        day1 LIKE vtbbewe-atage,
+        saknr LIKE bsid-saknr,
+        zfbdt LIKE bsid-zfbdt,
+        zterm LIKE bsid-zterm,
+        zbd1t LIKE bsid-zbd1t,
+        zbd2t LIKE bsid-zbd2t,
+        zbd3t LIKE bsid-zbd3t,
+        dd TYPE i,
+        nd LIKE bsid-wrbtr,
+        a_45 LIKE bsid-wrbtr,
+        a_90 LIKE bsid-wrbtr,
+        a_120 LIKE bsid-wrbtr,
+        a_150 LIKE bsid-wrbtr,
+        a_180 LIKE bsid-wrbtr,
+        a_365 LIKE bsid-wrbtr,
+        a_366 LIKE bsid-wrbtr,
+        total LIKE bsid-wrbtr,
+        fecode LIKE pa0001-pernr,
+        fename LIKE pa0001-ename,
+        state(25),
+        prctr type faglflexa-prctr,
+        plant(4),
+*        vkorg type knvv-vkorg,
+*        vtweg type knvv-vtweg,
+*        spart type knvv-spart,
+  ovtotal LIKE bsid-wrbtr,
+   END OF ty_s,
+BEGIN OF ty_t,
+        kunnr TYPE kunnr,
+        nd  TYPE p DECIMALS 2,
+        a_45 TYPE p DECIMALS 2,
+        a_90 TYPE p DECIMALS 2,
+        a_120 TYPE p DECIMALS 2,
+        a_150 TYPE p DECIMALS 2,
+        a_180 TYPE p DECIMALS 2,
+        a_365 TYPE p DECIMALS 2,
+        a_366 TYPE p DECIMALS 2,
+        total TYPE p DECIMALS 2,
+        name1 TYPE name1_gp,
+        ort01 TYPE kna1-ort01,
+        fecode TYPE pa0001-pernr,
+        fename TYPE pa0001-ename,
+        state(25),
+        ph(30),
+          ovtotal type p decimals 2,
+END OF ty_t.
+
+DATA : itab TYPE STANDARD TABLE OF ty_s,
+      witab TYPE ty_s,
+      itab1 TYPE STANDARD TABLE OF ty_s,
+      witab1 TYPE ty_s.
+
+** Bank receipts in BSAD
+DATA : br TYPE STANDARD TABLE OF ty_s,
+      wbr TYPE ty_s.
+
+data : dage TYPE STANDARD TABLE OF ty_s,
+      Wdage TYPE ty_s.
+
+DATA : fl TYPE STANDARD TABLE OF ty_t,
+      wfl TYPE ty_t.
+
+FIELD-SYMBOLS :<f1> TYPE ty_s,
+               <f2> TYPE ty_t.
+
+ASSIGN : witab TO <f1>,
+         wfl  TO <f2>.
+
+DATA : for_1st_age(17) TYPE c,
+       for_2nd_age(17) TYPE c,
+       for_3rd_age(17) TYPE c,
+       for_4th_age(17) TYPE c,
+       for_5th_age(17) TYPE c,
+       for_6th_age(18) TYPE c,
+       for_7th_age(18) TYPE c.
+
+SELECTION-SCREEN:BEGIN OF BLOCK blk1 WITH FRAME TITLE text-000.
+SELECT-OPTIONS : kunnr FOR bsid-kunnr,
+                 vkorg FOR knvv-vkorg,
+                 vtweg FOR knvv-vtweg,
+                 spart FOR knvv-spart.
+SELECTION-SCREEN : BEGIN OF LINE.
+SELECTION-SCREEN : COMMENT (31) text-003.
+PARAMETERS: agedays1(3) TYPE n OBLIGATORY DEFAULT '45',
+            agedays2(3) TYPE n OBLIGATORY DEFAULT '90',
+            agedays3(3) TYPE n OBLIGATORY DEFAULT '120',
+            agedays4(3) TYPE n OBLIGATORY DEFAULT '150',
+            agedays5(3) TYPE n OBLIGATORY DEFAULT '180',
+            agedays6(3) TYPE n OBLIGATORY DEFAULT '365'.
+SELECTION-SCREEN : END OF LINE.
+*SELECT-OPTIONS:bldat FOR bsid-bldat NO INTERVALS NO-EXTENSION OBLIGATORY.
+PARAMETERS : bldat type bsid-bldat.
+SELECTION-SCREEN : END OF BLOCK blk1.
+PARAMETERS : p_sum AS CHECKBOX.
+*SELECTION-SCREEN:BEGIN OF BLOCK blk3 WITH FRAME TITLE text-002.
+*PARAMETERS : base RADIOBUTTON GROUP z1.
+*SELECTION-SCREEN : END OF BLOCK blk3.
+
+
+CONCATENATE '0 -' agedays1 'days' INTO for_1st_age SEPARATED BY space.
+CONCATENATE agedays1 '-' agedays2 'days' INTO for_2nd_age SEPARATED BY
+space.
+CONCATENATE agedays2 '-' agedays3 'days' INTO for_3rd_age SEPARATED BY
+space.
+CONCATENATE agedays3 '-' agedays4 'days' INTO for_4th_age SEPARATED BY
+space.
+CONCATENATE agedays4 '-' agedays5 'days' INTO for_5th_age SEPARATED BY
+space.
+CONCATENATE agedays5 '-' agedays6 'days' INTO for_6th_age SEPARATED BY
+space.
+CONCATENATE 'Above' agedays6 'days' INTO for_7th_age SEPARATED BY space.
+
+***************
+
+START-OF-SELECTION.
+  PERFORM progress USING 'Collecting Open documents...' ' '.
+*  IF no_sec EQ 'X'." O/s without security deposit
+*    SELECT
+*      bsid~kunnr
+*      bsid~zuonr
+*      bsid~blart
+*      bsid~budat
+*      bsid~vbeln
+*      bsid~belnr
+*      bsid~bldat
+*      bsid~xblnr
+*      bsid~dmbtr
+*      bsid~augbl
+*      bsid~augdt
+*      bsid~shkzg
+*      bsid~saknr
+*      knvv~vkorg
+*      knvv~vtweg
+*      knvv~spart
+*     into corresponding fields of table itab
+*     from bsid inner join knvv on bsid~kunnr = knvv~kunnr
+*     where   bsid~kunnr in kunnr
+*     and bsid~bldat <= bldat-low
+*     and bsid~umskz ne 'A' and bsid~umskz ne 'E'
+*     and bsid~budat <= bldat-low
+*     and bsid~hkont ne '0000010250'
+*     and knvv~vkorg in vkorg
+*     and knvv~vtweg in vtweg
+*     and knvv~spart in spart.
+*
+*    SELECT
+*      kunnr
+*      zuonr
+*      blart
+*      budat
+*      vbeln
+*      belnr
+*      bldat
+*      xblnr
+*      dmbtr
+*      augbl
+*      augdt
+*      shkzg
+*      saknr
+*      zfbdt
+*      zterm
+*      zbd1t
+*      zbd2t
+*      zbd3t
+*     INTO CORRESPONDING FIELDS OF TABLE itab
+*     FROM bsid WHERE kunnr IN kunnr
+*     AND bldat <= bldat "bldat-low
+*     AND umskz NE 'A' AND umskz NE 'E'
+*     AND budat <= bldat "bldat-low
+*     AND hkont NE '0000000000'.
+*
+*    PERFORM progress USING 'Collecting cleared documents (Advances)..' ' '.
+*
+*    SELECT
+*      bsad~kunnr
+*      bsad~zuonr
+*      bsad~blart
+*      bsad~budat
+*      bsad~vbeln
+*      bsad~belnr
+*      bsad~bldat
+*      bsad~xblnr
+*      bsad~dmbtr
+*      bsad~augbl
+*      bsad~augdt
+*      bsad~shkzg
+*      bsad~saknr
+*      knvv~vkorg
+*      knvv~vtweg
+*      knvv~spart
+*     into corresponding fields of table itab1
+*     from bsad inner join knvv on bsad~kunnr = knvv~kunnr
+*     where bsad~kunnr in kunnr
+*     and bsad~bldat <= bldat-low
+*     and bsad~umskz ne 'A' and bsad~umskz ne 'E'
+*     and bsad~augdt > bldat-low
+*     and bsad~budat <= bldat-low
+*     and bsad~hkont ne '0000010250'
+*     and knvv~vkorg in vkorg
+*     and knvv~vtweg in vtweg
+*     and knvv~spart in spart.
+*
+*    SELECT
+*      kunnr
+*      zuonr
+*      blart
+*      budat
+*      vbeln
+*      belnr
+*      bldat
+*      xblnr
+*      dmbtr
+*      augbl
+*      augdt
+*      shkzg
+*      saknr
+*      zfbdt
+*      zterm
+*      zbd1t
+*      zbd2t
+*      zbd3t
+*     INTO CORRESPONDING FIELDS OF TABLE itab1
+*     FROM bsad WHERE bsad~kunnr IN kunnr
+*     AND bldat <= bldat "bldat-low
+*     AND umskz NE 'A' AND umskz NE 'E'
+*     AND augdt > bldat "bldat-low
+*     AND budat <= bldat "bldat-low
+*     AND hkont NE '0000000000'.
+*  ELSE.
+*    SELECT
+*      bsid~kunnr
+*      bsid~zuonr
+*      bsid~blart
+*      bsid~budat
+*      bsid~vbeln
+*      bsid~belnr
+*      bsid~bldat
+*      bsid~xblnr
+*      bsid~dmbtr
+*      bsid~augbl
+*      bsid~augdt
+*      bsid~shkzg
+*      bsid~saknr
+*      knvv~vkorg
+*      knvv~vtweg
+*      knvv~spart
+*     into corresponding fields of table itab
+*     from bsid inner join knvv on bsid~kunnr = knvv~kunnr
+*     where   bsid~kunnr in kunnr
+*     and bsid~bldat <= bldat-low
+*     and bsid~umskz ne 'A' and bsid~umskz ne 'E'
+*     and bsid~budat <= bldat-low
+*     and knvv~vkorg in vkorg
+*     and knvv~vtweg in vtweg
+*     and knvv~spart in spart.
+    SELECT
+      kunnr
+      zuonr
+      blart
+      budat
+      vbeln
+      belnr
+      bldat
+      xblnr
+      dmbtr
+      augbl
+      augdt
+      shkzg
+      saknr
+      zfbdt
+      zterm
+      zbd1t
+      zbd2t
+      zbd3t
+     INTO CORRESPONDING FIELDS OF TABLE itab
+     FROM bsid WHERE kunnr IN kunnr
+     AND bldat <= bldat"bldat-low
+     AND umskz NE 'A' AND umskz NE 'E'
+     AND budat <= bldat ."bldat-low.
+
+    PERFORM progress USING 'Collecting cleared documents (Advances)..' ' '.
+
+*    SELECT
+*      bsad~kunnr
+*      bsad~zuonr
+*      bsad~blart
+*      bsad~budat
+*      bsad~vbeln
+*      bsad~belnr
+*      bsad~bldat
+*      bsad~xblnr
+*      bsad~dmbtr
+*      bsad~augbl
+*      bsad~augdt
+*      bsad~shkzg
+*      bsad~saknr
+*      knvv~vkorg
+*      knvv~vtweg
+*      knvv~spart
+*     into corresponding fields of table itab1
+*     from bsad inner join knvv on bsad~kunnr = knvv~kunnr
+*     where bsad~kunnr in kunnr
+*     and bsad~bldat <= bldat-low
+*     and bsad~umskz ne 'A' and bsad~umskz ne 'E'
+*     and bsad~augdt > bldat-low
+*     and bsad~budat <= bldat-low
+*     and knvv~vkorg in vkorg
+*     and knvv~vtweg in vtweg
+*     and knvv~spart in spart.
+    SELECT
+      kunnr
+      zuonr
+      blart
+      budat
+      vbeln
+      belnr
+      bldat
+      xblnr
+      dmbtr
+      augbl
+      augdt
+      shkzg
+      saknr
+      zfbdt
+      zterm
+      zbd1t
+      zbd2t
+      zbd3t
+     INTO CORRESPONDING FIELDS OF TABLE itab1
+     FROM bsad WHERE kunnr IN kunnr
+     AND bldat <= bldat"bldat-low
+     AND umskz NE 'A' AND umskz NE 'E'
+     AND augdt > bldat "bldat-low
+     AND budat <= bldat. "bldat-low.
+*  ENDIF.
+
+
+
+  LOOP AT itab1 INTO witab1  WHERE augdt > bldat."bldat-low.
+    MOVE-CORRESPONDING witab1 TO <f1>.MOVE-CORRESPONDING witab1 TO wbr.
+    IF witab1-blart = 'BR' AND witab1-shkzg = 'H'. "Bank Receipt
+      wbr-vbeln = <f1>-zuonr.
+      APPEND wbr TO br.
+    ELSE.
+      APPEND <f1> TO itab.
+    ENDIF.
+    CLEAR:  wbr,<f1>.
+  ENDLOOP..
+* Adjusting the bill balance against amount receipt via BR document type 24.10.15
+  SORT itab BY kunnr vbeln.
+  SORT br BY kunnr vbeln.
+  DATA :brt TYPE p DECIMALS 2.
+
+  LOOP AT itab ASSIGNING <f1> WHERE vbeln IS NOT INITIAL.
+    READ TABLE br INTO wbr WITH KEY kunnr = <f1>-kunnr
+                                    vbeln = <f1>-vbeln.
+    IF sy-subrc EQ 0.
+      LOOP AT br INTO wbr WHERE kunnr = <f1>-kunnr AND vbeln  = <f1>-vbeln.
+        brt = brt + wbr-dmbtr.
+        DELETE br.
+      ENDLOOP.
+      <f1>-dmbtr = <f1>-dmbtr - brt.
+      CLEAR brt.
+    ENDIF.
+  ENDLOOP.
+** Now moving balance Adhoc receipts to itab i.e. main file.
+  LOOP AT br INTO wbr.
+    MOVE-CORRESPONDING wbr TO <f1>.
+*    <f1>-vbeln = ' '.
+    APPEND <f1> TO itab.
+    CLEAR wbr.
+  ENDLOOP.
+
+  SORT itab BY bldat.
+
+  DATA : msg TYPE char255,
+         ndl TYPE i.
+
+  SORT itab BY kunnr bldat.
+  DATA : xregio TYPE regio.
+  LOOP AT itab ASSIGNING <f1>.
+    IF <f1>-vbeln IS INITIAL.
+      MOVE <f1>-xblnr TO <f1>-vbeln.
+    ENDIF.
+    MOVE <f1>-vbeln TO msg.
+    CONDENSE msg.
+    CONCATENATE 'Processing : ' msg INTO msg SEPARATED BY space.
+    PERFORM progress USING msg ' '.
+
+    ndl = ( <f1>-zbd1t + <f1>-zbd2t + <f1>-zbd3t ).
+
+    SELECT SINGLE regio FROM kna1 INTO xregio
+    WHERE kunnr = <f1>-kunnr.
+
+    IF <f1>-shkzg = 'H'.
+      <f1>-dmbtr = <f1>-dmbtr * -1.
+    ELSE.
+      <f1>-dmbtr = <f1>-dmbtr * 1.
+    ENDIF.
+
+*    IF base EQ 'X'.
+      CALL FUNCTION 'FIMA_DAYS_AND_MONTHS_AND_YEARS'
+        EXPORTING
+          i_date_from = <f1>-zfbdt
+          i_date_to   = bldat "bldat-low
+        IMPORTING
+          e_days      = <f1>-day1.
+
+    MOVE <f1>-day1 TO <f1>-dd.
+
+* Preparing Age Brackets
+* Not Due upto 60 days => for dealers.saknr  NEQ '0000033010'.
+    IF <f1>-dd GE 0 AND <f1>-dd LE ndl.
+      <f1>-nd = <f1>-dmbtr.
+    ENDIF.
+    IF <f1>-dd < ( agedays1 + ndl ) AND <f1>-dd > ndl.
+      MOVE <f1>-dmbtr TO <f1>-a_45.
+    ENDIF.
+    IF <f1>-dd < ( agedays2 + ndl ) AND <f1>-dd > ( agedays1 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_90.
+    ENDIF.
+    IF <f1>-dd < ( agedays3 + ndl ) AND <f1>-dd > ( agedays2 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_120.
+    ENDIF.
+    IF <f1>-dd < ( agedays4 + ndl ) AND <f1>-dd > ( agedays3 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_150.
+    ENDIF.
+    IF <f1>-dd < ( agedays5 + ndl ) AND <f1>-dd > ( agedays4 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_180.
+    ENDIF.
+    IF <f1>-dd < ( agedays6 + ndl ) AND <f1>-dd > ( agedays5 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_365.
+    ENDIF.
+    IF <f1>-dd > ( agedays6 + ndl ).
+      MOVE <f1>-dmbtr TO <f1>-a_366.
+    ENDIF.
+    ">
+* Preparing Age Brackets ====> Blocked on 28.10.15
+*    IF <f1>-dd <= agedays1 AND <f1>-dd => 0.
+*      MOVE <f1>-dmbtr TO <f1>-a_45.
+*    ENDIF.
+*    IF <f1>-dd <= agedays2 AND <f1>-dd > agedays1.
+*      MOVE <f1>-dmbtr TO <f1>-a_90.
+*    ENDIF.
+*    IF <f1>-dd <= agedays3 AND <f1>-dd > agedays2.
+*      MOVE <f1>-dmbtr TO <f1>-a_120.
+*    ENDIF.
+*    IF <f1>-dd <= agedays4 AND <f1>-dd > agedays3.
+*      MOVE <f1>-dmbtr TO <f1>-a_150.
+*    ENDIF.
+*    IF <f1>-dd <= agedays5 AND <f1>-dd > agedays4.
+*      MOVE <f1>-dmbtr TO <f1>-a_180.
+*    ENDIF.
+*    IF <f1>-dd <= agedays6 AND <f1>-dd > agedays5.
+*      MOVE <f1>-dmbtr TO <f1>-a_365.
+*    ENDIF.
+*    IF <f1>-dd > agedays6.
+*      MOVE <f1>-dmbtr TO <f1>-a_366.
+*    ENDIF.
+
+    <f1>-total = <f1>-nd + <f1>-a_45 + <f1>-a_90 +
+                 <f1>-a_120 + <f1>-a_150 +
+                 <f1>-a_180 + <f1>-a_365 +
+                 <f1>-a_366.
+
+*    <f1>-total = <f1>-a_45 + <f1>-a_90 +
+*                 <f1>-a_120 + <f1>-a_150 +
+*                 <f1>-a_180 + <f1>-a_365 +
+*                 <f1>-a_366.
+*
+    SELECT DISTINCT  kna1~name1  kna1~ort01 knvv~bzirk
+               INTO (<f1>-name1,<f1>-ort01,<f1>-bzirk)
+               FROM knb1 INNER JOIN kna1 ON knb1~kunnr = kna1~kunnr
+               INNER JOIN knvv ON knvv~kunnr = kna1~kunnr
+               WHERE kna1~kunnr = <f1>-kunnr
+                 AND kna1~spras = 'EN'.
+    ENDSELECT.
+
+    SELECT SINGLE exnum INTO <f1>-exnum FROM j_1iexcdtl
+    WHERE rdoc2 = <f1>-vbeln.
+
+ "   SELECT SINGLE fecode FROM zhcl_fedelaer
+  "   INTO <f1>-fecode
+  "    WHERE kunnr = <f1>-kunnr.
+
+    "IF <f1>-fecode IS NOT INITIAL.
+    "  SELECT SINGLE fename FROM zhcl_femaster
+     "  INTO <f1>-fename
+     "   WHERE fecode = <f1>-fecode.
+    "ENDIF.
+  ENDLOOP.
+*  IF delcren EQ 'X'. " Delete Credit Entries from Outstanding.
+*    DELETE itab WHERE total LT 0.
+*  ENDIF.
+  Export itab = ITAB to MEMORY id 'CUSTO'.
+  IF p_sum EQ 'X'.
+    SORT itab BY kunnr.
+    LOOP AT itab INTO witab."ASSIGNING <f1>.
+      MOVE witab-kunnr TO wfl-kunnr.
+      MOVE witab-nd TO wfl-nd.
+      MOVE witab-a_45 TO wfl-a_45.
+      MOVE witab-a_90 TO wfl-a_90.
+      MOVE witab-a_120 TO wfl-a_120.
+      MOVE witab-a_150 TO wfl-a_150.
+      MOVE witab-a_180 TO wfl-a_180.
+      MOVE witab-a_365 TO wfl-a_365.
+      MOVE witab-a_366 TO wfl-a_366.
+      MOVE witab-total TO wfl-total.
+      COLLECT wfl INTO fl.
+    ENDLOOP.
+    SORT fl BY kunnr.
+    DATA : zregio TYPE regio,
+           tel1 TYPE telf1,
+           tel2 TYPE telf2.
+    LOOP AT fl ASSIGNING <f2>.
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT' "Conversion exit ALPHA, external->internal
+        EXPORTING
+          input  = <f2>-kunnr                    "Must be character
+        IMPORTING
+          output =  <f2>-kunnr.
+
+      SELECT SINGLE name1 ort01 regio telf1 telf2 FROM kna1
+        INTO (<f2>-name1,<f2>-ort01,zregio,tel1,tel2)
+        WHERE kunnr = <f2>-kunnr.
+
+      IF zregio IS NOT INITIAL.
+        SELECT SINGLE bezei INTO <f2>-state
+          FROM t005u WHERE spras EQ 'EN'
+          AND land1 EQ 'IN' AND bland = zregio.
+      ENDIF.
+      CONCATENATE tel1 ',' tel2 INTO <f2>-ph.
+      CLEAR :zregio,tel1,tel2.
+
+    "  SELECT SINGLE fecode FROM zhcl_fedelaer
+     "  INTO <f2>-fecode
+     "   WHERE kunnr = <f2>-kunnr.
+
+    "  IF <f2>-fecode IS NOT INITIAL.
+    "    SELECT SINGLE fename FROM zhcl_femaster
+    "     INTO <f2>-fename
+      "    WHERE fecode = <f2>-fecode.
+     " ENDIF.
+    ENDLOOP.
+    DELETE fl WHERE total EQ 0.
+
+************** by CS *********************
+data: ovtotal type p decimals 2.
+*if ovrd = 'X'.
+ loop at fl into wfl.
+wfl-ovtotal = wfl-total - ( wfl-nd + wfl-a_45 ).
+modify fl from wfl transporting ovtotal.
+endloop.
+*endif.
+*******************************************
+    PERFORM builds.
+    PERFORM get_events.
+    PERFORM sub_comment_build USING t_list_top_of_page.
+    PERFORM call_alvs.
+  ELSE.
+    SORT itab BY kunnr bldat.
+    PERFORM build.
+    PERFORM get_events.
+    PERFORM sub_comment_build USING t_list_top_of_page.
+    PERFORM call_alv.
+  ENDIF.
+*&------------Form  BUILD
+FORM build.
+  DATA: fieldcat_in TYPE slis_fieldcat_alv.
+  REFRESH gt_fieldcat.
+
+*  CLEAR fieldcat_ln.
+*  fieldcat_ln-fieldname = 'STATE'.
+*  fieldcat_ln-tabname   = 'ITAB'.
+*  fieldcat_ln-seltext_l = 'STATE'.
+*  APPEND fieldcat_ln TO gt_fieldcat.
+*
+*  CLEAR fieldcat_ln.
+*  fieldcat_ln-fieldname = 'FECODE'.
+*  fieldcat_ln-tabname   = 'ITAB'.
+*  fieldcat_ln-seltext_l = 'FE-Code'.
+*  fieldcat_ln-no_zero = 'X'.
+*  APPEND fieldcat_ln TO gt_fieldcat.
+*
+*  CLEAR fieldcat_ln.
+*  fieldcat_ln-fieldname = 'FENAME'.
+*  fieldcat_ln-tabname   = 'ITAB'.
+*  fieldcat_ln-seltext_l = 'NE-Name'.
+*  fieldcat_ln-no_zero = 'X'.
+*  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'KUNNR'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Customer Code'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'NAME1'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Customer Name'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'ORT01'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'City'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'VBELN'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Invoice No'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'BUDAT'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Invoice date'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'BELNR'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Doc No'.
+  fieldcat_ln-no_zero = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'BLDAT'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'Doc. Date'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+*  clear fieldcat_ln.
+*  fieldcat_ln-fieldname = 'exnum'.
+*  fieldcat_ln-tabname   = 'itab'.
+*  fieldcat_ln-seltext_l = 'ex. invoice no'.
+*  fieldcat_ln-no_zero = 'x'.
+*  append fieldcat_ln to gt_fieldcat.
+*
+*  clear fieldcat_ln.
+*  fieldcat_ln-fieldname = 'bzirk'.
+*  fieldcat_ln-tabname   = 'itab'.
+*  fieldcat_ln-seltext_l = 'zone'.
+*  append fieldcat_ln to gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'ND'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'NotDue'."upto 60
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_45'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_1st_age ."'0 - 45'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_90'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_2nd_age. "'45 - 90'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_120'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_3rd_age."'90 - 120'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_150'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_4th_age ."'120 - 150'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_180'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_5th_age. " '150 - 180'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_365'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_6th_age." '180 - 365'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'A_366'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = for_7th_age." '> 365'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  CLEAR fieldcat_ln.
+  fieldcat_ln-fieldname = 'TOTAL'.
+  fieldcat_ln-tabname   = 'ITAB'.
+  fieldcat_ln-seltext_l = 'O/S AMT'.
+  fieldcat_ln-no_zero = 'X'.
+  fieldcat_ln-do_sum = 'X'.
+  APPEND fieldcat_ln TO gt_fieldcat.
+
+  g_repid = sy-repid.
+  gs_variant-report = g_repid.
+  g_save           = 'A'.
+
+ENDFORM.                    "BUILD
+
+*&---------------Form  CALL_ALV
+DATA t_layout TYPE slis_layout_alv.
+
+*&---------------------------------------------------------------------*
+*&      Form  CALL_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM call_alv.
+  t_layout-zebra = 'X'.
+  t_layout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = g_repid
+      i_save             = g_save
+      is_variant         = gs_variant
+      is_layout          = t_layout
+      it_fieldcat        = gt_fieldcat[]
+      it_events          = it_events[]
+    TABLES
+      t_outtab           = itab
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+
+ENDFORM.                    "CALL_ALV
+*&      Form  GET_EVENTS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_events .
+
+  CALL FUNCTION 'REUSE_ALV_EVENTS_GET'
+    EXPORTING
+      i_list_type     = 0
+    IMPORTING
+      et_events       = it_events[]
+    EXCEPTIONS
+      list_type_wrong = 1
+      OTHERS          = 2.
+
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  READ TABLE it_events WITH KEY name = slis_ev_top_of_page
+                                INTO it_events.
+  IF sy-subrc = 0.
+
+    MOVE t_formname_top_of_page TO it_events-form.
+    APPEND it_events.
+
+  ENDIF.
+
+ENDFORM.                    " get_events
+
+*&---------------------------------------------------------------------*
+*&      Form  sub_comment_build
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_T_LIST_TOP_OF_PAGE  text
+*----------------------------------------------------------------------*
+FORM sub_comment_build  USING  i_top_of_page TYPE slis_t_listheader.
+
+  DATA: ls_line TYPE slis_listheader,:
+        dt(10),
+        txt(255).
+
+  WRITE bldat TO dt.
+  CONCATENATE 'Customer Outstanding as on :' dt INTO txt SEPARATED BY space.
+  CONDENSE txt.
+  CLEAR ls_line.
+
+  ls_line-typ  = 'H'.
+  ls_line-info = 'Avon Steel Industries'.
+  APPEND ls_line TO i_top_of_page.
+
+  ls_line-typ  = 'S'.
+  ls_line-info = txt."'Customer Ageing'.
+  APPEND ls_line TO i_top_of_page.
+
+  CLEAR: ls_line, l_list.
+
+  ls_line-typ  = 'S'.
+  ls_line-info = l_list.
+  APPEND ls_line TO i_top_of_page.
+
+ENDFORM.                    " sub_comment_build
+*&---------------------------------------------------------------------*
+*&      Form  top_of_page
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM top_of_page.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = t_list_top_of_page.
+
+
+ENDFORM.                    "TOP_OF_PAGE
+*&---------------------------------------------------------------------*
+*&      Form  BUILDS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM builds .
+  DATA: fieldcat_s TYPE slis_fieldcat_alv.
+  REFRESH fcat.
+
+*  CLEAR fieldcat_s.
+*  fieldcat_s-fieldname = 'STATE'.
+*  fieldcat_s-tabname   = 'FL'.
+*  fieldcat_s-seltext_l = 'STATE'.
+*  fieldcat_s-no_zero = 'X'.
+*  APPEND fieldcat_s TO fcat.
+*
+*  CLEAR fieldcat_s.
+*  fieldcat_s-fieldname = 'FECODE'.
+*  fieldcat_s-tabname   = 'FL'.
+*  fieldcat_s-seltext_l = 'FE-CODE'.
+*  fieldcat_s-no_zero = 'X'.
+*  APPEND fieldcat_s TO fcat.
+*
+*  CLEAR fieldcat_s.
+*  fieldcat_s-fieldname = 'FENAME'.
+*  fieldcat_s-tabname   = 'FL'.
+*  fieldcat_s-seltext_l = 'FE-Name'.
+*  fieldcat_s-no_zero = 'X'.
+*  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'KUNNR'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'Customer Code'.
+  fieldcat_s-no_zero = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'NAME1'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'Customer Name'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'ORT01'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'City'.
+  APPEND fieldcat_s TO fcat.
+
+*if ovrd = 'X'.
+*  CLEAR fieldcat_s.
+*  fieldcat_s-fieldname = ' '.
+*else.
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'ND'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'Not Due' ."'0 - 60'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_45'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_1st_age ."'0 - 45'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+*ENDIF.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_90'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_2nd_age. "'45 - 90'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_120'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_3rd_age."'90 - 120'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_150'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_4th_age ."'120 - 150'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_180'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_5th_age. " '150 - 180'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_365'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_6th_age." '180 - 365'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'A_366'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = for_7th_age." '> 365'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+
+*  IF ovrd = 'X'.
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'OVTOTAL'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'O/D Total'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+*ELSE.
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'TOTAL'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'Total O/s'.
+  fieldcat_s-no_zero = 'X'.
+  fieldcat_s-do_sum = 'X'.
+  APPEND fieldcat_s TO fcat.
+*ENDIF.
+  CLEAR fieldcat_s.
+  fieldcat_s-fieldname = 'PH'.
+  fieldcat_s-tabname   = 'FL'.
+  fieldcat_s-seltext_l = 'Phones'.
+  APPEND fieldcat_s TO fcat.
+
+
+*  G_REPID = SY-REPID.
+*  GS_VARIANT-REPORT = G_REPID.
+*  G_SAVE           = 'A'.
+ENDFORM.                    " BUILDS
+*&---------------------------------------------------------------------*
+*&      Form  CALL_ALVS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM call_alvs .
+  flayout-zebra = 'X'.
+  flayout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      i_save             = 'A'"G_SAVE
+      is_variant         = gs_variant
+      is_layout          = flayout
+      it_fieldcat        = fcat[]
+      it_events          = it_events[]
+    TABLES
+      t_outtab           = fl
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+ENDFORM.                    " CALL_ALVS
+
+*&---------------------------------------------------------------------*
+*&      Form  PROGRESS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->TEXT       text
+*      -->PERCENTAGE text
+*----------------------------------------------------------------------*
+FORM progress USING text       TYPE char255
+                    percentage TYPE char255.
+  CONDENSE: text,
+            percentage.
+  CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+    EXPORTING
+      percentage = percentage
+      text       = text.
+ENDFORM.                    " PROGRESS TEXT MESSAGE AT STATUS BAR
+

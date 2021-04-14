@@ -1,0 +1,637 @@
+
+*&---------------------------------------------------------------------*
+*& Report  Y90_COMPLETE_SALES_DOC
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT y90_complete_sales_doc.
+
+TYPE-POOLS:slis.
+
+TABLES : vbak, vbap, konv, kna1, makt, vbrk, vbrp, cdhdr, cdpos.
+
+DATA: it_fieldcat            TYPE slis_t_fieldcat_alv.
+DATA: wa_fieldcat            LIKE LINE OF it_fieldcat.
+DATA: t_list_top_of_page     TYPE slis_t_listheader.
+DATA: it_events              TYPE slis_t_event WITH HEADER LINE.
+DATA: g_save                 TYPE c VALUE 'A'.
+DATA: gt_sort                TYPE slis_t_sortinfo_alv.
+DATA: gx_save                TYPE c VALUE 'A'.
+DATA: gx_variant             TYPE disvariant.
+DATA: g_variant              TYPE disvariant.
+DATA: gs_layout              TYPE slis_layout_alv.
+DATA: t_formname_top_of_page TYPE slis_formname VALUE 'TOP_OF_PAGE'.
+DATA: t_i_event              TYPE slis_alv_event.
+
+TYPES : BEGIN OF ty_vbak,
+          vbeln LIKE vbak-vbeln,
+          audat LIKE vbak-audat,
+          vbtyp LIKE vbak-vbtyp,
+          auart LIKE vbak-auart,
+          ihrez LIKE vbak-ihrez,
+          kunnr LIKE vbak-kunnr,
+          xblnr LIKE vbak-xblnr,
+          lifsk LIKE vbak-lifsk,
+          vkorg LIKE vbak-vkorg,
+          knumv LIKE vbak-knumv,
+        END OF ty_vbak.
+
+DATA : it_vbak TYPE STANDARD TABLE OF ty_vbak,
+       wa_vbak TYPE ty_vbak.
+
+TYPES : BEGIN OF ty_vbap,
+          vbeln  LIKE vbap-vbeln,
+          posnr  LIKE vbap-posnr,
+          matnr  LIKE vbap-matnr,
+          spart  LIKE vbap-spart,
+          werks  LIKE vbap-werks,
+          kmpmg  LIKE vbap-kmpmg,
+          kwmeng LIKE vbap-kwmeng,
+          vrkme  LIKE vbap-vrkme,
+        END OF ty_vbap.
+
+DATA : it_vbap TYPE STANDARD TABLE OF ty_vbap,
+       wa_vbap TYPE ty_vbap.
+
+TYPES : BEGIN OF ty_cdpos,
+          objectclas LIKE cdpos-objectclas,
+          objectid   LIKE cdpos-objectid,
+          changenr   LIKE cdpos-changenr,
+          tabname    LIKE cdpos-tabname,
+          tabkey     LIKE cdpos-tabkey,
+          fname      LIKE cdpos-fname,
+          chngind    LIKE cdpos-chngind,
+        END OF ty_cdpos.
+
+DATA : it_cdpos TYPE STANDARD TABLE OF ty_cdpos,
+       wa_cdpos TYPE ty_cdpos.
+
+TYPES : BEGIN OF ty_cdhdr,
+          objectclas LIKE cdhdr-objectclas,
+          objectid   LIKE cdhdr-objectid,
+          changenr   LIKE cdhdr-changenr,
+          udate      LIKE cdhdr-udate,
+        END OF ty_cdhdr.
+
+DATA : it_cdhdr TYPE STANDARD TABLE OF ty_cdhdr,
+       wa_cdhdr TYPE ty_cdhdr.
+
+TYPES: BEGIN OF ty_vbep,
+         vbeln LIKE vbap-vbeln,
+         posnr LIKE vbap-posnr,
+         lifsp LIKE vbep-lifsp,
+         etenr LIKE vbep-etenr,
+         edatu LIKE vbep-edatu,
+       END OF ty_vbep,
+
+       BEGIN OF ty_vb,
+         vbeln LIKE vbap-vbeln,
+         posnr LIKE vbap-posnr,
+         lifsp LIKE vbep-lifsp,
+         etenr LIKE vbep-etenr,
+       END OF ty_vb,
+
+       BEGIN OF ty_vbrk,
+         vbeln LIKE vbrk-vbeln,
+         fkart LIKE vbrk-fkart,
+         fkdat LIKE vbrk-fkdat,
+         vkorg LIKE vbrk-vkorg,
+         spart LIKE vbrk-spart,
+         kunrg LIKE vbrk-kunrg,
+       END OF ty_vbrk,
+
+       BEGIN OF ty_vbrp,
+         vbeln LIKE vbrp-vbeln,
+         posnr LIKE vbrp-posnr,
+         fkimg LIKE vbrp-fkimg,
+         werks LIKE vbrp-werks,
+         aubel LIKE vbrp-aubel,
+         aupos LIKE vbrp-aupos,
+         matnr LIKE mara-matnr,
+       END OF ty_vbrp,
+
+       BEGIN OF ty_konv,
+         knumv LIKE konv-knumv,
+         kposn LIKE konv-kposn,
+         stunr LIKE konv-stunr,
+         zaehk LIKE konv-zaehk,
+         kschl LIKE konv-kschl,
+         kbetr LIKE konv-kbetr,
+       END OF ty_konv,
+
+       BEGIN OF ty_fin,
+         vbeln      LIKE vbap-vbeln,
+         posnr      LIKE vbap-posnr,
+         audat      LIKE vbak-audat,
+         spart      LIKE vbap-spart,
+         xblnr      LIKE vbak-xblnr,
+         ord_qty    LIKE vbap-kwmeng,
+         bil_qty    LIKE vbap-lsmeng,
+         kwmeng     LIKE vbap-kwmeng,
+         excess_qty LIKE vbap-kwmeng,
+         short_qty  LIKE vbap-kwmeng,
+         so_rate    LIKE konv-kbetr,
+         name1      LIKE kna1-name1,
+         regio      LIKE kna1-regio,
+         maktx      LIKE makt-maktx,
+         kunnr      LIKE vbak-kunnr,
+         lifsp      LIKE vbep-lifsp,
+         fkdat      LIKE vbrk-fkdat,
+         edatu      LIKE vbep-edatu,
+         matnr      LIKE mara-matnr,
+       END OF ty_fin,
+
+       BEGIN OF ty_final,
+         mat     LIKE mara-matnr,
+         maktx   LIKE makt-maktx,
+         ktgrm   LIKE mvke-ktgrm,
+         werks   LIKE mard-werks,
+         lgort   LIKE mard-lgort,
+         labst   LIKE mard-labst,
+         ih00    LIKE mard-labst,
+         fg00    LIKE mard-labst,
+         tot     LIKE mard-labst,
+         so_rate LIKE konv-kbetr,
+         ord_qty LIKE vbap-kwmeng,
+         bil_qty LIKE vbap-lsmeng,
+         pen_qty LIKE vbap-lsmeng,
+         fre_qty LIKE vbap-kwmeng,
+         matnr   LIKE mara-matnr,
+       END OF ty_final.
+
+DATA:   it_vbep  TYPE STANDARD TABLE OF ty_vbep,
+        wa_vbep  TYPE ty_vbep,
+        it_vb    TYPE STANDARD TABLE OF ty_vb,
+        wa_vb    TYPE ty_vb,
+        it_vbrp  TYPE STANDARD TABLE OF ty_vbrp,
+        wa_vbrp  TYPE ty_vbrp,
+        it_vbrp1 TYPE STANDARD TABLE OF ty_vbrp,
+        wa_vbrp1 TYPE ty_vbrp,
+        it_vbrk  TYPE STANDARD TABLE OF ty_vbrk,
+        wa_vbrk  TYPE ty_vbrk,
+        it_vbrk1 TYPE STANDARD TABLE OF ty_vbrk,
+        wa_vbrk1 TYPE ty_vbrk,
+        it_konv  TYPE STANDARD TABLE OF ty_konv,
+        wa_konv  TYPE ty_konv,
+        it_final TYPE STANDARD TABLE OF ty_final,
+        it_fin   TYPE STANDARD TABLE OF ty_fin,
+        wa_final TYPE ty_final,
+        wa_fin   TYPE ty_fin.
+
+DATA :  ord_qty    LIKE vbap-kwmeng,
+        pen_qty    LIKE vbap-kwmeng,
+        fre_qty    LIKE vbap-kwmeng,
+        bil_qty    LIKE vbap-lsmeng,
+        sub_qty    LIKE vbap-kwmeng,
+        add_qty    LIKE vbap-lsmeng,
+        excess_qty LIKE vbap-kwmeng,
+        short_qty  LIKE vbap-kwmeng,
+        so_rate    LIKE konv-kbetr,
+        tabkey1    LIKE cdpos-tabkey.
+
+SELECTION-SCREEN : BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+SELECT-OPTIONS : v_vkorg FOR vbrk-vkorg DEFAULT '1000'.
+SELECT-OPTIONS : v_fkdat FOR vbrk-fkdat.
+SELECT-OPTIONS : v_kunrg FOR vbrk-kunrg." NO-EXTENSION NO INTERVALS.
+SELECT-OPTIONS : v_spart FOR vbrk-spart.
+SELECT-OPTIONS : v_matnr FOR vbrp-matnr.
+SELECTION-SCREEN : END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+  PERFORM data.
+  PERFORM disp.
+  PERFORM alv.
+
+FORM data.
+
+  SELECT vbeln
+         fkart
+         fkdat
+         vkorg
+         spart
+         kunrg
+         FROM vbrk INTO TABLE it_vbrk1
+         WHERE vkorg IN v_vkorg AND
+               fkdat IN v_fkdat AND
+               kunrg IN v_kunrg AND
+               spart IN v_spart.
+
+
+   IF IT_VBRK1 IS NOT INITIAL.
+   SELECT VBELN
+          POSNR
+          FKIMG
+          WERKS
+          AUBEL
+          AUPOS
+          MATNR FROM VBRP INTO TABLE IT_VBRP1
+                FOR ALL ENTRIES IN IT_VBRK1
+                WHERE VBELN = IT_VBRK1-VBELN AND MATNR IN V_MATNR.
+   ENDIF.
+
+  IF NOT it_vbrp1 IS INITIAL.
+
+    SELECT vbeln
+           posnr
+           matnr
+           spart
+           werks
+           kmpmg
+           kwmeng
+           vrkme FROM vbap INTO TABLE it_vbap FOR ALL ENTRIES IN it_vbrp1
+                                            WHERE vbeln EQ it_vbrp1-aubel
+                                             AND  posnr EQ it_vbrp1-aupos
+                                             AND  matnr EQ it_vbrp1-matnr.
+  ENDIF.
+
+  IF it_vbap IS NOT INITIAL.
+    SELECT vbeln
+           posnr
+           fkimg
+           werks
+           aubel
+           aupos
+           matnr FROM vbrp INTO TABLE it_vbrp
+                 FOR ALL ENTRIES IN it_vbAP
+     WHERE aubel = it_vbap-vbeln AND aupos = it_vbap-posnr and matnr IN v_matnr.
+
+     SELECT vbeln
+        audat
+        vbtyp
+        auart
+        ihrez
+        kunnr
+        xblnr
+        lifsk
+        vkorg
+        knumv
+    FROM vbak INTO TABLE it_vbak FOR ALL ENTRIES IN it_vbap WHERE vbeln EQ it_vbap-vbeln.
+
+  ENDIF.
+
+  IF NOT IT_VBRP IS INITIAL.
+    SELECT vbeln
+           posnr
+           lifsp
+           etenr
+           edatu FROM vbep INTO TABLE it_vbep
+                 FOR ALL ENTRIES IN it_vbrp
+                 WHERE vbeln EQ it_vbrp-aubel
+                   AND posnr EQ it_vbrp-aupos
+    AND ( lifsp EQ '06' OR lifsp EQ '07' ).
+
+    SELECT vbeln
+       fkart
+       fkdat
+       vkorg
+       spart
+       kunrg
+       FROM vbrk INTO TABLE it_vbrk FOR ALL ENTRIES IN it_vbrp
+       WHERE vbeln = it_vbrp-vbeln.
+
+  ENDIF.
+
+  IF it_vbak IS NOT INITIAL.
+    SELECT knumv
+           kposn
+           stunr
+           zaehk
+           kschl
+           kbetr
+           FROM konv INTO TABLE it_konv FOR ALL ENTRIES IN it_vbak WHERE knumv = it_vbak-knumv
+    AND ( kschl = 'ZR00' OR kschl = 'ZSCR' OR kschl = 'ZJBW' OR kschl = 'ZA00' ).
+  ENDIF.
+
+  SORT it_vbap BY vbeln posnr matnr.
+  LOOP AT it_vbap INTO wa_vbap.
+
+    SORT it_vbrp BY vbeln posnr matnr.
+    LOOP AT it_vbrp INTO wa_vbrp WHERE aubel = wa_vbap-vbeln
+                                  AND  aupos = wa_vbap-posnr.
+      CLEAR wa_vbrk.
+      READ TABLE it_vbrk INTO wa_vbrk WITH KEY vbeln = wa_vbrp-vbeln.
+      IF wa_vbrk-fkart = 'S1'.
+        sub_qty = sub_qty + wa_vbrp-fkimg.
+      ELSE.
+        add_qty = add_qty + wa_vbrp-fkimg.
+      ENDIF.
+
+      bil_qty = bil_qty + ( add_qty - sub_qty ).
+      CLEAR : add_qty , sub_qty.
+    ENDLOOP.
+
+    IF bil_qty GE wa_vbap-kwmeng.
+      excess_qty = bil_qty - wa_vbap-kwmeng.
+    ELSEIF bil_qty LE wa_vbap-kwmeng.
+      short_qty = wa_vbap-kwmeng - bil_qty.
+    ENDIF.
+
+    CLEAR wa_vbak.
+    READ TABLE it_vbak INTO wa_vbak WITH KEY vbeln = wa_vbap-vbeln.
+
+    CLEAR so_rate.
+    LOOP AT it_konv INTO wa_konv WHERE knumv = wa_vbak-knumv  AND kposn = wa_vbap-posnr
+      AND ( kschl = 'ZR00' OR kschl = 'ZSCR' OR kschl = 'ZJBW' OR kschl = 'ZA00' ).
+      so_rate = so_rate + wa_konv-kbetr.
+    ENDLOOP.
+
+    CLEAR : kna1-name1,kna1-regio.
+    SELECT SINGLE name1 regio FROM kna1 INTO (kna1-name1,kna1-regio) WHERE kunnr = wa_vbak-kunnr.
+
+    CLEAR makt-maktx.
+    SELECT SINGLE maktx FROM makt INTO makt-maktx WHERE matnr = wa_vbap-matnr.
+
+    CLEAR wa_vbep.
+    READ TABLE it_vbep INTO wa_vbep WITH KEY vbeln = wa_vbap-vbeln
+                                             posnr = wa_vbap-posnr.
+    IF sy-subrc EQ 0.
+
+      CONCATENATE sy-mandt wa_vbap-vbeln wa_vbap-posnr '0001' INTO tabkey1." salesorder must contains starting zeros.
+      CONDENSE tabkey1.
+
+      CLEAR cdpos-changenr.
+      SELECT SINGLE changenr FROM cdpos INTO cdpos-changenr WHERE objectclas EQ 'VERKBELEG' AND tabkey = tabkey1 AND tabname = 'VBEP' AND fname EQ 'LIFSP'. "OBJECTID(10) EQ WA_VBAP-vbeln AND
+      IF sy-subrc EQ 0.
+        CLEAR cdhdr-udate.
+        SELECT SINGLE udate FROM cdhdr INTO cdhdr-udate WHERE changenr = cdpos-changenr .
+      ENDIF.
+
+*      CLEAR WA_CDPOS.
+*      read table IT_CDPOS INTO WA_CDPOS WITH KEY OBJECTID = WA_VBEP-VBELN
+*                                                 TABKEY   = tabkey1.
+*      CLEAR WA_CDHDR.
+*      READ TABLE IT_CDHDR INTO WA_CDHDR WITH KEY CHANGENR = WA_CDPOS-CHANGENR.
+      wa_fin-vbeln = wa_vbap-vbeln.
+      wa_fin-posnr = wa_vbap-posnr.
+      wa_fin-spart = wa_vbap-spart.
+      wa_fin-matnr = wa_vbap-matnr.
+      wa_fin-audat = wa_vbak-audat.
+      wa_fin-xblnr = wa_vbak-xblnr.
+      wa_fin-lifsp = wa_vbep-lifsp.
+      wa_fin-edatu = wa_cdhdr-udate.
+      wa_fin-edatu = cdhdr-udate.
+      wa_fin-fkdat = wa_vbrk-fkdat.
+      IF wa_vbap-vrkme = 'KG'.
+        wa_fin-so_rate = so_rate / 1000.
+        wa_fin-bil_qty = bil_qty / 1000.
+        wa_fin-excess_qty = excess_qty / 1000.
+        wa_fin-short_qty  = short_qty / 1000.
+      ELSE.
+        wa_fin-so_rate = so_rate.
+        wa_fin-bil_qty = bil_qty.
+        wa_fin-excess_qty = excess_qty.
+        wa_fin-short_qty  = short_qty.
+      ENDIF.
+      wa_fin-name1   = kna1-name1.
+      wa_fin-regio   = kna1-regio.
+      wa_fin-maktx   = makt-maktx.
+      wa_fin-kwmeng  = wa_vbap-kwmeng.
+      wa_fin-kunnr = wa_vbak-kunnr.
+      COLLECT wa_fin INTO it_fin.
+    ELSEIF bil_qty GE wa_vbap-kwmeng OR bil_qty EQ wa_vbap-kwmeng.
+      wa_fin-vbeln = wa_vbap-vbeln.
+      wa_fin-posnr = wa_vbap-posnr.
+      wa_fin-spart = wa_vbap-spart.
+      wa_fin-matnr = wa_vbap-matnr.
+      wa_fin-audat = wa_vbak-audat.
+      wa_fin-xblnr = wa_vbak-xblnr.
+      wa_fin-lifsp = wa_vbep-lifsp.
+*    WA_FIN-EDATU = WA_VBEP-EDATU.
+      wa_fin-edatu = cdhdr-udate.
+      wa_fin-fkdat = wa_vbrk-fkdat.
+      IF wa_vbap-vrkme = 'KG'.
+        wa_fin-so_rate = so_rate / 1000.
+        wa_fin-bil_qty = bil_qty / 1000.
+        wa_fin-excess_qty = excess_qty / 1000.
+        wa_fin-short_qty  = short_qty / 1000.
+      ELSE.
+        wa_fin-so_rate = so_rate.
+        wa_fin-bil_qty = bil_qty.
+        wa_fin-excess_qty = excess_qty.
+        wa_fin-short_qty  = short_qty.
+      ENDIF.
+      wa_fin-name1   = kna1-name1.
+      wa_fin-regio   = kna1-regio.
+      wa_fin-maktx   = makt-maktx.
+      wa_fin-kwmeng  = wa_vbap-kwmeng.
+      wa_fin-kunnr = wa_vbak-kunnr.
+      COLLECT wa_fin INTO it_fin.
+    ENDIF.
+
+    CLEAR : wa_fin,wa_vbap,wa_vbrp,bil_qty,excess_qty,short_qty,cdhdr-udate.
+  ENDLOOP.
+ENDFORM.
+
+FORM disp.
+  DATA: counter TYPE i.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'VBELN'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'SO NUMBER'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'POSNR'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'SO ITEM'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'AUDAT'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'DATE'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'SPART'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'DIVISION'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'KUNNR'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'CUST NUMBER'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'NAME1'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'NAME'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 25.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'REGIO'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'REGION'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-outputlen  = 25.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'MATNR'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'MATERIAL'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  wa_fieldcat-outputlen  = 20.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'MAKTX'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'MATERIAL DESC'.
+*  WA_FIELDCAT-NO_ZERO    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  wa_fieldcat-outputlen  = 25.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'XBLNR'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'REFERENCE'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'KWMENG'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'SO QTY'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'BIL_QTY'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'DISPATCH'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'EXCESS_QTY'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'EXCESS QTY'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'SHORT_QTY'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'SHORT QTY'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'LIFSP'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'BLOCK QTY'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'SO_RATE'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'SO PRICE'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'FKDAT'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'BILLING DATE'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+
+  counter = counter + 1.
+  wa_fieldcat-col_pos    = counter.
+  wa_fieldcat-fieldname  = 'EDATU'.
+  wa_fieldcat-tabname    = 'IT_FIN'.
+  wa_fieldcat-seltext_l  = 'BLOCK DATE'.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-do_sum     = 'X'.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+
+ENDFORM.
+
+FORM alv.
+  gs_layout-zebra                = 'X'.
+  gs_layout-detail_popup         = 'X'.
+  gs_layout-detail_initial_lines = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      it_fieldcat        = it_fieldcat
+      it_events          = it_events[]
+      i_callback_program = sy-repid
+      is_layout          = gs_layout
+      it_sort            = gt_sort[]
+      i_save             = g_save
+      is_variant         = gx_variant
+*     I_CALLBACK_PF_STATUS_SET   = 'ZSTANDARD'
+*     I_CALLBACK_USER_COMMAND = 'USER_COMMAND'
+    TABLES
+      t_outtab           = it_fin[].
+  .
+ENDFORM.
+

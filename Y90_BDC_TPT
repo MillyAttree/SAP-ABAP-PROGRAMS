@@ -1,0 +1,358 @@
+report Y90_BDC_TPT
+       no standard page heading line-size 255.
+
+*include bdcrecx1.
+
+INCLUDE zbdc_transfer_post.
+start-of-selection.
+
+at selection-screen on value-request for p_fname.
+  call function 'F4_FILENAME'
+    exporting
+      dynpro_number = syst-dynnr
+      field_name    = 'P_FNAME'
+    importing
+      file_name     = p_fname.
+
+start-of-selection.
+  if rd1 eq 'X'.
+    perform download.
+  endif.
+
+  if rd2 eq 'X'.
+    if p_fname is initial.
+      var1 = 1.
+      message 'Please input file name' type 'S' display like 'E'.
+    elseif mode is initial.
+      var1 = 1.
+      message 'Please input mode' type 'S' display like 'E'.
+    endif.
+  endif.
+
+  if rd2 eq 'X' and var1 ne '1'.
+    perform upload_data.
+    perform get_data.
+    if it_final[] is not initial.
+      perform bdc.
+    else.
+      var1 = 1.
+      message 'There is no data in the file' type 'S' display like 'E'.
+    endif.
+  endif.
+
+  form download .
+
+  wa1-bldat     = '21042018'.
+  wa1-budat     = '21042018'.
+  wa1-bwart     = '411'.
+  wa1-sobkz     = 'E'.
+  wa1-werks     = '1000'.
+  wa1-lgort     = 'IH00'.
+  wa1-UMLGO     = 'IH00'.
+  wa1-UMMAT     = 'FR-HRC-N-GR2'.
+  wa1-MATNR     = 'FR-HRC-N-GR2'.
+  wa1-ERFMG     = '562.56'.
+  wa1-ERFME     = 'TO'.
+  wa1-CHARG     = '56184451'.
+  wa1-MAT_KDAUF = '1002563'.
+  wa1-MAT_KDPOS = '20'.
+
+  append wa1 to it1.
+  clear: wa1.
+
+  append 'Doc. Date'              to t_header.
+  append 'Posting Date'           to t_header.
+  append 'Mov Type'               to t_header.
+  append 'Special Stock'          to t_header.
+  append 'Plant'                  to t_header.
+  append 'St Loc'                 to t_header.
+  append 'Rec St Loc'             to t_header.
+  append 'Rec Mat'                to t_header.
+  append 'Material'               to t_header.
+  append 'Qty'                    to t_header.
+  append 'UOM'                    to t_header.
+  append 'Batch'                  to t_header.
+  append 'Sale order'             to t_header.
+  append 'Line item'              to t_header.
+
+  call method cl_gui_frontend_services=>file_save_dialog
+    exporting
+      window_title      = 'File Directory'
+      default_extension = 'XLS'
+      initial_directory = 'D:\'
+    changing
+      filename          = lv_filename
+      path              = lv_path
+      fullpath          = lv_fullpath
+      user_action       = lv_result.
+
+  lv_fname = lv_fullpath.
+
+  call function 'WS_DOWNLOAD'
+    exporting
+      bin_filesize            = ' '
+      filename                = lv_fname
+      filetype                = 'DAT'
+    tables
+      data_tab                = it1
+      fieldnames              = t_header
+    exceptions
+      file_open_error         = 1
+      file_write_error        = 2
+      invalid_filesize        = 3
+      invalid_type            = 4
+      no_batch                = 5
+      unknown_error           = 6
+      invalid_table_width     = 7
+      gui_refuse_filetransfer = 8
+      customer_error          = 9
+      no_authority            = 10
+      others                  = 11.
+
+endform.                    " DOWNLOAD
+
+
+  form upload_data .
+
+  clear: it1[], it1, wa1.
+  call function 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    exporting
+      filename                = p_fname
+      i_begin_col             = 1
+      i_begin_row             = 2
+      i_end_col               = 14
+      i_end_row               = 20000
+    tables
+      intern                  = it_file
+    exceptions
+      inconsistent_parameters = 1
+      upload_ole              = 2
+      others                  = 3.
+
+    loop at it_file into wa_file.
+    case wa_file-col.
+      when 001.
+       wa1-bldat      = wa_file-value.
+      when 002.
+       wa1-budat      = wa_file-value.
+      when 003.
+       wa1-bwart      = wa_file-value.
+      when 004.
+       wa1-sobkz      = wa_file-value.
+      when 005.
+       wa1-werks      = wa_file-value.
+      when 006.
+       wa1-lgort      = wa_file-value.
+      when 007.
+       wa1-UMLGO      = wa_file-value.
+      when 008.
+       wa1-UMMAT      = wa_file-value.
+      when 009.
+       wa1-MATNR      = wa_file-value.
+      when 010.
+       wa1-ERFMG      = wa_file-value.
+      when 011.
+       wa1-ERFME      = wa_file-value.
+      when 012.
+       wa1-CHARG      = wa_file-value.
+      when 013.
+       wa1-MAT_KDAUF  = wa_file-value.
+      when 014.
+       wa1-MAT_KDPOS  = wa_file-value.
+
+    endcase.
+    at end of row.
+
+      append wa1 to it1.
+      clear: wa1.
+    endat.
+    clear: wa_file.
+  endloop.
+
+endform.                    " UPLOAD_DATA
+*&-------
+*&---------------------------------------------------------------------*
+*&      Form  DOWNLOAD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+
+form bdc .
+
+  loop at it_final into wa_final.
+    refresh bdcdata.
+    clear: bdcdata.
+
+*perform open_group.
+
+perform bdc_dynpro      using 'SAPMM07M' '0400'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'RM07M-SOBKZ'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '/00'.
+perform bdc_field       using 'MKPF-BLDAT'
+                              wa_final-bldat.
+perform bdc_field       using 'MKPF-BUDAT'
+                              wa_final-budat."'25.04.2018'.
+perform bdc_field       using 'RM07M-BWARTWA'
+                              wa_final-bwart."'411'.
+perform bdc_field       using 'RM07M-SOBKZ'
+                              wa_final-sobkz."'e'.
+perform bdc_field       using 'RM07M-WERKS'
+                              wa_final-werks."'1000'.
+perform bdc_field       using 'RM07M-LGORT'
+                              wa_final-lgort."'IH00'.
+perform bdc_field       using 'XFULL'
+                              'X'.
+perform bdc_field       using 'RM07M-WVERS2'
+                              'X'.
+perform bdc_dynpro      using 'SAPMM07M' '0421'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'MSEG-CHARG(01)'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '/00'.
+perform bdc_field       using 'MSEGK-UMLGO'
+                              wa_final-umlgo.                         "'ih00'.
+perform bdc_field       using 'MSEGK-UMMAT'
+                              wa_final-ummat.                         "'SR-HRC-S-GR2'.
+perform bdc_field       using 'MSEG-MATNR(01)'
+                              wa_final-matnr.                         "'SR-HRC-S-GR2'.
+perform bdc_field       using 'MSEG-ERFMG(01)'
+                              wa_final-erfmg.                          "'1.177'.
+perform bdc_field       using 'MSEG-ERFME(01)'
+                              wa_final-erfme.                          "'to'.
+perform bdc_field       using 'MSEG-CHARG(01)'
+                              wa_final-charg.                       "'3070801056'.
+perform bdc_field       using 'MSEGK-MAT_KDAUF'
+                              wa_final-MAT_KDAUF.                    "'50002112'.
+perform bdc_field       using 'MSEGK-MAT_KDPOS'
+                              wa_final-MAT_KDPOS.                        "'10'.
+*perform bdc_field       using 'DKACB-FMORE'
+*                              'X'.
+perform bdc_dynpro      using 'SAPLKACB' '0002'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=ENTE'.
+*perform bdc_field       using 'DKACB-FMORE'
+*                              'X'.
+perform bdc_dynpro      using 'SAPLKACB' '0002'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=ENTE'.
+perform bdc_dynpro      using 'SAPMM07M' '0421'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'MSEG-ERFMG(01)'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=BU'.
+*perform bdc_field       using 'DKACB-FMORE'
+*                              'X'.
+perform bdc_dynpro      using 'SAPLKACB' '0002'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=ENTE'.
+*perform bdc_transaction using 'MB1B'.
+
+*perform close_group.
+
+
+  call transaction 'MB1B' using bdcdata mode mode update 'S' messages into messtab.
+    clear: wa_final.
+  endloop.
+
+  leave to list-processing.
+  sort messtab ascending.
+  delete adjacent duplicates from messtab comparing all fields.
+  loop at messtab.
+    if messtab-msgtyp = 'S'." or messtab-ms
+**    gtyp = 'W'.
+      clear: text2.
+      concatenate 'Transfer Posting has been updated successfully : '  messtab-msgv1  into text2 separated by space.
+      condense text2.
+      write:/ text2 color 5.
+    elseif messtab-msgtyp = 'E'.
+      clear: text2.
+      concatenate 'Transfer Posting has not been updated : '  messtab-msgv1 into text2 separated by space.
+      condense text2.
+      write:/ text2 color 6.
+    endif.
+  endloop.
+
+endform.                    " BDC
+
+form bdc_dynpro  using    program dynpro.
+
+  clear: bdcdata.
+  bdcdata-program = program.
+  bdcdata-dynpro  = dynpro.
+  bdcdata-dynbegin  = 'X'.
+  append bdcdata.
+
+endform.                    " BDC_DYNPRO
+*&---------------------------------------------------------------------*
+*&      Form  BDC_FIELD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0402   text
+*      -->P_WA_FINAL_MATNR  text
+*----------------------------------------------------------------------*
+form bdc_field  using    fnam fval.
+
+  clear: bdcdata.
+  bdcdata-fnam = fnam.
+  bdcdata-fval = fval.
+  append bdcdata.
+
+endform.                    " BDC_FIELD
+
+form get_data .
+
+  loop at it1 INTO wa1.
+    wa_final-bldat     = wa1-bldat.
+    wa_final-budat     = wa1-budat.
+    wa_final-bwart     = wa1-bwart.
+    wa_final-sobkz     = wa1-sobkz.
+    wa_final-werks     = wa1-werks.
+    wa_final-lgort     = wa1-lgort.
+    wa_final-UMLGO     = wa1-UMLGO.
+    wa_final-UMMAT     = wa1-UMMAT.
+    wa_final-MATNR     = wa1-MATNR.
+    wa_final-ERFMG     = wa1-ERFMG.
+    wa_final-ERFME     = wa1-ERFME.
+    wa_final-CHARG     = wa1-CHARG.
+    wa_final-MAT_KDAUF = wa1-MAT_KDAUF.
+    wa_final-MAT_KDPOS = wa1-MAT_KDPOS.
+    wa_final-screen    = wa1-screen.
+    APPEND wa_final TO it_final.
+*    modify it_final from wa_final." transporting werks steuc screen.
+    delete it2 where matnr = wa_final-matnr.
+    clear: wa1.
+    clear: wa_final.
+  endloop.
+**endif.
+*  if it2[] is not initial.
+*    loop at it2 into wa2.
+*      wa_final-bldat     = wa2-bldat.
+*      wa_final-budat     = wa2-budat.
+*      wa_final-bwart     = wa2-bwart.
+*      wa_final-sobkz     = wa2-sobkz.
+*      wa_final-werks     = wa2-werks.
+*      wa_final-lgort     = wa2-lgort.
+*      wa_final-UMLGO     = wa2-UMLGO.
+*      wa_final-UMMAT     = wa2-UMMAT.
+*      wa_final-MATNR     = wa2-MATNR.
+*      wa_final-ERFMG     = wa2-ERFMG.
+*      wa_final-ERFME     = wa2-ERFME.
+*      wa_final-CHARG     = wa2-CHARG.
+*      wa_final-MAT_KDAUF = wa2-MAT_KDAUF.
+*      wa_final-MAT_KDPOS = wa2-MAT_KDPOS.
+*      wa_final-screen    = wa2-screen.
+*
+*      append wa_final to it_final.
+*      clear: wa_final, wa2.
+*      clear: wa2.
+*    endloop.
+*  endif.
+
+endform.
+

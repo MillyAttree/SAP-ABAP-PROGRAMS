@@ -1,0 +1,1334 @@
+*&---------------------------------------------------------------------*
+*& Report  YSD_OEM_DET
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  YSD_OEM_DET
+
+ NO STANDARD PAGE HEADING .
+
+TYPE-POOLS: SLIS.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      GD_TAB_GROUP TYPE SLIS_T_SP_GROUP_ALV,
+      GD_LAYOUT TYPE SLIS_LAYOUT_ALV,
+      gd_repid like sy-repid.
+
+TABLES: VBRK,VBRP,MAKT.
+
+TYPES : BEGIN OF TY_VBRK,
+       VBELN LIKE	VBRK-VBELN,
+       SPART LIKE VBRK-SPART,
+       FKART LIKE VBRK-FKART,
+       FKTYP LIKE VBRK-FKTYP,
+       VBTYP LIKE VBRK-VBTYP,
+       WAERK LIKE VBRK-WAERK,
+       VKORG LIKE VBRK-VKORG,
+       VTWEG LIKE VBRK-VTWEG,
+       FKDAT LIKE VBRK-FKDAT,
+       KUNAG LIKE VBRK-KUNAG,
+       FKSTO LIKE VBRK-FKSTO,
+       END OF TY_VBRK.
+
+DATA: IT_VBRK TYPE STANDARD TABLE OF TY_VBRK,
+      WA_VBRK TYPE TY_VBRK.
+
+TYPES: BEGIN OF TY_VBRP,
+       VBELN LIKE	VBRP-VBELN,
+       POSNR LIKE	VBRP-POSNR,
+       FKLMG LIKE	VBRP-FKLMG,
+       UMVKZ LIKE VBRP-UMVKZ,
+       MATNR LIKE VBRP-MATNR,
+       KTGRM LIKE VBRP-KTGRM,
+       MATKL LIKE VBRP-MATKL,
+       SPART LIKE VBRP-SPART,
+       MEINS LIKE VBRP-MEINS,
+       END OF TY_VBRP.
+
+DATA: IT_VBRP TYPE STANDARD TABLE OF TY_VBRP,
+      WA_VBRP TYPE TY_VBRP.
+
+TYPES: BEGIN OF TY_FIN,
+       FKLMG LIKE	VBRP-FKLMG,
+       MATNR LIKE VBRP-MATNR,
+       KTGRM LIKE VBRP-KTGRM,
+       MATKL LIKE VBRP-MATKL,
+       KUNAG LIKE VBRK-KUNAG,
+       END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+TYPES: BEGIN OF TY_FINAL,
+       doon   LIKE VBRP-FKLMG,
+       GOEN   LIKE VBRP-FKLMG,
+       HBL    LIKE VBRP-FKLMG,
+       HERO   LIKE VBRP-FKLMG,
+       FREE   LIKE VBRP-FKLMG,
+       CASH   LIKE VBRP-FKLMG,
+       TEJ    LIKE VBRP-FKLMG,
+       INDER  LIKE VBRP-FKLMG,
+       AJANTA LIKE VBRP-FKLMG,
+       AVON   LIKE VBRP-FKLMG,
+       ELECT  LIKE VBRP-FKLMG,
+       GREEN  LIKE VBRP-FKLMG,
+       LOHIA  LIKE VBRP-FKLMG,
+       GOOD   LIKE VBRP-FKLMG,
+       CHRIS  LIKE VBRP-FKLMG,
+       TUNWAL LIKE VBRP-FKLMG,
+       RAMON  LIKE VBRP-FKLMG,
+       KINET  LIKE VBRP-FKLMG,
+       CLH    LIKE VBRP-FKLMG,
+       KNIGHT LIKE VBRP-FKLMG,
+       ZOOM   LIKE VBRP-FKLMG,
+       CAPARO LIKE VBRP-FKLMG,
+       AMPERE LIKE VBRP-FKLMG,
+       DMK    LIKE VBRP-FKLMG,
+       JIJO   LIKE VBRP-FKLMG,
+       DILLI  LIKE VBRP-FKLMG,
+       SHRI   LIKE VBRP-FKLMG,
+       WA     LIKE VBRP-FKLMG,
+       DD     LIKE VBRP-FKLMG,
+       SAERA  LIKE VBRP-FKLMG,
+       NEW    LIKE VBRP-FKLMG,
+       UMA    LIKE VBRP-FKLMG,
+       NEXT   LIKE VBRP-FKLMG,
+       REFLEX LIKE VBRP-FKLMG,
+       TERRA  LIKE VBRP-FKLMG,
+       ATHER  LIKE VBRP-FKLMG,
+       LAL    LIKE VBRP-FKLMG,
+       VRLA   LIKE VBRP-FKLMG,
+       HEROM  LIKE VBRP-FKLMG,
+       KAIKE  LIKE VBRP-FKLMG,
+       BHARAT LIKE VBRP-FKLMG,
+       ACCRE  LIKE VBRP-FKLMG,
+       UP     LIKE VBRP-FKLMG,
+       POWER  LIKE VBRP-FKLMG,
+       GAURI  LIKE VBRP-FKLMG,
+       OK     LIKE VBRP-FKLMG,
+       RASA   LIKE VBRP-FKLMG,
+       ELITE  LIKE VBRP-FKLMG,
+       SWITAC LIKE VBRP-FKLMG,
+       ENERGY LIKE VBRP-FKLMG,
+       HIM    LIKE VBRP-FKLMG,
+       PASH   LIKE VBRP-FKLMG,
+       VARSA  LIKE VBRP-FKLMG,
+       INDIA  LIKE VBRP-FKLMG,
+       TOT   LIKE VBRP-FKLMG,
+       MATNR LIKE VBRP-MATNR,
+       MAKTX LIKE MAKT-MAKTX,
+       MATKL LIKE VBRP-MATKL,
+       END OF TY_FINAL.
+
+  DATA: IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+        WA_FINAL TYPE TY_FINAL.
+
+  DATA: MAKTX LIKE MAKT-MAKTX.
+
+DATA:  doon   LIKE VBRP-FKLMG,
+       GOEN   LIKE VBRP-FKLMG,
+       HBL    LIKE VBRP-FKLMG,
+       HERO   LIKE VBRP-FKLMG,
+       FREE   LIKE VBRP-FKLMG,
+       CASH   LIKE VBRP-FKLMG,
+       TEJ    LIKE VBRP-FKLMG,
+       INDER  LIKE VBRP-FKLMG,
+       AJANTA LIKE VBRP-FKLMG,
+       AVON   LIKE VBRP-FKLMG,
+       ELECT  LIKE VBRP-FKLMG,
+       GREEN  LIKE VBRP-FKLMG,
+       LOHIA  LIKE VBRP-FKLMG,
+       GOOD   LIKE VBRP-FKLMG,
+       CHRIS  LIKE VBRP-FKLMG,
+       TUNWAL LIKE VBRP-FKLMG,
+       RAMON  LIKE VBRP-FKLMG,
+       KINET  LIKE VBRP-FKLMG,
+       CLH    LIKE VBRP-FKLMG,
+       KNIGHT LIKE VBRP-FKLMG,
+       ZOOM   LIKE VBRP-FKLMG,
+       CAPARO LIKE VBRP-FKLMG,
+       AMPERE LIKE VBRP-FKLMG,
+       DMK    LIKE VBRP-FKLMG,
+       JIJO   LIKE VBRP-FKLMG,
+       DILLI  LIKE VBRP-FKLMG,
+       SHRI   LIKE VBRP-FKLMG,
+       WA     LIKE VBRP-FKLMG,
+       DD     LIKE VBRP-FKLMG,
+       SAERA  LIKE VBRP-FKLMG,
+       NEW    LIKE VBRP-FKLMG,
+       UMA    LIKE VBRP-FKLMG,
+       NEXT   LIKE VBRP-FKLMG,
+       REFLEX LIKE VBRP-FKLMG,
+       TERRA  LIKE VBRP-FKLMG,
+       ATHER  LIKE VBRP-FKLMG,
+       LAL    LIKE VBRP-FKLMG,
+       VRLA   LIKE VBRP-FKLMG,
+       HEROM  LIKE VBRP-FKLMG,
+       KAIKE  LIKE VBRP-FKLMG,
+       BHARAT LIKE VBRP-FKLMG,
+       ACCRE  LIKE VBRP-FKLMG,
+       UP     LIKE VBRP-FKLMG,
+       POWER  LIKE VBRP-FKLMG,
+       GAURI  LIKE VBRP-FKLMG,
+       OK     LIKE VBRP-FKLMG,
+       RASA   LIKE VBRP-FKLMG,
+       ELITE  LIKE VBRP-FKLMG,
+       SWITAC LIKE VBRP-FKLMG,
+       ENERGY LIKE VBRP-FKLMG,
+       HIM    LIKE VBRP-FKLMG,
+       PASH   LIKE VBRP-FKLMG,
+       VARSA  LIKE VBRP-FKLMG,
+       INDIA  LIKE VBRP-FKLMG,
+       TOT   LIKE VBRP-FKLMG.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001 .
+  PARAMETER :  VKORG  LIKE  VBRK-VKORG OBLIGATORY DEFAULT '3000'.
+SELECT-OPTIONS :VTWEG FOR VBRK-VTWEG,
+                SPART FOR VBRK-SPART,
+*                KONDM FOR VBRP-KONDM,
+                KTGRM FOR VBRP-KTGRM OBLIGATORY,
+                FKDAT FOR VBRK-FKDAT OBLIGATORY,
+*                KUNAG FOR VBRK-KUNAG,
+                FKART FOR VBRK-FKART ,
+                MATKL FOR VBRP-MATKL ,
+                matnr for vbrp-matnr.
+SELECTION-SCREEN END OF BLOCK B1.
+
+
+START-OF-SELECTION.
+
+PERFORM DATA.
+
+PERFORM DISP.
+
+PERFORM alv.
+
+FORM DATA.
+
+  SELECT  VBELN
+          SPART
+          FKART
+          FKTYP
+          VBTYP
+          WAERK
+          VKORG
+          VTWEG
+          FKDAT
+          KUNAG
+          FKSTO
+    FROM VBRK INTO TABLE IT_VBRK WHERE VKORG EQ VKORG AND
+                                                 VTWEG IN VTWEG AND
+                                                 SPART IN SPART AND
+                                                 FKDAT IN FKDAT AND
+                                                 FKART IN FKART AND
+                                                 FKSTO NE 'X' AND
+                                               ( KUNAG = '0002002410' OR
+                                                 KUNAG = '0002002411' OR
+                                                 KUNAG = '0002002412' OR
+                                                 KUNAG = '0002002413' OR
+                                                 KUNAG = '0002000320' OR
+                                                 KUNAG = '0002000420' OR
+                                                 KUNAG = '0002002417' OR
+                                                 KUNAG = '0002002419' OR
+                                                 KUNAG = '0002002420' OR
+                                                 KUNAG = '0002002421' OR
+                                                 KUNAG = '0002002422' OR
+                                                 KUNAG = '0002002423' OR
+                                                 KUNAG = '0002002424' OR
+                                                 KUNAG = '0002002445' OR
+                                                 KUNAG = '0002002466' OR
+                                                 KUNAG = '0002002490' OR
+                                                 KUNAG = '0002002511' OR
+                                                 KUNAG = '0002002536' OR
+                                                 KUNAG = '0002002539' OR
+                                                 KUNAG = '0002002540' OR
+                                                 KUNAG = '0002002555' OR
+                                                 KUNAG = '0002002560' OR
+                                                 KUNAG = '0002002566' OR
+                                                 KUNAG = '0002002567' OR
+                                                 KUNAG = '0002002569' OR
+                                                 KUNAG = '0002002570' OR
+                                                 KUNAG = '0002002576' OR
+                                                 KUNAG = '0002002578' OR
+                                                 KUNAG = '0002002592' OR
+                                                 KUNAG = '0002002600' OR
+                                                 KUNAG = '0002002615' OR
+                                                 KUNAG = '0002002625' OR
+                                                 KUNAG = '0002002630' OR
+                                                 KUNAG = '0002002636' OR
+                                                 KUNAG = '0002002643' OR
+                                                 KUNAG = '0002002644' OR
+                                                 KUNAG = '0002002646' OR
+                                                 KUNAG = '0002002647' OR
+                                                 KUNAG = '0002002650' OR
+                                                 KUNAG = '0002002655' OR
+                                                 KUNAG = '0002002658' OR
+                                                 KUNAG = '0002002665' OR
+                                                 KUNAG = '0002002670' OR
+                                                 KUNAG = '0002002675' OR
+                                                 KUNAG = '0002002676' OR
+                                                 KUNAG = '0002002682' OR
+                                                 KUNAG = '0002002691' OR
+                                                 KUNAG = '0002002698' OR
+                                                 KUNAG = '0002002701' OR
+                                                 KUNAG = '0002002704' OR
+                                                 KUNAG = '0002002725' OR
+                                                 KUNAG = '0002002727' OR
+                                                 KUNAG = '0002002740' OR
+                                                 KUNAG = '0002002741' ).
+
+
+
+  IF NOT IT_VBRK IS INITIAL.
+
+    SELECT  VBELN
+            POSNR
+            FKLMG
+            UMVKZ
+            MATNR
+            KTGRM
+            MATKL
+            SPART
+            MEINS
+        FROM VBRP INTO TABLE IT_VBRP FOR ALL ENTRIES IN IT_VBRK WHERE
+                                                                      KTGRM IN KTGRM AND
+                                                                      MATNR IN MATNR AND
+                                                                      VBELN EQ IT_VBRK-VBELN AND
+                                                                      SPART EQ IT_VBRK-SPART .
+  IF SY-SUBRC EQ 0.
+  ENDIF.
+
+   ENDIF.
+
+
+  LOOP AT IT_VBRP INTO WA_VBRP..
+
+  WA_FIN-FKLMG = WA_VBRP-FKLMG.
+  WA_FIN-MATNR = WA_VBRP-MATNR.
+  WA_FIN-KTGRM = WA_VBRP-KTGRM.
+  WA_FIN-MATKL = WA_VBRP-MATKL.
+
+  CLEAR WA_VBRK.
+  READ TABLE IT_VBRK INTO WA_VBRK WITH KEY VBELN = WA_VBRP-VBELN
+                                           SPART = WA_VBRP-SPART.
+  IF SY-SUBRC EQ 0.
+   WA_FIN-KUNAG = WA_VBRK-KUNAG.
+  ENDIF.
+
+  COLLECT WA_FIN INTO IT_FIN.
+  CLEAR WA_FIN.
+  ENDLOOP.
+
+SORT IT_FIN BY KUNAG MATNR.
+
+LOOP AT IT_FIN INTO WA_FIN.
+  READ TABLE IT_FIN INTO WA_FIN INDEX SY-TABIX.
+  SELECT SINGLE MAKTX FROM MAKT INTO (MAKT-MAKTX) WHERE MATNR = WA_FIN-MATNR.
+   doon   = 0.
+   GOEN   = 0.
+   HBL    = 0.
+   HERO   = 0.
+   FREE   = 0.
+   CASH   = 0.
+   TEJ    = 0.
+   INDER  = 0.
+   AJANTA = 0.
+   AVON   = 0.
+   ELECT  = 0.
+   GREEN  = 0.
+   LOHIA  = 0.
+   GOOD   = 0.
+   CHRIS  = 0.
+   TUNWAL = 0.
+   RAMON  = 0.
+   KINET  = 0.
+   CLH    = 0.
+   KNIGHT = 0.
+   ZOOM   = 0.
+   CAPARO = 0.
+   AMPERE = 0.
+   DMK    = 0.
+   JIJO   = 0.
+   DILLI  = 0.
+   SHRI   = 0.
+   WA     = 0.
+   DD     = 0.
+   SAERA  = 0.
+   NEW    = 0.
+   UMA    = 0.
+   NEXT   = 0.
+   REFLEX = 0.
+   TERRA  = 0.
+   ATHER  = 0.
+   LAL    = 0.
+   VRLA   = 0.
+   HEROM  = 0.
+   KAIKE  = 0.
+   BHARAT = 0.
+   ACCRE  = 0.
+   UP     = 0.
+   POWER  = 0.
+   GAURI  = 0.
+   OK     = 0.
+   RASA   = 0.
+   ELITE  = 0.
+   SWITAC = 0.
+   ENERGY = 0.
+   HIM    = 0.
+   PASH   = 0.
+   VARSA  = 0.
+   INDIA  = 0.
+
+
+
+
+  IF wa_fin-kunag = '0002002410'.
+   doon  = doon  + wa_fin-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002411'.
+    GOEN =  GOEN + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002412'.
+     HBL =  HBL  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002413'.
+    HERO =  HERO  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002000320'.
+    FREE = FREE  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002000420'.
+    CASH =  CASH + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002417'.
+    TEJ = TEJ   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002419'.
+    INDER = INDER  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002420'.
+    AJANTA = AJANTA + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002421'.
+    AVON  = AVON   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002422'.
+    ELECT = ELECT + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002423'.
+    GREEN = GREEN  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002424'.
+    LOHIA = LOHIA  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002445'.
+    GOOD  = GOOD  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002466'.
+    CHRIS = CHRIS + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002490'.
+    TUNWAL = TUNWAL + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002511'.
+    RAMON = RAMON  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002536'.
+    KINET = KINET   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002539'.
+    CLH  = CLH + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002540'.
+    KNIGHT = KNIGHT + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002555'.
+    ZOOM  = ZOOM    + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002560'.
+    CAPARO = CAPARO + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002566'.
+    AMPERE = AMPERE + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002567'.
+    DMK  = DMK   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002569'.
+    JIJO = JIJO + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002570'.
+    DILLI = DILLI + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002576'.
+    SHRI  = SHRI + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002578'.
+     WA  =  WA  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002592'.
+    DD  = DD  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002600'.
+    SAERA = SAERA   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002615'.
+     NEW  =  NEW   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002625'.
+      UMA =  UMA + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002630 '.
+    NEXT = NEXT + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002636'.
+    REFLEX = REFLEX + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002643 '.
+    TERRA  = TERRA  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002644 '.
+     ATHER = ATHER  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002646'.
+     LAL  =  LAL   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002647'.
+     VRLA =  VRLA + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002650'.
+     HEROM = HEROM + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002655'.
+    KAIKE  = KAIKE + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002658'.
+    BHARAT = BHARAT  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002665'.
+    ACCRE = ACCRE  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002670'.
+     UP  =  UP   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002675'.
+      POWER =  POWER + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002676'.
+     GAURI = GAURI + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002682'.
+    OK  = OK   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002691'.
+     RASA  =  RASA  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002698'.
+      ELITE =  ELITE + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002701'.
+     SWITAC =  SWITAC  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002704'.
+   ENERGY = ENERGY + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002725'.
+      HIM =   HIM  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002727'.
+     PASH  =  PASH   + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002740'.
+   VARSA = VARSA  + WA_FIN-FKLMG.
+  ELSEIF wa_fin-kunag = '0002002741'.
+   INDIA  = INDIA  + WA_FIN-FKLMG.
+  ENDIF.
+
+MOVE : doon   TO WA_FINAL-doon   ,
+       GOEN   TO WA_FINAL-GOEN   ,
+       HBL    TO WA_FINAL-HBL    ,
+       HERO   TO WA_FINAL-HERO   ,
+       FREE   TO WA_FINAL-FREE   ,
+       CASH   TO WA_FINAL-CASH   ,
+       TEJ    TO WA_FINAL-TEJ    ,
+       INDER  TO WA_FINAL-INDER  ,
+       AJANTA TO WA_FINAL-AJANTA ,
+       AVON   TO WA_FINAL-AVON   ,
+       ELECT  TO WA_FINAL-ELECT  ,
+       GREEN  TO WA_FINAL-GREEN  ,
+       LOHIA  TO WA_FINAL-LOHIA  ,
+       GOOD   TO WA_FINAL-GOOD   ,
+       CHRIS  TO WA_FINAL-CHRIS  ,
+       TUNWAL TO WA_FINAL-TUNWAL ,
+       RAMON  TO WA_FINAL-RAMON  ,
+       KINET  TO WA_FINAL-KINET  ,
+       CLH    TO WA_FINAL-CLH    ,
+       KNIGHT TO WA_FINAL-KNIGHT ,
+       ZOOM   TO WA_FINAL-ZOOM   ,
+       CAPARO TO WA_FINAL-CAPARO ,
+       AMPERE TO WA_FINAL-AMPERE ,
+       DMK    TO WA_FINAL-DMK    ,
+       JIJO   TO WA_FINAL-JIJO   ,
+       DILLI  TO WA_FINAL-DILLI  ,
+       SHRI   TO WA_FINAL-SHRI   ,
+       WA     TO WA_FINAL-WA     ,
+       DD     TO WA_FINAL-DD     ,
+       SAERA  TO WA_FINAL-SAERA  ,
+       NEW    TO WA_FINAL-NEW    ,
+       UMA    TO WA_FINAL-UMA    ,
+       NEXT   TO WA_FINAL-NEXT   ,
+       REFLEX TO WA_FINAL-REFLEX ,
+       TERRA  TO WA_FINAL-TERRA  ,
+       ATHER  TO WA_FINAL-ATHER  ,
+       LAL    TO WA_FINAL-LAL    ,
+       VRLA   TO WA_FINAL-VRLA   ,
+       HEROM  TO WA_FINAL-HEROM  ,
+       KAIKE  TO WA_FINAL-KAIKE  ,
+       BHARAT TO WA_FINAL-BHARAT ,
+       ACCRE  TO WA_FINAL-ACCRE  ,
+       UP     TO WA_FINAL-UP     ,
+       POWER  TO WA_FINAL-POWER  ,
+       GAURI  TO WA_FINAL-GAURI  ,
+       OK     TO WA_FINAL-OK     ,
+       RASA   TO WA_FINAL-RASA   ,
+       ELITE  TO WA_FINAL-ELITE  ,
+       SWITAC TO WA_FINAL-SWITAC ,
+       ENERGY TO WA_FINAL-ENERGY ,
+       HIM    TO WA_FINAL-HIM    ,
+       PASH   TO WA_FINAL-PASH   ,
+       VARSA  TO WA_FINAL-VARSA  ,
+       INDIA  TO WA_FINAL-INDIA  .
+
+
+MOVE: WA_FIN-MATNR TO WA_FINAL-MATNR,
+      MAKT-MAKTX   TO WA_FINAL-MAKTX,
+      WA_FIN-MATKL TO WA_FINAL-MATKL.
+
+COLLECT WA_FINAL INTO IT_FINAL.
+CLEAR WA_FINAL.
+*ENDAT.
+
+ENDLOOP.
+
+ SORT IT_FINAL BY MATKL.
+
+LOOP AT IT_FINAL INTO WA_FINAL..
+TOT = 0.
+
+TOT = TOT +  WA_FINAL-doon
+          +  WA_FINAL-GOEN
+          +  WA_FINAL-HBL
+          +  WA_FINAL-HERO
+          +  WA_FINAL-FREE
+          +  WA_FINAL-CASH
+          +  WA_FINAL-TEJ
+          +  WA_FINAL-INDER
+          +  WA_FINAL-AJANTA
+          +  WA_FINAL-AVON
+          +  WA_FINAL-ELECT
+          +  WA_FINAL-GREEN
+          +  WA_FINAL-LOHIA
+          +  WA_FINAL-GOOD
+          +  WA_FINAL-CHRIS
+          +  WA_FINAL-TUNWAL
+          +  WA_FINAL-RAMON
+          +  WA_FINAL-KINET
+          +  WA_FINAL-CLH
+          +  WA_FINAL-KNIGHT
+          +  WA_FINAL-ZOOM
+          +  WA_FINAL-CAPARO
+          +  WA_FINAL-AMPERE
+          +  WA_FINAL-DMK
+          +  WA_FINAL-JIJO
+          +  WA_FINAL-DILLI
+          +  WA_FINAL-SHRI
+          +  WA_FINAL-WA
+          +  WA_FINAL-DD
+          +  WA_FINAL-SAERA
+          +  WA_FINAL-NEW
+          +  WA_FINAL-UMA
+          +  WA_FINAL-NEXT
+          +  WA_FINAL-REFLEX
+          +  WA_FINAL-TERRA
+          +  WA_FINAL-ATHER
+          +  WA_FINAL-LAL
+          +  WA_FINAL-VRLA
+          +  WA_FINAL-HEROM
+          +  WA_FINAL-KAIKE
+          +  WA_FINAL-BHARAT
+          +  WA_FINAL-ACCRE
+          +  WA_FINAL-UP
+          +  WA_FINAL-POWER
+          +  WA_FINAL-GAURI
+          +  WA_FINAL-OK
+          +  WA_FINAL-RASA
+          +  WA_FINAL-ELITE
+          +  WA_FINAL-SWITAC
+          +  WA_FINAL-ENERGY
+          +  WA_FINAL-HIM
+          +  WA_FINAL-PASH
+          +  WA_FINAL-VARSA
+          +  WA_FINAL-INDIA  .
+
+
+MOVE TOT TO WA_FINAL-TOT.
+MODIFY IT_FINAL FROM WA_FINAL.
+CLEAR wa_Final.
+ENDLOOP.
+
+SORT IT_FINAL BY MATKL.
+
+ENDFORM.
+
+FORM DISP.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MATNR'.
+  WA_FCAT-SELTEXT_L = 'MATERIAL'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 6.
+  WA_FCAT-NO_ZERO = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MAKTX'.
+  WA_FCAT-SELTEXT_L = 'DESCRIPTION'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 30.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MATKL'.
+  WA_FCAT-SELTEXT_L = 'MAT GROUP'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'DOON'.
+  WA_FCAT-SELTEXT_L = 'DOON SCOTER INDIA'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'GOEN'.
+  WA_FCAT-SELTEXT_L = 'Goenka Electric Motor Vehicles Pvt.'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'HBL'.
+  WA_FCAT-SELTEXT_L = 'HBL Power System Ltd'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'HERO'.
+  WA_FCAT-SELTEXT_L = 'Hero Electric Vehicles (P) Ltd.'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'FREE'.
+  WA_FCAT-SELTEXT_L = 'Free Of Charge Goods'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CASH'.
+  WA_FCAT-SELTEXT_L = 'Cash Sale'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TEJ'.
+  WA_FCAT-SELTEXT_L = 'Tej Enterprises'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'INDER'.
+  WA_FCAT-SELTEXT_L = 'Inder Auto Industries'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'AJANTA'.
+  WA_FCAT-SELTEXT_L = 'Ajanta Manufacturing Ltd.'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'AVON'.
+  WA_FCAT-SELTEXT_L = 'Avon Cycle Limited'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ELECT'.
+  WA_FCAT-SELTEXT_L = 'Electrotherm ( India ) Ltd'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'GREEN'.
+  WA_FCAT-SELTEXT_L = 'Green Electric Vehicles Pvt. Ltd.'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'LOHIA'.
+  WA_FCAT-SELTEXT_L = 'Lohia Auto Industries'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'GOOD'.
+  WA_FCAT-SELTEXT_L = 'GOODYEAR INDIA LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CHRIS'.
+  WA_FCAT-SELTEXT_L = 'CHRIS MOTORS'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TUNWAL'.
+  WA_FCAT-SELTEXT_L = 'TUNWAL ELECTRONICS'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'RAMON'.
+  WA_FCAT-SELTEXT_L = 'RAMON INDUSTRIES'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'KINET'.
+  WA_FCAT-SELTEXT_L = 'KINETIC ENGINEERING LIMITED'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CLH'.
+  WA_FCAT-SELTEXT_L = 'CLH GASEOUS FUEL APPLICATIONS PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'KNIGHT'.
+  WA_FCAT-SELTEXT_L = 'KNIGHT QUEEN INDUSTRIES PVT LTD '.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ZOOM'.
+  WA_FCAT-SELTEXT_L = 'ZOOM MOTORS PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CAPARO'.
+  WA_FCAT-SELTEXT_L = 'CAPARO  AUTOTECH LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'AMPERE'.
+  WA_FCAT-SELTEXT_L = 'AMPERE VEHICLES PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'DMK'.
+  WA_FCAT-SELTEXT_L = 'DMK IMPEX PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'JIJO'.
+  WA_FCAT-SELTEXT_L = 'JIJO ELECTRIC WHEELS PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'DILLI'.
+  WA_FCAT-SELTEXT_L = 'DILLI ELECTRIC AUTO PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'SHRI'.
+  WA_FCAT-SELTEXT_L = 'SHRI RAM AUTOTECH PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'WA'.
+  WA_FCAT-SELTEXT_L = 'VVA AUTO INDUSTRIES PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'DD'.
+  WA_FCAT-SELTEXT_L = 'DD AUTO PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'SAERA'.
+  WA_FCAT-SELTEXT_L = 'SAERA ELECTRIC AUTO PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NEW'.
+  WA_FCAT-SELTEXT_L = 'NEW ARCANA E-VEHICLE PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'UMA'.
+  WA_FCAT-SELTEXT_L = 'UMA AUTO INDUSTRIES'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NEXT'.
+  WA_FCAT-SELTEXT_L = 'NEXTSTEP ENGINEERING (P) LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'REFLEX'.
+  WA_FCAT-SELTEXT_L = 'REFLEX CONTROL SYSTEM PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TERRA'.
+  WA_FCAT-SELTEXT_L = 'TERRA MOTORS INDIA PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ATHER'.
+  WA_FCAT-SELTEXT_L = 'ATHER ENERGY PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'LAL'.
+  WA_FCAT-SELTEXT_L = 'LAL JI GOPINATH JI INDUSTRIES'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'VRLA'.
+  WA_FCAT-SELTEXT_L = 'VRLA MANUFACTURING CO'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'HEROM'.
+  WA_FCAT-SELTEXT_L = 'HERO MOTOCROP LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'KAIKE'.
+  WA_FCAT-SELTEXT_L = 'GREEN KAIKETSU AUTOMOTIVE INDIA PVT'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'BHARAT'.
+  WA_FCAT-SELTEXT_L = 'BHARAT MOTORS'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ACCRE'.
+  WA_FCAT-SELTEXT_L = 'ACCRETION POWER AUTOS'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'UP'.
+  WA_FCAT-SELTEXT_L = 'U.P TELELINKS LIMITED'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'POWER'.
+  WA_FCAT-SELTEXT_L = 'POWERS PICKUP'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'GAURI'.
+  WA_FCAT-SELTEXT_L = 'GAURI AUTO INDIA PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'OK'.
+  WA_FCAT-SELTEXT_L = 'O K PLAY INDIA LIMITED'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'RASA'.
+  WA_FCAT-SELTEXT_L = 'RASANDIK ENGINEERING'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ELITE'.
+  WA_FCAT-SELTEXT_L = 'ELITE AUTO ENGINEERS PVT LTD.'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'SWITAC'.
+  WA_FCAT-SELTEXT_L = 'SIWACH STEEL PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ENERGY'.
+  WA_FCAT-SELTEXT_L = 'Kinetic Green Energy & Power Soluti'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'HIM'.
+  WA_FCAT-SELTEXT_L = 'HIM TEKNOFORGE LTD.'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'PASH'.
+  WA_FCAT-SELTEXT_L = 'PASHUPATI VEHICLES PVT. LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'VARSA'.
+  WA_FCAT-SELTEXT_L = 'VERSATILE AUTO COMPONENTS PVT.LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+   CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'INDIA'.
+  WA_FCAT-SELTEXT_L = 'NEW ARCANA INDIA  PVT LTD'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+    CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TOT'.
+  WA_FCAT-SELTEXT_L = 'TOTAL'.
+  WA_FCAT-TABNAME   = 'IT_FINAL'.
+  WA_FCAT-OUTPUTLEN = 8.
+  WA_FCAT-NO_ZERO = 'X'.
+  WA_FCAT-DO_SUM  = 'X'.
+  WA_FCAT-DECIMALS_OUT =  0.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  GD_LAYOUT-NO_INPUT          = 'X'.
+  GD_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+  GD_LAYOUT-TOTALS_TEXT       = 'Totals'(201).
+  GD_LAYOUT-ZEBRA             = 'X'.
+
+
+
+endform.
+
+
+FORM ALV.
+  gd_repid = sy-repid.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = GD_REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+     I_CALLBACK_TOP_OF_PAGE            = 'TOP_OF_PAGE'
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      =
+*     I_GRID_SETTINGS                   =
+     IS_LAYOUT                         = GD_LAYOUT
+     IT_FIELDCAT                       = IT_FCAT[]
+*     IT_EXCLUDING                      =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           =
+*     IT_FILTER                         =
+*     IS_SEL_HIDE                       =
+*     I_DEFAULT                         = 'X'
+*     I_SAVE                            = ' '
+*     IS_VARIANT                        =
+*     IT_EVENTS                         =
+*     IT_EVENT_EXIT                     =
+*     IS_PRINT                          =
+*     IS_REPREP_ID                      =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK                      =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = IT_FINAL[]
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+ENDFORM.                    "ALV
+
+
+
+
+FORM TOP_OF_PAGE.
+
+  DATA:  IT_HEADER TYPE SLIS_T_LISTHEADER,
+         WA_HEADER TYPE SLIS_LISTHEADER.
+
+  WA_HEADER-TYP = 'H'.
+  WA_HEADER-INFO = 'OEM Detail Report'.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+  DATA: NO_LINEC_C  TYPE C LENGTH 20.                   "LINE TO DISPLAY NO OF LINES
+  DATA: NO_LINE_C  TYPE C LENGTH 4.
+  DATA: DATE(12) TYPE C.
+*&------------------------------------------modified to display selection date in alv--------------------------------------------------*
+  DATA : DATE1_C(12) TYPE C.
+  DATA : DATE2_C(12) TYPE C.
+  DATA : SEC_LINE_C TYPE STRING.
+
+  DESCRIBE TABLE IT_FINAL LINES NO_LINE_C .
+
+  CONCATENATE 'No of Records :' NO_LINE_C INTO NO_LINEC_C SEPARATED BY SPACE.
+  WA_HEADER-TYP = 'S'.
+  WA_HEADER-INFO = NO_LINEC_C.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+  WRITE fkdat-LOW TO DATE1_C DD/MM/YYYY.
+  WRITE fkdaT-HIGH TO DATE2_C DD/MM/YYYY.
+
+  CONCATENATE 'From :  ' DATE1_C  'To: ' DATE2_C INTO SEC_LINE_C SEPARATED BY SPACE.
+
+  WA_HEADER-TYP  = 'S'.
+  WA_HEADER-INFO = SEC_LINE_C.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+*&--------------------------------------------------------------modification------------------------------------------------------------*
+
+  WRITE: SY-DATUM TO DATE DD/MM/YY.
+* Date
+  WA_HEADER-TYP  = 'S'.
+*  WA_HEADER-KEY = 'Date: '.
+  CONCATENATE  'Date :  ' DATE  INTO WA_HEADER-INFO SEPARATED BY SPACE.   "todays date
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR: WA_HEADER.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = IT_HEADER[]
+      I_LOGO             = 'RALSONLOGO1'.
+*   I_END_OF_LIST_GRID       =
+*   I_ALV_FORM               =
+  .
+
+ENDFORM.                    "TOP_OF_PAGE

@@ -1,0 +1,543 @@
+
+REPORT Y90_MM_STOCK.
+
+*&---------------------------------------------------------------------*
+*& REPORT  YDAILY_PROD
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+TABLES : MARA, MAKT , MARD, VBAK, VBAP, MAST, STPO.
+
+TYPES : BEGIN OF TY_MARA,
+          MATNR LIKE MARA-MATNR,
+          MTART LIKE MARA-MTART,
+          MATKL LIKE MARA-MATKL,
+          SPART LIKE MARA-SPART,
+        END OF TY_MARA,
+
+        BEGIN OF TY_MAKT,
+          MATNR LIKE MAKT-MATNR,
+          MAKTX LIKE MAKT-MAKTX,
+        END OF TY_MAKT,
+
+        BEGIN OF TY_MARD,
+          MATNR LIKE MARD-MATNR,
+          WERKS LIKE MARD-WERKS,
+          LGORT LIKE MARD-LGORT,
+          LABST LIKE MARD-LABST,
+        END OF TY_MARD,
+
+        BEGIN OF TY_BOM,
+          MATNR LIKE MARD-MATNR,
+          WERKS LIKE MARD-WERKS,
+          LGORT LIKE MARD-LGORT,
+          LABST LIKE MARD-LABST,
+        END OF TY_BOM,
+
+        BEGIN OF TY_MAST,
+          MATNR LIKE MAST-MATNR,
+          WERKS LIKE MAST-WERKS,
+          STLNR LIKE MAST-STLNR,
+        END OF TY_MAST,
+
+        BEGIN OF TY_STPO,
+          STLNR LIKE STPO-STLNR,
+          IDNRK LIKE STPO-IDNRK,
+        END OF TY_STPO,
+
+        BEGIN OF TY_VBAK,
+        VBELN LIKE VBAK-VBELN,
+        ERDAT LIKE VBAK-ERDAT,
+        AUART LIKE VBAK-AUART,
+        VBTYP LIKE VBAK-VBTYP,
+        TRVOG LIKE VBAK-TRVOG,
+        VKORG LIKE VBAK-VKORG,
+        END OF TY_VBAK,
+
+        BEGIN OF TY_VBAP,
+          VBELN  LIKE VBAP-VBELN,
+          POSNR  LIKE VBAP-POSNR,
+          KLMENG LIKE VBAP-KLMENG,
+          LSMENG LIKE VBAP-LSMENG,
+          VGBEL  LIKE VBAP-VGBEL,
+          WERKS  LIKE VBAP-WERKS,
+          MATNR  LIKE VBAP-MATNR,
+          FAKSP  LIKE VBAP-FAKSP,
+        END OF TY_VBAP,
+
+       BEGIN OF TY_VBEP,
+         VBELN  LIKE VBAP-VBELN,
+         POSNR  LIKE VBAP-POSNR,
+         LIFSP LIKE VBEP-LIFSP,
+         ETENR LIKE VBEP-ETENR,
+       END OF TY_VBEP,
+
+       BEGIN OF TY_VB,
+         VBELN  LIKE VBAP-VBELN,
+         POSNR  LIKE VBAP-POSNR,
+         LIFSP LIKE VBEP-LIFSP,
+         ETENR LIKE VBEP-ETENR,
+       END OF TY_VB,
+
+        BEGIN OF TY_VBRP,
+          VBELN LIKE VBRP-VBELN,
+          POSNR LIKE VBRP-POSNR,
+          FKLMG LIKE VBRP-FKLMG,
+          WERKS LIKE VBRP-WERKS,
+          AUBEL LIKE VBRP-AUBEL,
+          AUPOS LIKE VBRP-AUPOS,
+          MATNR LIKE MARA-MATNR,
+        END OF TY_VBRP,
+
+        BEGIN OF TY_FIN,
+          ORD_QTY LIKE VBAP-KLMENG,
+          MATNR   LIKE MARA-MATNR,
+        END OF TY_FIN,
+
+        BEGIN OF TY_FINAL,
+
+          MAT     LIKE MARA-MATNR,
+          MAKTX   LIKE MAKT-MAKTX,
+          KTGRM   LIKE MVKE-KTGRM,
+          WERKS   LIKE MARD-WERKS,
+          LGORT   LIKE MARD-LGORT,
+          LABST   LIKE MARD-LABST,
+          IH00    LIKE MARD-LABST,
+          FG00    LIKE MARD-LABST,
+          TOT     LIKE MARD-LABST,
+          ORD_QTY LIKE VBAP-KLMENG,
+          BIL_QTY LIKE VBAP-LSMENG,
+          PEN_QTY LIKE VBAP-LSMENG,
+          FRE_QTY LIKE VBAP-KLMENG,
+          MATNR   LIKE MARA-MATNR,
+        END OF TY_FINAL.
+
+
+DATA :  IH00 LIKE MARD-LABST,
+        FG00 LIKE MARD-LABST,
+        MAT  LIKE MARA-MATNR.
+
+
+DATA :  ORD_QTY LIKE VBAP-KLMENG,
+        PEN_QTY LIKE VBAP-KLMENG,
+        FRE_QTY LIKE VBAP-KLMENG,
+        BIL_QTY LIKE VBAP-LSMENG.
+
+DATA: FIELDCATALOG TYPE SLIS_T_FIELDCAT_ALV WITH HEADER LINE,
+      GD_TAB_GROUP TYPE SLIS_T_SP_GROUP_ALV,
+      GD_LAYOUT    TYPE SLIS_LAYOUT_ALV,
+      GD_REPID     LIKE SY-REPID.
+
+DATA :  IT_MARA  TYPE STANDARD TABLE OF TY_MARA,
+        WA_MARA  TYPE TY_MARA,
+        IT_BOM   TYPE STANDARD TABLE OF TY_BOM,
+        WA_BOM   TYPE TY_BOM,
+        IT_MAKT  TYPE STANDARD TABLE OF TY_MAKT,
+        WA_MAKT  TYPE TY_MAKT,
+        IT_MAST  TYPE STANDARD TABLE OF TY_MAST,
+        WA_MAST  TYPE TY_MAST,
+        IT_STPO  TYPE STANDARD TABLE OF TY_STPO,
+        WA_STPO  TYPE TY_STPO,
+        IT_VBAK  TYPE STANDARD TABLE OF TY_VBAK,
+        WA_VBAK  TYPE TY_VBAK,
+        IT_VBAP  TYPE STANDARD TABLE OF TY_VBAP,
+        WA_VBAP  TYPE TY_VBAP,
+        IT_VBEP  TYPE STANDARD TABLE OF TY_VBEP,
+        WA_VBEP  TYPE TY_VBEP,
+        IT_VB    TYPE STANDARD TABLE OF TY_VB,
+        WA_VB    TYPE TY_VB,
+        IT_VBRP  TYPE STANDARD TABLE OF TY_VBRP,
+        WA_VBRP  TYPE TY_VBRP,
+        IT_MARD  TYPE STANDARD TABLE OF TY_MARD,
+        WA_MARD  TYPE TY_MARD,
+        IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+        IT_FIN   TYPE STANDARD TABLE OF TY_FIN,
+        WA_FINAL TYPE TY_FINAL,
+        WA_FIN   TYPE TY_FIN.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+
+SELECT-OPTIONS : S_MATNR FOR  MARA-MATNR.
+PARAMETERS     : S_WERKS TYPE MARD-WERKS DEFAULT '1000'.
+SELECT-OPTIONS : S_MATKL FOR  MARA-MATKL.
+SELECT-OPTIONS : S_ERDAT FOR  VBAK-ERDAT OBLIGATORY .
+SELECT-OPTIONS : S_VBELN FOR  VBAK-VBELN.
+SELECTION-SCREEN END OF BLOCK B1.
+
+START-OF-SELECTION.
+
+
+  PERFORM DATA.
+  PERFORM DISPLAY.
+  PERFORM ALV.
+
+*&---------------------------------------------------------------------*
+*&      FORM  DATA
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM DATA .
+
+  SELECT MATNR
+         MTART
+         MATKL
+         SPART FROM MARA INTO TABLE IT_MARA
+                         WHERE MATNR IN S_MATNR
+                         AND   MTART EQ 'ZFRT'
+                         AND   MATKL IN S_MATKL
+                         AND   SPART NE '40'
+                         AND   SPART NE '20' .
+
+  IF IT_MARA[] IS NOT INITIAL.
+
+    SELECT MATNR
+           WERKS
+           STLNR FROM MAST INTO TABLE IT_MAST
+                 FOR ALL ENTRIES IN   IT_MARA
+                 WHERE MATNR EQ IT_MARA-MATNR
+                 AND WERKS EQ S_WERKS.
+
+
+    SELECT  MATNR
+            WERKS
+            LGORT
+            LABST FROM MARD INTO TABLE IT_MARD
+                  FOR ALL ENTRIES IN IT_MARA
+                  WHERE MATNR EQ IT_MARA-MATNR
+                  AND   LGORT EQ 'FG00'
+                  AND   WERKS EQ S_WERKS.
+
+    SELECT MATNR
+        MAKTX FROM MAKT INTO TABLE IT_MAKT
+              FOR  ALL ENTRIES IN  IT_MARA
+              WHERE MATNR EQ IT_MARA-MATNR.
+
+  ENDIF.
+
+  IF IT_MAST IS NOT INITIAL .
+
+    SELECT STLNR
+           IDNRK FROM STPO INTO TABLE IT_STPO
+                 FOR ALL ENTRIES IN   IT_MAST
+                 WHERE STLNR EQ IT_MAST-STLNR.
+
+  ENDIF.
+
+  IF IT_STPO IS NOT INITIAL .
+
+    SELECT  MATNR
+            WERKS
+            LGORT
+            LABST FROM MARD INTO TABLE IT_BOM
+                  FOR ALL ENTRIES IN IT_STPO
+                  WHERE MATNR EQ IT_STPO-IDNRK
+                  AND   LGORT EQ 'IH00'
+                  AND   WERKS EQ S_WERKS.
+
+  ENDIF.
+
+   SELECT VBELN
+          ERDAT
+          AUART
+          VBTYP
+          TRVOG
+          VKORG FROM VBAK INTO TABLE IT_VBAK WHERE VBELN IN S_VBELN AND ERDAT IN S_ERDAT AND VBTYP EQ 'C'
+                                                                                         AND TRVOG EQ '0'
+                                                                                         AND VKORG EQ '1000'.
+
+  IF NOT IT_VBAK IS INITIAL .
+    SELECT VBELN
+           POSNR
+           KLMENG
+           LSMENG
+           VGBEL
+           WERKS
+           MATNR FROM VBAP INTO TABLE IT_VBAP
+                 FOR ALL ENTRIES IN IT_VBAK
+                 WHERE VBELN EQ IT_VBAK-VBELN
+                 AND   MATNR IN S_MATNR
+                 AND   WERKS EQ S_WERKS
+                 AND   FAKSP EQ ' '.
+
+  ENDIF.
+
+  IF NOT IT_VBAP IS INITIAL.
+   SELECT VBELN
+          POSNR
+          FKLMG
+          WERKS
+          AUBEL
+          AUPOS
+          MATNR FROM VBRP INTO TABLE IT_VBRP
+                FOR ALL ENTRIES IN IT_VBAP
+                WHERE AUBEL EQ IT_VBAP-VBELN
+                 AND  AUPOS EQ IT_VBAP-POSNR
+                 AND  MATNR EQ IT_VBAP-MATNR.
+
+    SELECT  VBELN
+            POSNR
+            LIFSP
+            ETENR FROM VBEP INTO TABLE IT_VBEP
+                  FOR ALL ENTRIES IN IT_VBAP
+                  WHERE VBELN EQ IT_VBAP-VBELN
+                    AND POSNR EQ IT_VBAP-POSNR
+                    AND LIFSP EQ '06'
+                    AND ETENR EQ 2.
+
+  SELECT VBELN
+         POSNR
+         LIFSP
+         ETENR FROM VBEP INTO TABLE IT_VB
+               FOR ALL ENTRIES IN IT_VBAP
+               WHERE VBELN EQ IT_VBAP-VBELN
+                 AND POSNR EQ IT_VBAP-POSNR
+                 AND LIFSP EQ '06'
+                 AND ETENR EQ 1.
+  ENDIF.
+
+
+ SORT IT_VBAP BY MATNR VBELN POSNR.
+ LOOP AT IT_VBAP INTO WA_VBAP .
+ AT NEW MATNR.
+ ORD_QTY = 0.
+ BIL_QTY = 0.
+ ENDAT.
+
+    SORT IT_VBRP BY MATNR VBELN POSNR.
+
+    LOOP AT IT_VBRP INTO WA_VBRP  WHERE AUBEL = WA_VBAP-VBELN
+                                   AND  AUPOS = WA_VBAP-POSNR.
+
+     BIL_QTY =  BIL_QTY + WA_VBRP-FKLMG .
+
+     ENDLOOP.
+
+    CLEAR WA_VB.
+    READ TABLE IT_VB INTO WA_VB WITH KEY VBELN = WA_VBAP-VBELN
+                                         POSNR = WA_VBAP-POSNR.
+    IF SY-SUBRC EQ 0.
+    CLEAR : WA_VBAP-KLMENG, BIL_QTY.
+    ENDIF.
+
+    CLEAR WA_VBEP.
+    READ TABLE IT_VBEP INTO WA_VBEP WITH KEY VBELN = WA_VBAP-VBELN
+                                             POSNR = WA_VBAP-POSNR.
+    IF SY-SUBRC EQ 0.
+    CLEAR : WA_VBAP-KLMENG, BIL_QTY.
+    ENDIF.
+
+      IF BIL_QTY GE WA_VBAP-KLMENG.
+      CLEAR : BIL_QTY,WA_VBAP-KLMENG.
+      ELSEIF BIL_QTY LT WA_VBAP-KLMENG.
+      ORD_QTY = ORD_QTY + WA_VBAP-KLMENG.
+      ENDIF.
+
+      AT END OF MATNR.
+      WA_FIN-ORD_QTY = ORD_QTY - BIL_QTY.
+      WA_FIN-MATNR   = WA_VBAP-MATNR.
+      COLLECT WA_FIN INTO IT_FIN.
+      ENDAT.
+
+  CLEAR : WA_FIN,WA_VBAP,WA_VBRP.
+  ENDLOOP.
+
+
+  SORT IT_MARD BY MATNR.
+  LOOP AT IT_MARD INTO  WA_MARD .
+  WA_FINAL-FG00  = ( WA_MARD-LABST / 1000 ).
+  WA_FINAL-MATNR = WA_MARD-MATNR.
+  WA_FINAL-WERKS = WA_MARD-WERKS.
+
+    CLEAR WA_FIN.
+    READ TABLE IT_FIN INTO WA_FIN WITH KEY MATNR = WA_MARD-MATNR.
+    IF SY-SUBRC EQ 0.
+    WA_FINAL-ORD_QTY = WA_FIN-ORD_QTY.
+    ENDIF.
+
+    CLEAR WA_MAKT.
+    READ TABLE IT_MAKT INTO WA_MAKT WITH KEY MATNR = WA_MARD-MATNR.
+    IF SY-SUBRC = 0.
+      WA_FINAL-MAKTX = WA_MAKT-MAKTX.
+    ENDIF.
+
+    CLEAR WA_MAST.
+    READ TABLE IT_MAST INTO WA_MAST WITH KEY MATNR = WA_MARD-MATNR.
+    IF SY-SUBRC EQ 0.
+
+      CLEAR WA_STPO.
+      READ TABLE IT_STPO INTO WA_STPO WITH KEY STLNR = WA_MAST-STLNR.
+      IF SY-SUBRC EQ 0.
+        WA_FINAL-MAT = WA_STPO-IDNRK.
+
+        CLEAR WA_BOM.
+        READ TABLE IT_BOM INTO WA_BOM WITH KEY MATNR = WA_STPO-IDNRK.
+        IF SY-SUBRC EQ 0.
+          WA_FINAL-IH00 = ( WA_BOM-LABST / 1000 ).
+        ENDIF.
+      ENDIF.
+    ENDIF.
+    APPEND WA_FINAL TO IT_FINAL.
+    CLEAR :  WA_FINAL , WA_MARD.
+  ENDLOOP.
+
+*  LOOP AT IT_FINAL INTO WA_FINAL.
+
+*    SORT IT_VBRP BY  MATNR .
+*    LOOP AT IT_VBRP INTO WA_VBRP WHERE MATNR = WA_FINAL-MATNR
+*                                 AND   WERKS = WA_FINAL-WERKS.
+*
+*      BIL_QTY =  BIL_QTY + WA_VBRP-FKLMG .
+*      WA_FINAL-BIL_QTY = WA_FINAL-BIL_QTY + BIL_QTY.
+*
+*      CLEAR : BIL_QTY,  WA_VBRP.
+*     ENDLOOP.
+*
+*    MODIFY IT_FINAL FROM WA_FINAL.
+*    CLEAR : WA_FINAL.
+*   ENDLOOP.
+
+  LOOP AT IT_FINAL INTO WA_FINAL.
+
+*    PEN_QTY = WA_FINAL-ORD_QTY - WA_FINAL-BIL_QTY.
+
+    IF WA_FINAL-ORD_QTY GE 0.
+    WA_FINAL-PEN_QTY = ( WA_FINAL-ORD_QTY / 1000 ).
+    ENDIF.
+
+    WA_FINAL-TOT = WA_FINAL-IH00 + WA_FINAL-FG00.
+
+    FRE_QTY = WA_FINAL-TOT - WA_FINAL-PEN_QTY.
+
+*    IF FRE_QTY GE 0.
+    WA_FINAL-FRE_QTY = FRE_QTY.
+*    ENDIF.
+    MODIFY IT_FINAL FROM WA_FINAL.
+    CLEAR : WA_FINAL, FRE_QTY, PEN_QTY.
+  ENDLOOP.
+
+ENDFORM.                    " DATA
+
+
+
+*&---------------------------------------------------------------------*
+*&      FORM  DISPLAY
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM DISPLAY .
+
+  FIELDCATALOG-FIELDNAME   = 'MATNR'.
+  FIELDCATALOG-SELTEXT_M   = 'MATERIAL NO'.
+  FIELDCATALOG-OUTPUTLEN   =  15.
+  FIELDCATALOG-NO_ZERO     =  'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'MAKTX'.
+  FIELDCATALOG-SELTEXT_M   = 'MATERIAL DESCRIPTION'.
+  FIELDCATALOG-OUTPUTLEN   =  35.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'MAT'.
+  FIELDCATALOG-SELTEXT_M   = 'PROD MATERIAL NO'.
+  FIELDCATALOG-OUTPUTLEN   =  15.
+  FIELDCATALOG-NO_ZERO     =  'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'IH00'.
+  FIELDCATALOG-SELTEXT_M   = '(IH00)'.
+  FIELDCATALOG-OUTPUTLEN   =  15.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'FG00'.
+  FIELDCATALOG-SELTEXT_M   = '(FG00)'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'TOT'.
+  FIELDCATALOG-SELTEXT_M   = 'TOTAL'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'PEN_QTY'.
+  FIELDCATALOG-SELTEXT_M   = 'ORDER QTY'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'FRE_QTY'.
+  FIELDCATALOG-SELTEXT_M   = 'FREE QTY'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  GD_LAYOUT-NO_INPUT          = 'X'.
+  GD_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+  GD_LAYOUT-TOTALS_TEXT       = 'TOTALS'(201).
+  GD_LAYOUT-ZEBRA             = 'X'.
+
+
+ENDFORM.                    " DISPLAY
+
+*&---------------------------------------------------------------------*
+*&      FORM  ALV
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM ALV .
+
+  GD_REPID = SY-REPID.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*      I_BACKGROUND_ID        = 'ALV_BACKGROUND'
+      I_CALLBACK_PROGRAM     = GD_REPID
+*      I_CALLBACK_TOP_OF_PAGE = 'TOP-OF-PAGE'  "SEE FORM
+      IS_LAYOUT              = GD_LAYOUT
+      IT_FIELDCAT            = FIELDCATALOG[]
+*     IT_SORT                = IT_SORTCAT
+*     IT_SPECIAL_GROUPS      = GD_TABGROUP
+*     IT_EVENTS              = GT_XEVENTS
+      I_SAVE                 = 'X'
+*     IS_VARIANT             = Z_TEMPLATE
+    TABLES
+      T_OUTTAB               = IT_FINAL
+    EXCEPTIONS
+      PROGRAM_ERROR          = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+ENDFORM.                    " ALV
+
+                  "TOP-OF-PAGE
+

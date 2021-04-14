@@ -1,0 +1,268 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_INDENT1
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT y90_indent1.
+
+TABLES : zindent,MARD.
+
+*INCLUDE ZINDENT01.
+
+DATA : var1 TYPE char1.
+
+CONTROLS tab_cnt1 TYPE TABLEVIEW USING SCREEN 101.
+
+DATA : it TYPE STANDARD TABLE OF zindent,
+       wa TYPE zindent.
+DATA : NUM TYPE C LENGTH 10.
+DATA: text2   TYPE string.
+TYPES : BEGIN OF str,
+          matnr           TYPE matnr,
+          menge           TYPE menge_d,
+          meins           TYPE meins,
+          lgort           TYPE lgort_d,
+          mark            TYPE char1,
+          REQUIRED_DATE   TYPE ZDATE,
+          REMARKS         TYPE ZREMARKS,
+          WERKS           TYPE WERKS_D,
+          STRIP_SIZE      TYPE ZSTRIP_S,
+          STRIP_THICKNESS TYPE ZSTRIP_T,
+          TUBE_SIZE       TYPE ZTUBE_S,
+          TUBE_THICKNESS  TYPE ZTUBE_T,
+        END OF str.
+
+DATA : it1 TYPE STANDARD TABLE OF str,
+       wa1 TYPE str.
+
+data : WNORANGE LIKE INRI-NRRANGENR,
+       WSUBOBJ  LIKE INRI-SUBOBJECT,
+       WDOCNO(12).
+
+*DATA : indent_num TYPE zindent-indent.
+*DATA : WERKS TYPE MARD-WERKS.
+
+CALL SCREEN 0101.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0101  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0101 OUTPUT.
+  SET PF-STATUS 'ZIND2'.
+  SET TITLEBAR 'ZIND'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0101  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0101 INPUT.
+
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      CLEAR: var1, zindent.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT' OR 'CANC'.
+      LEAVE PROGRAM.
+    WHEN 'ENTER'.
+      CLEAR: var1.
+      PERFORM data_valid.
+    WHEN 'SAVE'.
+      CLEAR: var1.
+      PERFORM data_valid.
+      IF var1 NE '1'.
+        PERFORM save.
+      ENDIF.
+  ENDCASE.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  SCROLL  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE scroll OUTPUT.
+
+  IF sy-stepl = 1.
+    tab_cnt1-lines = tab_cnt1-top_line + sy-loopc - 1.
+  ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  TAB_CNT1_MODIFY  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE tab_cnt1_modify INPUT.
+
+  DATA : tabix TYPE sy-tabix.
+  DATA : line TYPE i.
+  DATA : variable TYPE char1.
+  CLEAR : tabix, line, variable.
+  DESCRIBE TABLE it1 LINES line.
+  IF line LT tab_cnt1-current_line.
+    variable = 1.
+    APPEND INITIAL LINE TO it1.
+  ENDIF.
+  IF variable EQ '1'.
+    IF tab_cnt1-current_line GT sy-tabix.
+      tabix = sy-tabix.
+    ELSE.
+      tabix = tab_cnt1-current_line.
+    ENDIF.
+  ELSE.
+    tabix = tab_cnt1-current_line.
+  ENDIF.
+
+  MODIFY it1
+    FROM wa1
+    INDEX tabix.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  DATA_VALID
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM data_valid .
+
+  DELETE it1 WHERE matnr IS INITIAL.
+  IF it1[] IS NOT INITIAL.
+    LOOP AT it1 INTO wa1.
+      IF var1 NE '1'.
+        IF wa1-menge IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input qty' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-meins IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input UOM' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-lgort IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Storage Loc' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-werks IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Plant' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-STRIP_SIZE IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Strip Width' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-STRIP_THICKNESS IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Strip Thickness' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-TUBE_SIZE IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Tube Size' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+      IF var1 NE '1'.
+        IF wa1-TUBE_THICKNESS IS INITIAL.
+          var1 = 1.
+          MESSAGE 'Please input Tube Thickness' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ENDIF.
+
+
+*      IF VAR1 NE '1'.
+*      SELECT SINGLE WERKS FROM MARD INTO (MARD-WERKS) WHERE MATNR = WA1-MATRN.
+*        IF SY-SUBRC NE 0.
+*        VAR1 = 1.
+*        MESSAGE 'Material is not present ' TYPE 'S' DISPLAY LIKE 'E'.
+*        ENDIF.
+*      ENDIF.
+
+
+      CLEAR: wa1.
+    ENDLOOP.
+  ELSE.
+    var1 = 1.
+    MESSAGE 'Please input atleast one material code record in table' TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save .
+
+  CALL FUNCTION 'NUMBER_GET_NEXT'
+    EXPORTING
+      nr_range_nr                   = '01'
+      object                        = 'ZINDT01'
+*     QUANTITY                      = '1'
+*     SUBOBJECT                     = WSUBOBJ
+*     TOYEAR                        = '0000'
+*     IGNORE_BUFFER                 = ' '
+   IMPORTING
+     NUMBER                        = NUM
+*     QUANTITY                      =
+*     RETURNCODE                    =
+   EXCEPTIONS
+     INTERVAL_NOT_FOUND            = 1
+     NUMBER_RANGE_NOT_INTERN       = 2
+     OBJECT_NOT_FOUND              = 3
+     QUANTITY_IS_0                 = 4
+     QUANTITY_IS_NOT_1             = 5
+     INTERVAL_OVERFLOW             = 6
+     BUFFER_OVERFLOW               = 7
+     OTHERS                        = 8
+            .
+  IF sy-subrc EQ 0.
+  LOOP AT it1 INTO wa1.
+    MOVE-CORRESPONDING wa1 TO wa.
+    wa-mandt = sy-mandt.
+    wa-indent = NUM.
+    wa-aedat  = sy-datum.
+    wa-ernam  = sy-uname.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = wa-matnr
+      IMPORTING
+        output = wa-matnr.
+        MODIFY zindent FROM wa.
+    COMMIT WORK.
+    CLEAR: wa, wa1.
+  ENDLOOP.
+
+        MESSAGE S001(00) WITH 'INDENT NUMBER :' NUM.
+      ELSE.
+        MESSAGE 'INDENT NOT CREATED'TYPE 'E'.
+      ENDIF.
+        LEAVE PROGRAM.
+
+ENDFORM.
+

@@ -1,0 +1,710 @@
+*&---------------------------------------------------------------------*
+*& Report  Y90_SMS_PROGRAM
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT y90_sms_program
+NO STANDARD PAGE HEADING
+LINE-SIZE 130.
+
+************************************************************************
+*                 Tables Used
+************************************************************************
+TABLES : bsad,
+         bsid,
+         kna1,
+         bseg,
+         vbrk,
+         knvv,
+         vbrp,
+         makt,
+         LFA1,
+         VBPA,
+         KONV.
+*TYPES: zsms_user TYPE xxxxxx.
+*           zsdtassalidtxt.
+DATA: FIELDCATALOG TYPE SLIS_T_FIELDCAT_ALV WITH HEADER LINE,
+      GD_TAB_GROUP TYPE SLIS_T_SP_GROUP_ALV,
+      GD_LAYOUT    TYPE SLIS_LAYOUT_ALV,
+      GD_REPID     LIKE SY-REPID.
+
+***********************************************************************
+*  Selection-options
+***********************************************************************
+SELECTION-SCREEN BEGIN OF BLOCK first WITH FRAME TITLE text-001.
+
+SELECT-OPTIONS :
+        ckunnr   FOR vbrk-kunrg NO-EXTENSION ,"OBLIGATORY ,
+        s_date  FOR vbrk-fkdat NO-EXTENSION OBLIGATORY.
+PARAMETER:
+        p_bukrs   LIKE vbrk-bukrs DEFAULT '1000'.
+*PARAMETERS : coll   AS CHECKBOX.
+
+SELECTION-SCREEN END OF BLOCK first.
+
+TYPES: BEGIN OF ty_vbrk,
+       vbeln TYPE vbrk-vbeln,
+       fkart TYPE vbrk-fkart,
+       vkorg TYPE vbrk-vkorg,
+       fkdat TYPE vbrk-fkdat,
+       netwr TYPE vbrk-netwr,
+       kunrg TYPE vbrk-kunrg,
+       knumv TYPE vbrk-knumv,
+       END OF ty_vbrk.
+
+DATA : it_vbrk TYPE STANDARD TABLE OF ty_vbrk,
+       wa_vbrk TYPE ty_vbrk.
+
+TYPES: BEGIN OF ty_vbrp,
+       posnr TYPE vbrp-posnr,
+       fkimg TYPE vbrp-fkimg,
+       matnr TYPE vbrp-matnr,
+       vgbel TYPE vbrp-vgbel,
+       vgtyp TYPE vbrp-vgtyp,
+       vbeln TYPE vbrp-vbeln,
+       AUBEL TYPE vbrp-AUBEL,
+       AUPOS TYPE vbrp-AUPOS,
+       END OF ty_vbrp.
+
+DATA : it_vbrp TYPE STANDARD TABLE OF ty_vbrp,
+       wa_vbrp TYPE ty_vbrp.
+
+TYPES : BEGIN OF TY_KONV,
+        KNUMV TYPE KONV-KNUMV,
+        KPOSN TYPE KONV-KPOSN,
+        STUNR TYPE KONV-STUNR,
+        ZAEHK TYPE KONV-ZAEHK,
+        KWERT TYPE KONV-KWERT,
+        KSCHL TYPE KONV-KSCHL,
+        END OF TY_KONV.
+
+DATA : IT_KONV TYPE STANDARD TABLE OF TY_KONV,
+       WA_KONV TYPE TY_KONV.
+
+TYPES :  BEGIN OF ty_likp,
+         vbeln TYPE likp-vbeln,
+         xabln TYPE likp-xabln,
+         LIFEX TYPE LIKP-LIFEX,
+         LIFNR LIKE LIKP-LIFNR,
+         END OF ty_likp.
+
+DATA : it_likp TYPE STANDARD TABLE OF ty_likp,
+       wa_likp TYPE ty_likp.
+
+TYPES : BEGIN OF ty_itab ,
+        telf2 LIKE kna1-telf2,
+        fkdat TYPE string,
+        netwr TYPE string,
+        xabln TYPE likp-xabln,
+        kunrg TYPE vbrk-kunrg,
+        name1 TYPE kna1-name1,
+        LIFEX TYPE LIKP-LIFEX,
+        LIFNR LIKE LIKP-LIFNR,
+        NAME2 LIKE LFA1-NAME1,
+        TELF1 LIKE LFA1-TELF1,
+        KNUMV TYPE KONV-KNUMV,
+        vbeln TYPE vbrk-vbeln,
+        fkimg TYPE string,
+        matnr TYPE vbrp-matnr,
+        maktx TYPE makt-maktx,
+        msg   TYPE string,
+        msg1  TYPE string,
+        END OF ty_itab.
+
+DATA : it_itab TYPE STANDARD TABLE OF ty_itab,
+       wa_itab TYPE ty_itab.
+
+TYPES : BEGIN OF TY_VBPA,
+        VBELN TYPE VBPA-VBELN,
+        POSNR TYPE VBPA-POSNR,
+        PARVW TYPE VBPA-PARVW,
+        KUNNR TYPE VBPA-KUNNR,
+        LIFNR TYPE VBPA-LIFNR,
+        END OF TY_VBPA.
+
+DATA : IT_VBPA TYPE STANDARD TABLE OF TY_VBPA,
+       WA_VBPA TYPE TY_VBPA.
+
+DATA : message TYPE string.
+DATA : message1 TYPE string.
+DATA : message2 TYPE string.
+DATA : message3 TYPE string.
+DATA : message4 TYPE string.
+DATA : message5 TYPE string.
+DATA : message6 TYPE string.
+DATA : message7 TYPE string.
+DATA : message8 TYPE string.
+DATA : message9 TYPE string.
+DATA : message10 TYPE string.
+
+TYPES  : BEGIN OF ty_fin,
+         telf2 LIKE kna1-telf2,
+         netwr TYPE string,
+         kunrg TYPE vbrk-kunrg,
+         fkimg TYPE string,
+         fkdat TYPE string,
+         matnr TYPE vbrp-matnr,
+         maktx TYPE makt-maktx,
+         name1 TYPE kna1-name1,
+         msg   TYPE C LENGTH 600 ,"string,
+         msg1  TYPE string,
+         xabln TYPE likp-xabln,
+         KNUMV TYPE KONV-KNUMV,
+         total TYPE string,
+         vbeln TYPE vbrk-vbeln,
+         LIFEX TYPE LIKP-LIFEX,
+         LIFNR LIKE LIKP-LIFNR,
+         NAME2 LIKE LFA1-NAME1,
+         TELF1 LIKE LFA1-TELF1,
+         END OF ty_fin.
+
+DATA : it_fin TYPE STANDARD TABLE OF ty_fin,
+       wa_fin TYPE ty_fin.
+
+DATA: netamt LIKE bsid-dmbtr.
+
+DATA : BEGIN OF it_msg OCCURS 0,
+       telf2 LIKE kna1-telf2,
+       msg   TYPE string,
+       msg1  TYPE string,
+       END OF it_msg.
+
+DATA : w_fcat TYPE slis_fieldcat_alv .
+DATA : t_fcat   TYPE slis_t_fieldcat_alv,
+       w_layout TYPE slis_layout_alv.
+
+DATA LV_TAX TYPE KWERT.
+
+DATA :  string(100) TYPE c,
+        one(25)     TYPE c VALUE 'Avon Steel Industries Pvt Ltd Payment Of Rs',
+        two(13)     TYPE c,
+        three(7)    TYPE c VALUE 'against',
+        four(30)    TYPE c,
+        five(12)    TYPE c VALUE 'For Bill No:',
+        six(10)     TYPE c.
+
+DATA: city     LIKE kna1-ort01,
+      tel      LIKE kna1-telf2,
+      cust     LIKE bsid-kunnr,
+      oldcity  LIKE kna1-ort01,
+      oldname  LIKE kna1-name1,
+      oldcode  LIKE bsid-kunnr,
+      grandtot LIKE bsid-dmbtr,
+      date     LIKE bsid-budat,
+      zuonr    LIKE bsid-zuonr,
+      text     LIKE bseg-sgtxt,
+      code     LIKE bsid-kunnr,
+      name     LIKE kna1-name1,
+      amt      LIKE bsid-dmbtr,
+      w_year   LIKE bsik-gjahr,
+      zone     LIKE knvv-vkbur.
+*      sname LIKE zsdtassalidtxt-short_name.
+***********************************IF coll EQ 'X'.
+***********************************  FREE s_date.
+***********************************  s_date-sign = 'I'.
+***********************************  s_date-option = 'BT'.
+***********************************  s_date-low = s_date-low .
+***********************************  s_date-high = s_date-high.
+***********************************  APPEND s_date.
+***********************************ENDIF.
+
+netamt = 0.
+grandtot = 0.
+
+DATA : dat TYPE sy-datum.
+DATA : qty TYPE fkimg.
+DATA : f_msg TYPE string.
+DATA : total TYPE string.
+DATA qty_tot  TYPE string.
+*DATA : lw_sms_user TYPE zsms_user.
+DATA:   lv_client   TYPE REF TO if_http_client.
+
+CALL FUNCTION 'DATE_TO_PERIOD_CONVERT'
+  EXPORTING
+    i_date         = s_date-high
+    i_periv        = 'V3'
+  IMPORTING
+    e_gjahr        = w_year
+  EXCEPTIONS
+    input_false    = 1
+    t009_notfound  = 2
+    t009b_notfound = 3
+    OTHERS         = 4.
+
+START-OF-SELECTION .
+  PERFORM get_data.
+*****************  IF coll = 'X'.
+*****************    PERFORM send_msg.
+*****************  ENDIF.
+  PERFORM DISPLAY.
+  PERFORM ALV.
+END-OF-SELECTION.
+
+
+
+*&----------------------milly -----------------------------------------------*
+*&      Form  SEND_MSG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+************************FORM send_msg .
+************************  LOOP AT it_msg.
+************************
+************************    CONCATENATE 'http://www.txtguru.in/imobile/api.php?' 'username='   'avonsteel_com'
+************************                                 '&password='  '27877736'
+************************                                 '&source='    'UPDATE'
+************************                                 '&dmobile=91' it_msg-telf2
+************************                                 '&message='   it_msg-msg
+************************                                 INTO f_msg.
+************************    CALL METHOD cl_http_client=>create_by_url
+************************      EXPORTING
+************************        url    = f_msg
+************************      IMPORTING
+************************        client = lv_client.
+************************    IF sy-subrc <> 0.
+************************* Implement suitable error handling here
+************************    ENDIF.
+************************
+************************    CALL METHOD lv_client->send
+************************      EXCEPTIONS
+************************        http_communication_failure = 1
+************************        http_invalid_state         = 2.
+************************
+************************    CALL METHOD lv_client->receive
+************************      EXCEPTIONS
+************************        http_communication_failure = 1
+************************        http_invalid_state         = 2
+************************        http_processing_failed     = 3.
+************************
+************************  ENDLOOP.
+************************  MESSAGE ID '00' TYPE 'S' NUMBER '208' WITH
+************************           'Msg Sent'.
+************************
+************************ENDFORM.                    "SEND_MSG
+*&---------------------------------------------------------------------*
+*&      Form  GET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->COL_POS    text
+*      -->FNAME      text
+*      -->SELTEXT_L  text
+*      -->DO_SUM     text
+*      -->NO_ZERO    text
+*----------------------------------------------------------------------*
+************************FORM get_fcat   USING    col_pos   LIKE sy-cucol
+************************                     fname     TYPE slis_fieldname
+************************                     seltext_l LIKE  dd03p-scrtext_l
+************************                     do_sum
+************************                      no_zero.
+************************  w_fcat-col_pos = col_pos .
+************************  w_fcat-fieldname =  fname.
+************************  w_fcat-seltext_l = seltext_l.
+************************  w_fcat-do_sum    = do_sum.
+************************  w_fcat-no_zero   = no_zero.
+************************  APPEND w_fcat TO t_fcat .
+************************  CLEAR w_fcat .
+************************
+************************
+************************ENDFORM.                    " GET_FCAT
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+
+FORM get_data.
+
+  SELECT vbeln
+         fkart
+         vkorg
+         fkdat
+         netwr
+         kunrg
+         KNUMV FROM vbrk INTO TABLE it_vbrk WHERE fkdat IN s_date AND kunrg IN ckunnr AND bukrs EQ p_bukrs.
+
+  IF NOT it_vbrk IS INITIAL.
+    SELECT posnr
+           fkimg
+           matnr
+           vgbel
+           vgtyp
+           vbeln
+           AUBEL
+           AUPOS FROM vbrp INTO TABLE it_vbrp FOR ALL ENTRIES IN it_vbrk WHERE vbeln = it_vbrk-vbeln.
+
+    SELECT KNUMV
+           KPOSN
+           STUNR
+           ZAEHK
+           KWERT
+           KSCHL FROM KONV INTO TABLE IT_KONV FOR ALL ENTRIES IN IT_VBRK WHERE KNUMV = IT_VBRK-KNUMV AND ( KSCHL = 'JCOS' OR KSCHL = 'JOIG'
+      OR KSCHL = 'JOUG' OR KSCHL = 'JOSG' OR KSCHL = 'JOCG' OR KSCHL = 'ZTCZ').
+
+  ENDIF.
+
+  IF NOT it_vbrp IS INITIAL.
+    SELECT vbeln
+           xabln
+           LIFEX
+           LIFNR
+           FROM likp INTO TABLE it_likp FOR ALL ENTRIES IN it_vbrp WHERE vbeln = it_vbrp-vgbel.
+  ENDIF.
+
+  IF NOT IT_LIKP IS INITIAL.
+    SELECT  VBELN
+            POSNR
+            PARVW
+            KUNNR
+            LIFNR
+       FROM VBPA INTO TABLE IT_VBPA FOR ALL ENTRIES IN IT_LIKP WHERE VBELN = IT_LIKP-VBELN AND PARVW = 'SP' AND LIFNR NE ''.
+
+  ENDIF.
+
+  SORT it_vbrp BY vbeln.
+
+  LOOP AT it_vbrp INTO wa_vbrp.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        input  = wa_vbrp-vbeln
+      IMPORTING
+        output = wa_itab-vbeln.
+
+    wa_itab-fkimg = wa_vbrp-fkimg.
+
+    CLEAR wa_likp.
+    READ TABLE it_likp INTO wa_likp WITH KEY vbeln = wa_vbrp-vgbel.
+    IF sy-subrc EQ 0.
+    wa_itab-LIFEX = wa_likp-LIFEX.
+    wa_itab-LIFNR = wa_likp-LIFNR.
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = wa_likp-xabln
+        IMPORTING
+          output = wa_itab-xabln.
+    ENDIF.
+
+    CLEAR WA_VBRK.
+    READ TABLE IT_VBRK INTO WA_VBRK WITH KEY VBELN = WA_VBRP-VBELN.
+
+    CLEAR WA_VBPA.
+    READ TABLE IT_VBPA INTO WA_VBPA WITH KEY VBELN = WA_LIKP-VBELN." AND PARVW = 'LF' AND LIFNR NE ''.
+
+    SELECT SINGLE NAME1 TELF1 FROM LFA1 INTO (WA_ITAB-NAME2,WA_ITAB-TELF1) WHERE LIFNR = WA_VBPA-LIFNR.
+
+    CLEAR wa_vbrk.
+    READ TABLE it_vbrk INTO wa_vbrk WITH KEY vbeln = wa_vbrp-vbeln.
+    IF sy-subrc EQ 0.
+      wa_itab-netwr = wa_vbrk-netwr.
+      wa_itab-kunrg = wa_vbrk-kunrg.
+      wa_itab-KNUMV = wa_vbrk-KNUMV.
+      CALL FUNCTION 'CONVERSION_EXIT_PDATE_OUTPUT'
+        EXPORTING
+          input  = wa_vbrk-fkdat
+        IMPORTING
+          output = wa_itab-fkdat.
+    ENDIF.
+
+    CLEAR: kna1-name1,kna1-telf2.
+    SELECT SINGLE name1 telf2 FROM kna1 INTO (kna1-name1,kna1-telf2) WHERE kunnr = wa_vbrk-kunrg.
+    wa_itab-name1 = kna1-name1.
+    wa_itab-telf2 = kna1-telf2.
+    APPEND wa_itab TO it_itab.
+    CLEAR wa_itab.
+  ENDLOOP.
+
+  sort it_itab by vbeln.
+  LOOP AT it_itab INTO wa_itab.
+    AT NEW vbeln.
+      qty = 0.
+    ENDAT.
+
+    qty = qty + wa_itab-fkimg.
+
+    AT END OF vbeln.
+    MOVE:  wa_itab-vbeln TO wa_fin-vbeln,
+           wa_itab-xabln TO wa_fin-xabln,
+           wa_itab-name1 TO wa_fin-name1,
+           wa_itab-telf2 TO wa_fin-telf2,
+           wa_itab-netwr TO wa_fin-netwr,
+           wa_itab-kunrg TO wa_fin-kunrg,
+           qty           TO wa_fin-fkimg,
+           wa_itab-fkdat TO wa_fin-fkdat,
+           wa_itab-LIFEX TO wa_fin-LIFEX,
+           WA_ITAB-NAME2 TO wa_fin-NAME2,
+           WA_ITAB-TELF1 TO WA_FIN-TELF1,
+           wa_itab-KNUMV TO wa_FIN-KNUMV.
+    COLLECT wa_fin INTO it_fin.
+*    APPEND wa_fin TO it_fin.
+    ENDAT.
+    CLEAR wa_fin.
+  ENDLOOP.
+
+  LOOP AT it_fin INTO wa_fin.
+
+    CLEAR LV_TAX.
+    LOOP AT IT_KONV INTO WA_KONV WHERE KNUMV = WA_fin-KNUMV.
+      LV_TAX = LV_TAX + WA_KONV-KWERT.
+    ENDLOOP.   " JLST , ZIN1 , ZIN2 , JCST
+    WA_FIN-TOTAL = WA_FIN-NETWR + LV_TAX.
+
+
+    CONCATENATE 'Your A/C has been Debited with Rs' WA_FIN-TOTAL 'bill no.' wa_fin-vbeln 'Dt.' wa_fin-fkdat 'Qty' wa_fin-fkimg 'Truck no.'
+    wa_fin-LIFEX INTO wa_fin-msg SEPARATED BY space.
+    CONCATENATE 'TPT' wa_fin-NAME2 WA_FIN-TELF1 'ASIPL' INTO wa_fin-msg1 SEPARATED BY space.
+    MODIFY it_fin FROM wa_fin.
+    CLEAR wa_fin.
+  ENDLOOP.
+
+  SORT it_fin BY vbeln.
+  LOOP AT it_fin INTO wa_fin.
+    it_msg-telf2 = wa_fin-telf2.
+    it_msg-msg = wa_fin-msg.
+    it_msg-msg1 = wa_fin-msg1.
+    COLLECT it_msg.
+    CLEAR : wa_fin,it_msg.
+  ENDLOOP.
+
+*    LOOP AT it_itab INTO wa_itab.
+*    AT NEW VBELN.
+*    MESSAGE = 0.
+*    ENDAT.
+*
+*    if sy-tabix = 1.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE1 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 2.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE2 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 3.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE3 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 4.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE4 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 5.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE5 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 6.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE6 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 7.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE7 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 8.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE8 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 9.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE9 SEPARATED BY SPACE.
+*    ELSEIF sy-tabix = 10.
+*    CONCATENATE wa_ITAB-MSG wa_ITAB-MSG1 INTO MESSAGE10 SEPARATED BY SPACE.
+*    endif.
+*
+*    AT END OF VBELN.
+*    CONCATENATE MESSAGE1 MESSAGE2 MESSAGE3 MESSAGE4 MESSAGE5 MESSAGE6 MESSAGE7 MESSAGE8 MESSAGE9 MESSAGE10 INTO MESSAGE SEPARATED BY SPACE.
+*    it_msg-telf2 = wa_itab-telf2.
+*    it_msg-msg = MESSAGE.
+*    COLLECT it_msg.
+*    CLEAR : wa_itab,it_msg.
+*    ENDAT.
+*
+*  ENDLOOP.
+
+ENDFORM.
+
+FORM DISPLAY.
+
+  FIELDCATALOG-FIELDNAME   = 'TELF2'.
+  FIELDCATALOG-SELTEXT_M   = 'MOBILE'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG." TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'MSG'.
+  FIELDCATALOG-SELTEXT_M   = 'MSG'.
+  FIELDCATALOG-OUTPUTLEN   =  90.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG." TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'MSG1'.
+  FIELDCATALOG-SELTEXT_M   = 'MSG'.
+  FIELDCATALOG-OUTPUTLEN   =  60.
+  FIELDCATALOG-DO_SUM      = 'X'.
+  FIELDCATALOG-NO_ZERO     = 'X'.
+  APPEND FIELDCATALOG." TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+*  GD_LAYOUT-NO_INPUT          = 'X'.
+*  GD_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+*  GD_LAYOUT-TOTALS_TEXT       = 'TOTALS'(201).
+*  GD_LAYOUT-ZEBRA             = 'X'.
+*
+
+ENDFORM.
+
+*----------------------------------------------------------------------*
+FORM ALV .
+
+  GD_REPID = SY-REPID.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*      I_BACKGROUND_ID        = 'ALV_BACKGROUND'
+      I_CALLBACK_PROGRAM     = GD_REPID
+*      I_CALLBACK_TOP_OF_PAGE = 'TOP-OF-PAGE'  "SEE FORM
+      IS_LAYOUT              = GD_LAYOUT
+      IT_FIELDCAT            = FIELDCATALOG[]
+*     IT_SORT                = IT_SORTCAT
+*     IT_SPECIAL_GROUPS      = GD_TABGROUP
+*     IT_EVENTS              = GT_XEVENTS
+      I_SAVE                 = 'X'
+*     IS_VARIANT             = Z_TEMPLATE
+    TABLES
+      T_OUTTAB               = IT_MSG
+    EXCEPTIONS
+      PROGRAM_ERROR          = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+ENDFORM.
+
+
+
+
+
+
+
+
+*FORM get_data .
+**  SORT itab BY kunnr.
+** Getting data from BSAD Table.
+*  SELECT bukrs kunnr shkzg zuonr belnr dmbtr INTO (itab-bukrs,
+*       itab-kunnr,itab-shkzg,itab-zuonr,itab-belnr,itab-dmbtr )
+*  FROM bsad
+*  WHERE bukrs = bukrs
+*        AND kunnr >= ckunnr-low
+*        AND kunnr <= ckunnr-high
+**        AND umskz NOT IN ('H','J')
+*        AND gjahr = w_year
+*        AND budat >= s_date-low
+*        AND budat <= s_date-high.
+**        AND blart IN ('DR','DG').
+**        AND SHKZG = 'H'.
+*    APPEND itab.
+*  ENDSELECT.
+*
+** Getting data from BSID table
+*
+*  SELECT SINGLE bukrs kunnr shkzg zuonr belnr dmbtr VBELN INTO (itab-bukrs,
+*       itab-kunnr,itab-shkzg,itab-zuonr,itab-belnr,itab-dmbtr)
+*  FROM bsid
+*  WHERE bukrs = bukrs
+*         and kunnr in ckunnr
+**        AND kunnr >= ckunnr-low
+**        AND kunnr <= ckunnr-high
+**        AND umskz NOT IN ('H','J')
+*        AND gjahr = w_year
+*        and budat in s_date.
+**        AND budat >= s_date-low
+**        AND budat <= s_date-high.
+**        AND blart IN ('DR','DG').
+**        AND SHKZG = 'H'.
+*    APPEND itab.
+**  ENDSELECT.
+** This loop get the VKBUR from knvv.
+*  SORT itab BY kunnr.
+*  LOOP AT itab.
+*    SELECT vkbur INTO itab-vkbur
+*    FROM knvv
+*    WHERE kunnr = itab-kunnr.
+**       AND
+**          vkorg = '1000' AND  "'1000' AND " By Raju.K @ 21.08.2013
+**          vtweg = '10' AND
+**          spart = '10'.
+*      IF sy-subrc = 0.
+*        MODIFY itab.
+*      ENDIF.
+*    ENDSELECT.
+*  ENDLOOP.
+** this loop get the short name from zsdtassalidtxt.
+*  SORT itab BY vkbur.
+**  LOOP AT itab.
+**    SELECT short_name INTO (itab-short_name)
+**    FROM zsdtassalidtxt
+**    WHERE vkbur = itab-vkbur.
+**      IF sy-subrc = 0.
+**        MODIFY itab.
+**      ENDIF.
+**    ENDSELECT.
+**  ENDLOOP.
+** This loop get the name of dealer.
+*  SORT itab BY kunnr.
+*  LOOP AT itab.
+*    SELECT name1 ort01 telf2 INTO (itab-name1,itab-ort01,itab-telf2)
+*     FROM kna1
+*     WHERE kunnr = itab-kunnr.
+**    ITAB-TEXT1 = 'Hero Cycles Payment Of Rs'.
+**    ITAB-TEXT2 = 'against'.
+**    ITAB-TEXT3 = 'For Bill No:'.
+*      MODIFY itab.
+*    ENDSELECT.
+*    IF strlen( itab-telf2 ) NE '10'.
+*      IF sy-subrc = 0.
+*        DELETE itab.
+*      ENDIF.
+*    ENDIF.
+*  ENDLOOP.
+*
+*  SORT itab BY kunnr.
+*******************************  IF coll NE '  '.
+*******************************    DELETE itab WHERE dmbtr <= amount.
+*******************************  ENDIF.
+*******************************  DELETE itab WHERE dmbtr < '100' .
+** This loop is for getting the Ch DD No from bseg table .
+*  LOOP AT itab.
+*    SELECT SINGLE sgtxt INTO (itab-sgtxt )
+*      FROM bseg
+*      WHERE bukrs = '1000' AND
+*            belnr = itab-belnr AND
+*            gjahr = w_year.
+*    MODIFY itab.
+*  ENDLOOP.
+*
+** This loop is for getting the bill date from
+*  LOOP AT itab.
+*    SELECT SINGLE fkdat INTO (itab-budat)
+*       FROM vbrk
+*        WHERE vbeln = itab-zuonr AND
+*              kunrg = itab-kunnr.
+*    IF sy-subrc = 0.
+*      MODIFY itab.
+*    ENDIF.
+*
+*
+*  ENDLOOP.
+*  LOOP AT itab.
+*    total = itab-dmbtr.
+**    CONCATENATE 'Hero Cycles Payment Of Rs' TOTAL 'against' ITAB-SGTXT 'for Bill No.' ITAB-ZUONR
+*    IF itab-shkzg EQ 'H'.
+*      CONCATENATE 'Avon Steel Industries - Your account is credited with Rs ' total ' ' itab-sgtxt
+*        INTO itab-msg SEPARATED BY space .
+*    ELSEIF itab-shkzg EQ 'S'.
+*      CONCATENATE 'Avon Steel Industries - Your account is debited with Rs ' total ' ' itab-sgtxt
+*        INTO itab-msg SEPARATED BY space .
+*    ENDIF.
+*    MODIFY itab.
+*    CLEAR itab.
+*  ENDLOOP.
+*
+*  LOOP AT itab.
+*    it_msg-telf2 = itab-telf2.
+*    it_msg-msg = itab-msg.
+*    APPEND it_msg.
+*    CLEAR : itab,it_msg.
+*  ENDLOOP.
+*ENDFORM.                    " GET_DATA
+
