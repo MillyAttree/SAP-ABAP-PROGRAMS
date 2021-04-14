@@ -1,0 +1,244 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_MATERIAL_GROUP
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_MATERIAL_GROUP NO STANDARD PAGE HEADING .
+
+TABLES: VBRK, VBRP, KNA1, MAKT.
+
+DATA: BEGIN OF ITAB OCCURS 0,
+      VBELN LIKE VBRK-VBELN,
+      VKORG LIKE VBRK-VKORG,           " SALES ORG
+      VTWEG LIKE VBRK-VTWEG,           " DISTRIBUTION CHANNEL
+      SPART LIKE VBRK-SPART,           " DIVISION
+      FKDAT LIKE VBRK-FKDAT,           " BILLING DATE
+      KUNAG LIKE VBRK-KUNAG,           " SOLD-TO-PARTY
+      KONDM LIKE VBRP-KONDM,           " MATERIAL PRICING GROUP
+      MATKL LIKE VBRP-MATKL,           " MATERIAL GROUP
+      MATNR LIKE VBRP-MATNR,           " MATERIAL NO
+      FKIMG LIKE VBRP-FKIMG,           " ACTUAL INVOICED QUANTITY
+      NETWR LIKE VBRP-NETWR,           " NET VALUE
+      UMVKZ LIKE VBRP-UMVKZ,           " CONVERSION FACTOR
+      MEINS LIKE VBRP-MEINS,           " BASE UNIT OF MEASURE
+      MAKTX LIKE MAKT-MAKTX,
+      NAME1 LIKE KNA1-NAME1,
+      ORT01 LIKE KNA1-ORT01,
+      END OF ITAB.
+
+DATA: BEGIN OF ITAB1 OCCURS 0,
+      MAKTX LIKE MAKT-MAKTX,
+      NAME1 LIKE KNA1-NAME1,
+      ORT01 LIKE KNA1-ORT01,
+      END OF ITAB1.
+
+DATA: T_FKIMG TYPE P DECIMALS 3.
+DATA: T_NETWR TYPE P DECIMALS 2.
+DATA: GT_FKIMG TYPE P DECIMALS 3.
+DATA: GT_NETWR TYPE P DECIMALS 2.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+PARAMETERS: P_VKORG LIKE VBRK-VKORG OBLIGATORY DEFAULT 1000.
+
+SELECT-OPTIONS: S_VTWEG FOR VBRK-VTWEG,
+                S_SPART FOR VBRK-SPART,
+                S_KONDM FOR VBRP-KONDM,
+                S_FKDAT FOR VBRK-FKDAT OBLIGATORY,
+                S_KUNAG FOR VBRK-KUNAG.
+SELECTION-SCREEN END OF BLOCK B1.
+
+IF S_VTWEG AND S_SPART AND S_KONDM AND S_FKDAT AND S_KUNAG IS INITIAL.
+  MESSAGE 'PLEASE FILL ANY PARAMETER ' TYPE 'E'.
+ENDIF.
+
+START-OF-SELECTION.
+  PERFORM DATA.
+
+
+END-OF-SELECTION.
+  PERFORM DISP.
+
+TOP-OF-PAGE.
+  WRITE:/50 'SALES REPORT'.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DATA.
+
+  SELECT VBRK~VBELN
+         VBRK~VKORG
+         VBRK~VTWEG
+         VBRK~SPART
+         VBRK~FKDAT
+         VBRK~KUNAG
+         VBRP~KONDM
+         VBRP~MATKL
+         VBRP~MATNR
+         VBRP~FKIMG
+         VBRP~NETWR
+         VBRP~UMVKZ
+         VBRP~MEINS
+    INTO TABLE ITAB FROM VBRK INNER JOIN VBRP ON VBRK~VBELN = VBRP~VBELN WHERE
+                  VBRK~VKORG EQ  P_VKORG AND
+                  VBRK~VTWEG IN  S_VTWEG AND
+                  VBRK~SPART IN  S_SPART AND
+                  VBRP~KONDM IN  S_KONDM AND
+                  VBRK~FKDAT IN  S_FKDAT AND
+                  VBRK~KUNAG IN  S_KUNAG.
+
+  SORT ITAB BY VBELN.
+  LOOP AT ITAB.
+    MOVE VBRK-KUNAG TO ITAB-KUNAG.
+    MOVE VBRP-FKIMG TO ITAB-FKIMG.
+    MOVE VBRP-NETWR TO ITAB-NETWR.
+    MOVE VBRP-UMVKZ TO ITAB-UMVKZ.
+    MOVE VBRP-MEINS TO ITAB-MEINS.
+    MOVE VBRP-MATNR TO ITAB-MATNR.
+    MOVE VBRP-KONDM TO ITAB-KONDM.
+    MOVE VBRP-MATKL TO ITAB-MATKL.
+
+    COLLECT ITAB.
+  ENDLOOP.
+
+  LOOP AT ITAB.
+    SELECT SINGLE * FROM KNA1 WHERE KUNNR EQ ITAB-KUNAG.
+    MOVE KNA1-NAME1 TO ITAB-NAME1.
+    MOVE KNA1-ORT01 TO ITAB-ORT01.
+    SELECT SINGLE * FROM MAKT WHERE MATNR EQ ITAB-MATNR.
+    MOVE MAKT-MAKTX TO ITAB-MAKTX.
+    MODIFY ITAB.
+
+  ENDLOOP.
+ENDFORM.                    "DATA
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+
+  LOOP AT ITAB.
+    uline (91).
+    skip.
+    AT NEW KUNAG .
+      WRITE: 2 'CUSTOMER CODE:', ITAB-KUNAG(10) .
+     ENDAT.
+
+      AT NEW NAME1.
+      WRITE: 30 'NAME:', ITAB-NAME1(10).
+      ENDAT.
+
+      AT NEW ORT01.
+      WRITE: 60 'CITY:', ITAB-ORT01(10).
+      ENDAT.
+
+    AT NEW KONDM.
+      WRITE :/2 'Material Pricing Group : ' ,
+              30 ITAB-KONDM(2).
+    ENDAT.
+    AT NEW MATKL.
+      WRITE :40 'Material Group : ' ,
+        55 ITAB-MATKL(9).
+     uline (91).
+      PERFORM LINEITEMS_HEADING.
+    ENDAT.
+
+
+
+  T_FKIMG = T_FKIMG  + ITAB-FKIMG.
+  T_NETWR = T_NETWR  + ITAB-NETWR.
+
+  GT_FKIMG = GT_FKIMG  + ITAB-FKIMG.
+  GT_NETWR = GT_NETWR  + ITAB-NETWR.
+
+    WRITE : sy-uline(91),
+    1 sy-vline,
+    2 itab-matnr(18),
+    13 sy-vline,
+    14 itab-maktx(40),
+    53 sy-vline,
+    54(18) itab-fkimg,
+    72 sy-vline,
+    73(18) itab-netwr,
+    91 sy-vline,
+    sy-uline(91).
+
+
+    AT END OF matkl.
+      FORMAT COLOR COL_TOTAL.
+
+      WRITE : sy-uline(91),
+                /1 sy-vline,
+                5 'Total',
+                53 sy-vline,
+                54(18) T_fkimg RIGHT-JUSTIFIED,
+                72 sy-vline,
+                73(18) T_netwr RIGHT-JUSTIFIED,
+                91 sy-vline,
+                sy-uline(91).
+*      ULINE .
+      FORMAT COLOR OFF.
+
+
+      T_fkimg = 0.
+      T_netwr = 0.
+    ENDAT.
+
+
+    AT LAST.
+      SKIP.
+      FORMAT COLOR COL_KEY.
+      WRITE :/5 'Grand Total',
+                53 sy-vline,
+                54(18) GT_fkimg RIGHT-JUSTIFIED,
+                72 sy-vline,
+                73(18) GT_Netwr RIGHT-JUSTIFIED,
+                91 sy-vline.
+      FORMAT COLOR OFF.
+      ULINE.
+      WRITE :/ 'END OF REPORT'.
+      GT_fkimg = 0.
+      GT_netwr = 0.
+
+    ENDAT.
+
+  ENDLOOP.
+
+
+ENDFORM.                    " DATADISPLAY
+
+*&---------------------------------------------------------------------*
+*&      Form  LINEITEMS_HEADING
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM lineitems_heading.
+  FORMAT COLOR COL_HEADING.
+  ULINE 1(91).
+  WRITE :/1 sy-vline,
+          2 'MATERIAL',
+          13 sy-vline,
+          14 'DESCRIPTION',
+          53 sy-vline,
+          54 'BILLED QTY',
+          72 sy-vline,
+          73 'BILLED VALUE',
+          91 sy-vline.
+  ULINE (91).
+  FORMAT COLOR OFF.
+
+ENDFORM.

@@ -1,0 +1,424 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_SALE_PLAN
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_SALE_PLAN.
+
+
+TABLES: S076,MAKT,MARA,MARD.
+
+TYPE-POOLS: SLIS.
+DATA: G_REPID LIKE SY-REPID,
+      GT_LIST_TOP_OF_PAGE TYPE SLIS_T_LISTHEADER,
+      GT_EVENTS           TYPE SLIS_T_EVENT,
+      GT_SORT             TYPE SLIS_T_SORTINFO_ALV,
+      GS_LAYOUT           TYPE SLIS_LAYOUT_ALV,
+      GT_FIELDCAT         TYPE SLIS_T_FIELDCAT_ALV,
+      FIELDCAT_LN LIKE LINE OF GT_FIELDCAT,
+      COL_POS TYPE I.
+
+
+DATA: BEGIN OF ITAB_N OCCURS 0,
+       PMNUX LIKE S076-PMNUX,
+       VRSIO LIKE S076-VRSIO,
+       SPMON LIKE S076-SPMON,
+       END OF ITAB_N.
+
+
+DATA: BEGIN OF ITAB_N_W OCCURS 0,
+ PMNUX LIKE S076-PMNUX,
+VRSIO LIKE S076-VRSIO,
+
+
+END OF ITAB_N_W.
+
+DATA: BEGIN OF ITAB OCCURS 0,
+       VRSIO LIKE S076-VRSIO,
+       WENUX LIKE S076-WENUX,
+       PMNUX LIKE S076-PMNUX,
+       MAKTX LIKE MAKT-MAKTX,
+       PRODU LIKE S076-PRODU,
+       BASME LIKE S076-BASME,
+       SPWOC LIKE S076-SPWOC,
+       SPMON LIKE S076-SPMON,
+       RESULT TYPE QSOLLWERTC,
+       LABST LIKE MARD-LABST,
+       LGORT LIKE MARD-LGORT,
+
+      END OF ITAB.
+
+
+DATA: BEGIN OF IT_ALV OCCURS 0,
+       VRSIO LIKE S076-VRSIO,
+       WENUX LIKE S076-WENUX,
+       PMNUX LIKE S076-PMNUX,
+       MAKTX LIKE MAKT-MAKTX,
+       PRODU LIKE S076-PRODU,
+       BASME LIKE S076-BASME,
+       SPWOC LIKE S076-SPWOC,
+       SPMON LIKE S076-SPMON,
+       RESULT TYPE QSOLLWERTC,
+       RESULT1 TYPE QSOLLWERTC,
+       RAS LIKE MARD-LABST,
+       RAL LIKE MARD-LABST,
+       LGORT LIKE MARD-LGORT,
+       MONTH  TYPE C LENGTH 2,
+       YEAR   TYPE C LENGTH 4,
+       MONTH_NAME  TYPE C LENGTH 10,
+       END OF IT_ALV.
+
+
+DATA:RESULT TYPE QSOLLWERTC.
+*DATA:RESULT1 TYPE QSOLLWERTC.
+DATA: ITLINE TYPE I.
+
+SELECTION-SCREEN: BEGIN OF BLOCK B1 WITH FRAME.
+SELECT-OPTIONS: S_MATNR FOR MARA-MATNR.
+SELECT-OPTIONS:S_SPMON FOR S076-SPMON.                      "VRSIO FOR S076-VRSIO MEMORY ID MCV NO INTERVALS .
+SELECTION-SCREEN: END OF BLOCK B1.
+
+INITIALIZATION.
+  G_REPID = SY-REPID.
+
+START-OF-SELECTION.
+
+
+  SELECT * INTO CORRESPONDING FIELDS OF TABLE ITAB
+      FROM S076 INNER JOIN MARD ON S076~PMNUX = MARD~MATNR WHERE  PMNUX IN S_MATNR
+      AND SPMON  IN S_SPMON AND ( LGORT = '9010' OR LGORT = '9020' ).
+
+
+
+
+
+
+
+  LOOP AT ITAB.
+
+    SELECT SINGLE * FROM MAKT WHERE MATNR = ITAB-PMNUX.
+
+    CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+      EXPORTING
+        I_NUMBER_OF_DIGITS       = 0
+        I_FLTP_VALUE             = ITAB-PRODU
+*       I_VALUE_NOT_INITIAL_FLAG = 'X'
+*       I_SCREEN_FIELDLENGTH     = 16
+      IMPORTING
+        E_CHAR_FIELD             = RESULT.
+
+
+    MOVE: ITAB-VRSIO TO IT_ALV-VRSIO,
+       ITAB-WENUX TO IT_ALV-WENUX,
+       ITAB-PMNUX TO IT_ALV-PMNUX,
+       MAKT-MAKTX TO IT_ALV-MAKTX,
+       ITAB-PRODU TO IT_ALV-PRODU,
+       ITAB-BASME TO IT_ALV-BASME,
+       ITAB-SPWOC TO IT_ALV-SPWOC,
+       ITAB-SPMON TO IT_ALV-SPMON,
+       RESULT TO IT_ALV-RESULT.
+
+
+    IF ITAB-LGORT = '9010'.
+      MOVE ITAB-LABST TO IT_ALV-RAS.
+    ELSEIF ITAB-LGORT = '9020'.
+      MOVE ITAB-LABST TO IT_ALV-RAL.
+    ENDIF.
+
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        INPUT  = IT_ALV-PMNUX
+      IMPORTING
+        OUTPUT = IT_ALV-PMNUX.
+
+    COLLECT IT_ALV.
+    CLEAR IT_ALV.
+  ENDLOOP.
+
+
+  LOOP AT IT_ALV.
+
+
+    IT_ALV-MONTH = IT_ALV-SPMON+4(2).
+    IT_ALV-YEAR = IT_ALV-SPMON+0(4).
+
+
+    IF IT_ALV-MONTH  = '01'.
+      IT_ALV-MONTH_NAME = 'JAN'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '02'.
+      IT_ALV-MONTH_NAME = 'FEB'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '03'.
+      IT_ALV-MONTH_NAME = 'MAR'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '04'.
+      IT_ALV-MONTH_NAME = 'APR'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '05'.
+      IT_ALV-MONTH_NAME = 'MAY'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '06'.
+      IT_ALV-MONTH_NAME = 'JUN'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '07'.
+      IT_ALV-MONTH_NAME = 'JUL'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '08'.
+      IT_ALV-MONTH_NAME = 'AUG'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '09'.
+      IT_ALV-MONTH_NAME = 'SEP'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '10'.
+      IT_ALV-MONTH_NAME = 'OCT'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '11'.
+      IT_ALV-MONTH_NAME = 'NOV'.
+    ENDIF.
+    IF IT_ALV-MONTH  = '12'.
+      IT_ALV-MONTH_NAME = 'DEC'.
+    ENDIF.
+
+    MODIFY IT_ALV.
+
+  ENDLOOP.
+
+
+
+
+END-OF-SELECTION.
+  PERFORM BUILD.
+
+  PERFORM CALL_ALV.
+
+*&---------------------------------------------------------------------*
+*&      Form  BUILD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM BUILD.
+
+  DATA: FIELDCAT_LN TYPE SLIS_FIELDCAT_ALV.
+  CLEAR FIELDCAT_LN.
+  FIELDCAT_LN-FIELDNAME = 'VRSIO'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'VERSION'.
+   FIELDCAT_LN-OUTPUTLEN = '4'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+
+  CLEAR FIELDCAT_LN.
+  FIELDCAT_LN-FIELDNAME = 'WENUX'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'PLANT'.
+   FIELDCAT_LN-OUTPUTLEN = '4'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+  FIELDCAT_LN-FIELDNAME = 'PMNUX'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'MATERIAL'.
+  FIELDCAT_LN-OUTPUTLEN = '10'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+  FIELDCAT_LN-FIELDNAME = 'MAKTX'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'MATERIAL DESCRIPTION'.
+  FIELDCAT_LN-OUTPUTLEN = '40'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+
+  FIELDCAT_LN-FIELDNAME = 'MONTH'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'MONTH'.
+   FIELDCAT_LN-OUTPUTLEN = '4'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+  FIELDCAT_LN-FIELDNAME = 'YEAR'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'YEAR'.
+   FIELDCAT_LN-OUTPUTLEN = '4'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+
+  FIELDCAT_LN-FIELDNAME = 'MONTH_NAME'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'MONTH_NAME'.
+   FIELDCAT_LN-OUTPUTLEN = '4'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+
+  FIELDCAT_LN-FIELDNAME = 'RESULT'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-OUTPUTLEN = '16'.
+  FIELDCAT_LN-SELTEXT_L = 'SALE PLAN QTY.'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+  FIELDCAT_LN-FIELDNAME = 'RAS'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-OUTPUTLEN = '16'.
+  FIELDCAT_LN-SELTEXT_L = 'RALSON QTY.'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+  FIELDCAT_LN-FIELDNAME = 'RAL'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-OUTPUTLEN = '16'.
+  FIELDCAT_LN-SELTEXT_L = 'RALCO QTY.'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+  CLEAR FIELDCAT_LN.
+
+
+  FIELDCAT_LN-FIELDNAME = 'BASME'.
+  FIELDCAT_LN-TABNAME = 'IT_ALV'.
+  FIELDCAT_LN-KEY = ' '.
+  FIELDCAT_LN-NO_OUT = ' '.
+  FIELDCAT_LN-SELTEXT_L = 'UOM'.
+  FIELDCAT_LN-OUTPUTLEN = '3'.
+  APPEND FIELDCAT_LN TO GT_FIELDCAT.
+
+
+
+  DATA: GS_SORT TYPE SLIS_SORTINFO_ALV.
+  CLEAR GS_SORT.
+  GS_SORT-FIELDNAME = 'PMNUX'.
+  GS_SORT-SPOS = 1.
+  GS_SORT-UP = 'X'.
+  APPEND GS_SORT TO GT_SORT.
+  CLEAR GS_SORT..
+
+ENDFORM.                    "BUILD
+
+*&---------------------------------------------------------------------*
+*&      Form  CALL_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM CALL_ALV.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                =  G_REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  = I_STRUCTURE_NAME
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      = I_GRID_TITLE
+*     I_GRID_SETTINGS                   = I_GRID_SETTINGS
+     IS_LAYOUT                         =  GS_LAYOUT
+     IT_FIELDCAT                       = GT_FIELDCAT[]
+*     IT_EXCLUDING                      = IT_EXCLUDING
+*     IT_SPECIAL_GROUPS                 = IT_SPECIAL_GROUPS
+     IT_SORT                           = GT_SORT[]
+*     IT_FILTER                         = IT_FILTER
+*     IS_SEL_HIDE                       = IS_SEL_HIDE
+     I_DEFAULT                         = 'X'
+     I_SAVE                            = 'A'
+*     IS_VARIANT                        = IS_VARIANT
+     IT_EVENTS                         = GT_EVENTS[]
+*     IT_EVENT_EXIT                     = IT_EVENT_EXIT
+*     IS_PRINT                          = IS_PRINT
+*     IS_REPREP_ID                      = IS_REPREP_ID
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   = IT_ALV_GRAPHICS
+*     IT_HYPERLINK                      = IT_HYPERLINK
+*     IT_ADD_FIELDCAT                   = IT_ADD_FIELDCAT
+*     IT_EXCEPT_QINFO                   = IT_EXCEPT_QINFO
+*     IR_SALV_FULLSCREEN_ADAPTER        = IR_SALV_FULLSCREEN_ADAPTER
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           = E_EXIT_CAUSED_BY_CALLER
+*     ES_EXIT_CAUSED_BY_USER            = ES_EXIT_CAUSED_BY_USER
+    TABLES
+      T_OUTTAB                          = IT_ALV[]
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+            .
+
+
+
+*  CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+*   EXPORTING
+**     I_INTERFACE_CHECK              = ' '
+**     I_BYPASSING_BUFFER             =
+**     I_BUFFER_ACTIVE                = ' '
+*     I_CALLBACK_PROGRAM             = G_REPID
+**     I_CALLBACK_PF_STATUS_SET       = ' '
+**     I_CALLBACK_USER_COMMAND        = ' '
+**     I_STRUCTURE_NAME               =
+*     IS_LAYOUT                      = GS_LAYOUT
+*     IT_FIELDCAT                    = GT_FIELDCAT[]
+**     IT_EXCLUDING                   =
+**     IT_SPECIAL_GROUPS              =
+*     IT_SORT                        = GT_SORT[]
+**     IT_FILTER                      =
+**     IS_SEL_HIDE                    =
+**     I_DEFAULT                      = 'X'
+*     I_SAVE                         = 'A'
+**     IS_VARIANT                     =
+*     IT_EVENTS                      = GT_EVENTS[]
+**     IT_EVENT_EXIT                  =
+**     IS_PRINT                       =
+**     IS_REPREP_ID                   =
+**     I_SCREEN_START_COLUMN          = 0
+**     I_SCREEN_START_LINE            = 0
+**     I_SCREEN_END_COLUMN            = 0
+**     I_SCREEN_END_LINE              = 0
+**   IMPORTING
+**     E_EXIT_CAUSED_BY_CALLER        =
+**     ES_EXIT_CAUSED_BY_USER         =
+*    TABLES
+*      T_OUTTAB                       = IT_ALV
+*   EXCEPTIONS
+*     PROGRAM_ERROR                  = 1
+*     OTHERS                         = 2
+*            .
+*  IF SY-SUBRC <> 0.
+** MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+**         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+*  ENDIF.
+ENDFORM.                    "CALL_ALV

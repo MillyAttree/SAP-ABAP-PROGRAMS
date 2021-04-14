@@ -1,0 +1,54 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_TEST_FM
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_TEST_FM.
+
+PARAMETERS:
+  p_date type sy-datum.
+
+DATA:
+  w_date(10) TYPE c.
+
+CALL FUNCTION 'ISP_GET_MONTH_NAME'
+  EXPORTING
+   date               = p_date
+    language           = sy-langu
+*   MONTH_NUMBER       = '00'
+ IMPORTING
+*   LANGU_BACK         = LANGU_BACK
+   longtext           = w_date
+*   SHORTTEXT          = SHORTTEXT
+ EXCEPTIONS
+   calendar_id        = 1
+   date_error         = 2
+   not_found          = 3
+   wrong_input        = 4.
+
+WRITE: w_date.
+
+
+*
+*data:r_code type sy-subrc.
+*data:mnames type standard table of T247 with header line.
+*CALL FUNCTION 'MONTH_NAMES_GET'
+*EXPORTING
+*   LANGUAGE                    = SY-LANGU
+*IMPORTING
+*     RETURN_CODE                 = r_code
+*TABLES
+*    month_names                 = mnames.
+**EXCEPTIONS
+**  MONTH_NAMES_NOT_FOUND       = 1
+**  OTHERS                      = 2
+*          .
+*IF sy-subrc <> 0.
+*MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*        WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+*ENDIF.
+*
+*write:/ mnames.

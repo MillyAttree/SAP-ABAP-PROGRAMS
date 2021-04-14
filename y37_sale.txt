@@ -1,0 +1,196 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_SALE
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_SALE.
+
+
+data: BEGIN OF ITAB OCCURS 0,
+      MATNR TYPE MATNR,
+      OSTOCK LIKE S031-MZUBB,
+      BUDAT LIKE MKPF-BUDAT,
+      WERKS TYPE WERKS_D,
+      END OF ITAB.
+
+DATA: V_STOCK LIKE S031-MZUBB,
+      V_STOCK1 LIKE S031-MAGBB,
+      O_STOCK LIKE S031-MAGBB.
+
+DATA: V_MONTH TYPE C LENGTH 6,
+      V_DATE LIKE MKPF-BUDAT.
+
+*DATA: IT_MKPF LIKE MKPF WITH HEADER LINE .
+
+
+DATA: PLANT TYPE WERKS_d.
+
+LOOP AT ITAB.
+  V_MONTH = ITAB-BUDAT+0(6).
+  v_date  = itab-BUDAT.
+PLANT = ITAB-WERKS.
+ENDLOOP.
+
+*<b>Here Using each material of itab Calculate 1st day opening using S031 table.</b>LOOP AT ITAB.
+  SELECT SUM( MZUBB ) SUM( MAGBB )
+         INTO (V_STOCK,V_STOCK1)
+         FROM S031
+         WHERE MATNR = ITAB-MATNR
+         AND   SPMON LT V_MONTH.
+  O_STOCK = V_STOCK1 - V_STOCK.
+  IF O_STOCK < 0.
+     O_STOCK = O_STOCK * -1.
+     ITAB-OSTOCK = O_STOCK.
+     MODIFY ITAB.
+  ENDIF.
+*ENDLOOP.
+
+
+*2) now after getting 1st day opening of each material  you have to calculate Closing of Selection Date. For that you have to calculate all receipts and Issue quantities From 1st day of month upto selection date.
+*
+*2.1) First GO into MKPF table and Get all document Numbers of Selection    screen  date range. give BUDAT for selection In MKPF. Follow this logic for this
+
+DATA: BEGIN OF ITAB2 OCCURS 0,
+          DATE(10) TYPE C,
+        END OF ITAB2.
+  data :  R_BUDAT(10) TYPE C,
+          Z_BUDAT(10) TYPE C,
+          H_BUDAT(10) TYPE C.
+
+  DATA : BEGIN OF CLOSE OCCURS 0,
+            MBLNR LIKE MKPF-MBLNR,
+            DATE1 LIKE MKPF-BUDAT,
+         END OF CLOSE.
+
+DATA : BEGIN OF IT_MKPF OCCURS 0,
+            MBLNR LIKE MKPF-MBLNR,
+            BUDAT LIKE MKPF-BUDAT,
+            DATE1 LIKE MKPF-BUDAT,
+         END OF IT_MKPF.
+
+SHIFT v_date BY 11 PLACES RIGHT.
+CONDENSE v_DATE.
+Z_BUDAT = v_date(6).
+CONCATENATE Z_BUDAT '01' INTO R_BUDAT.
+CONCATENATE Z_BUDAT '31' INTO H_BUDAT.
+
+
+DO.
+  ITAB2-DATE = R_BUDAT.
+  APPEND ITAB2.
+     R_BUDAT = R_BUDAT + 1.
+     CONDENSE R_BUDAT.
+        IF R_BUDAT > H_BUDAT.
+         EXIT.
+        ENDIF.
+ENDDO.
+
+
+
+   LOOP AT ITAB2.
+     SELECT * FROM MKPF
+        INTO TABLE IT_MKPF
+        WHERE BUDAT = ITAB2-DATE.
+
+        LOOP AT IT_MKPF WHERE BUDAT = ITAB2-DATE AND BUDAT <= V_DATE .
+
+              CLOSE-MBLNR = IT_MKPF-MBLNR.
+              CLOSE-DATE1 = IT_MKPF-BUDAT.
+
+              APPEND CLOSE.
+        ENDLOOP.
+   ENDLOOP.
+
+*2.2)
+*Now After Getting that document nos you have to GO Into MSEG to get Receipt and Issue quantity. Give selection There That all documents from MKPF and Plant and All Movement type. You can ask movements types TO your FC for Issue and receipts quantity.
+*Follow this logic For <b>Receipt Quantity</b>
+
+DATA: BEGIN OF QTY OCCURS 0,
+          MATNR LIKE MSEG-MATNR,
+          MENGE1 LIKE MSEG-MENGE,
+      END OF QTY.
+
+       LOOP AT CLOSE.
+           SELECT *  FROM MSEG
+              INTO TABLE IT_MSEG
+              WHERE MBLNR = CLOSE-MBLNR AND
+                    WERKS = PLANT AND
+                    ( BWART = '561' OR
+                      BWART = '101' OR
+                      BWART = '501' ).
+
+                    LOOP AT IT_MSEG.
+                           QTY-MATNR  = IT_MSEG-MATNR.
+                           QTY-MENGE1 = IT_MSEG-MENGE.
+                           APPEND QTY.
+                    ENDLOOP.
+
+       ENDLOOP.
+
+DATA :  TEST LIKE QTY OCCURS 0 WITH HEADER LINE.
+
+SORT QTY BY MATNR.
+TEST[] = QTY[].
+
+DELETE ADJACENT DUPLICATES FROM QTY COMPARING MATNR.
+
+      LOOP AT QTY.
+         QTY-MENGE1 = 0.
+         LOOP AT TEST WHERE MATNR = QTY-MATNR .
+           QTY-MENGE1 = QTY-MENGE1 + TEST-MENGE1.
+          ENDLOOP.
+            MODIFY QTY.
+      ENDLOOP.
+
+*2.3) Same Calculate Issue Quantity
+
+DATA: BEGIN OF QTY1 OCCURS 0,
+          MATNR LIKE MSEG-MATNR,
+          MENGE1 LIKE MSEG-MENGE,
+      END OF QTY1.
+DATA : IT_MSEG1 LIKE MSEG OCCURS 10 WITH HEADER LINE.
+
+LOOP AT CLOSE.
+SELECT *  FROM MSEG
+           INTO TABLE IT_MSEG1
+           WHERE MBLNR = CLOSE-MBLNR AND
+                 WERKS = PLANT AND
+               ( BWART = '201' OR
+                 BWART = '261' ).
+
+   LOOP AT IT_MSEG1.
+     QTY1-MATNR  = IT_MSEG1-MATNR.
+     QTY1-MENGE1 = IT_MSEG1-MENGE.
+     APPEND QTY1.
+  ENDLOOP.
+ENDLOOP.
+
+SORT QTY1 BY MATNR.
+TEST[] = QTY1[].
+
+DELETE ADJACENT DUPLICATES FROM QTY1 COMPARING MATNR.
+
+      LOOP AT QTY1.
+         QTY1-MENGE1 = 0.
+         LOOP AT TEST WHERE MATNR = QTY1-MATNR .
+           QTY1-MENGE1 = QTY1-MENGE1 + TEST-MENGE1.
+          ENDLOOP.
+            MODIFY QTY1.
+      ENDLOOP.
+
+*3) And Finally <b>CLosing Stock</b> is
+
+*<b>Closing Stock = (1st day opening + Total Receipt) - Total Issue.</b>
+
+*--
+*CLOSING STOCK--
+
+LOOP AT ITAB.
+
+ITAB-TOT_VAL = ( ITAB-OSTOCK + ITAB-TOT_REC ) - ITAB-TOT_ISS.
+MODIFY ITAB.
+
+ENDLOOP.

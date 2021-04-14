@@ -1,0 +1,106 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_MSEG
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_MSEG NO STANDARD PAGE HEADING .
+
+TABLES:  MSEG .
+
+TYPE-POOLS:slis.
+
+DATA:BEGIN OF it_mseg OCCURS 0,
+      ebeln LIKE mseg-ebeln,
+      bwart LIKE mseg-bwart,
+      menge LIKE mseg-menge,
+    END OF it_mseg.
+
+DATA :BEGIN OF it_final_display OCCURS 0,
+      ebeln LIKE mseg-ebeln,
+      bwart LIKE mseg-bwart,
+      menge LIKE mseg-menge,
+      index_id TYPE c,
+      line_color(4) TYPE c,
+END OF it_final_display.
+
+
+DATA:wk_tot_val TYPE p DECIMALS 0.
+DATA: sum_101(13) TYPE p DECIMALS 2.
+DATA: sum_102(13) TYPE p DECIMALS 2.
+
+
+SELECT * FROM mseg CLIENT SPECIFIED
+INTO CORRESPONDING FIELDS OF TABLE it_mseg
+UP TO 5 ROWS
+WHERE mandt = sy-mandt
+AND ( bwart = '102' OR bwart = '101' )
+AND ebeln <> space
+AND bwart <> space
+AND menge GT 0.
+
+SORT it_mseg BY ebeln bwart ASCENDING.
+
+LOOP AT it_mseg.
+  AT NEW ebeln.
+    CLEAR it_final_display.
+    CLEAR sum_101.
+    CLEAR sum_102.
+    CLEAR wk_tot_val.
+  ENDAT.
+
+  MOVE-CORRESPONDING it_mseg TO it_final_display.
+  APPEND it_final_display.
+
+  CASE it_mseg-bwart.
+    WHEN '102'.
+      sum_102 = sum_102 + it_mseg-menge.
+    WHEN '101'.
+      sum_101 = sum_101 + it_mseg-menge.
+  ENDCASE.
+
+  AT END OF ebeln.
+    CLEAR it_final_display.
+    wk_tot_val = sum_101 - sum_102.
+    it_final_display-menge = wk_tot_val.
+    it_final_display-ebeln = 'Subtotal'.
+    it_final_display-index_id = 'X'.
+    APPEND it_final_display.
+  ENDAT.
+ENDLOOP.
+
+it_final_display-line_color = 'C300'.
+MODIFY it_final_display TRANSPORTING line_color WHERE index_id = 'X'.
+
+DATA: alvfld TYPE slis_fieldcat_alv,
+      fieldcat TYPE slis_t_fieldcat_alv,
+      wk_layout TYPE slis_layout_alv.
+
+wk_layout-info_fieldname = 'LINE_COLOR'.
+wk_layout-colwidth_optimize = 'X'.
+
+
+alvfld-fieldname = 'EBELN'.
+alvfld-seltext_m = 'Doc No'.
+APPEND alvfld TO fieldcat.
+
+alvfld-fieldname = 'BWART'.
+alvfld-seltext_m = 'Mvmnt type'.
+APPEND alvfld TO fieldcat.
+
+alvfld-fieldname = 'MENGE'.
+alvfld-seltext_m = 'Qty'.
+APPEND alvfld TO fieldcat.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+    i_callback_program = sy-repid
+    it_fieldcat        = fieldcat[]
+    is_layout          = wk_layout
+  TABLES
+    t_outtab           = it_final_display[]
+  EXCEPTIONS
+    program_error      = 1
+    OTHERS             = 2.

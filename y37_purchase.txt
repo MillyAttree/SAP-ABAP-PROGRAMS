@@ -1,0 +1,404 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_PURCHASE
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_PURCHASE NO STANDARD PAGE HEADING.
+
+TYPE-POOLS: SLIS.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+TABLES : EKKO , EKPO, EKBE.
+
+TYPES: BEGIN OF TY_EKKO,
+       EBELN LIKE EKKO-EBELN,
+       AEDAT LIKE EKKO-AEDAT,
+       EKORG LIKE EKKO-EKORG,
+       END OF TY_EKKO.
+
+DATA: IT_EKKO TYPE STANDARD TABLE OF TY_EKKO,
+      WA_EKKO TYPE TY_EKKO.
+
+TYPES: BEGIN OF TY_EKPO,
+       EBELN LIKE EKPO-EBELN,
+       EBELP LIKE EKPO-EBELP,
+       aedat like ekpo-aedat,
+       TXZ01 LIKE EKPO-TXZ01,
+       WERKS LIKE EKPO-WERKS,
+       MENGE LIKE EKPO-MENGE,
+       MEINS LIKE EKPO-MEINS,
+       MATNR LIKE EKPO-MATNR,
+       END OF TY_EKPO.
+
+DATA: IT_EKPO TYPE STANDARD TABLE OF TY_EKPO,
+      WA_EKPO TYPE TY_EKPO.
+
+TYPES: BEGIN OF TY_EKBE,
+       EBELN LIKE EKBE-EBELN,
+       EBELP LIKE EKBE-EBELP,
+       BWART LIKE EKBE-BWART,
+       BUDAT LIKE EKBE-BUDAT,
+       MENGE LIKE EKBE-MENGE,
+       MATNR LIKE EKBE-MATNR,
+       date type budat,
+       data TYPE wesbs,
+*       WESBS LIKE EKBE-WESBS,
+       BELNR LIKE EKBE-BELNR,
+
+       END OF TY_EKBE.
+
+DATA: IT_EKBE TYPE STANDARD TABLE OF TY_EKBE,
+      WA_EKBE TYPE TY_EKBE.
+*      WA_TEMP TYPE TY_EKBE.
+
+TYPES: BEGIN OF TY_FIN,
+       EBELN LIKE EKKO-EBELN,
+       AEDAT LIKE EKKO-AEDAT,
+       EBELP LIKE EKPO-EBELP,
+       TXZ01 LIKE EKPO-TXZ01,
+       MENGE LIKE EKPO-MENGE,
+       MEINS LIKE EKPO-MEINS,
+       BUDAT LIKE EKBE-BUDAT,
+       bwart like ekbe-bwart,
+       MENGE1 LIKE EKBE-MENGE,
+       MATNR LIKE EKBE-MATNR,
+       date type budat,
+       data TYPE wesbs,
+       PIN TYPE P DECIMALS 2,
+       END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+DATA: PIN TYPE P DECIMALS 3,
+      pen like pin.
+
+data: data TYPE p DECIMALS 3.
+data: date(12) type c.
+data: fin type p DECIMALS 3,
+      TOL TYPE P DECIMALS 3,
+      sum_105 TYPE p DECIMALS 3,
+      sum_106 TYPE p DECIMALS 3,
+      SUM_122 TYPE P DECIMALS 3,
+      SUM_124 TYPE P DECIMALS 3.
+
+DATA: GV_TABIX LIKE SY-TABIX.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+SELECT-OPTIONS : S_EBELN FOR EKKO-EBELN,
+                 S_EKORG FOR EKKO-EKORG,
+                 S_WERKS FOR EKPO-WERKS,
+                 S_MATNR FOR EKPO-MATNR,
+                 S_AEDAT FOR EKKO-AEDAT.
+SELECTION-SCREEN END OF BLOCK B1.
+
+START-OF-SELECTION.
+
+  PERFORM DATA.
+
+  PERFORM DISP.
+
+  PERFORM ALV.
+
+END-OF-SELECTION.
+
+
+
+
+FORM DATA.
+
+   SELECT EBELN
+         AEDAT
+         EKORG
+    FROM EKKO INTO TABLE IT_EKKO WHERE EBELN IN S_EBELN AND EKORG IN S_EKORG AND AEDAT IN S_AEDAT ..
+  IF SY-SUBRC EQ 0.
+    SORT IT_EKKO BY EBELN.
+  ENDIF.
+
+  IF IT_EKKO IS NOT INITIAL .
+    SELECT EBELN
+           EBELP
+           aedat
+           TXZ01
+           WERKS
+           MENGE
+           MEINS
+           matnr
+    FROM EKPO INTO TABLE IT_EKPO FOR ALL ENTRIES IN IT_EKKO WHERE EBELN = IT_EKKO-EBELN
+                                                              AND WERKS IN S_WERKS
+                                                              AND MATNR IN S_MATNR.
+ IF sy-subrc eq 0..
+   sort it_ekpo by ebeln ebelp .
+ ENDIF.
+
+  ENDIF.
+
+  IF IT_EKPO IS NOT INITIAL .
+    SELECT EBELN
+           EBELP
+           BWART
+           BUDAT
+           MENGE
+           matnr
+           BELNR
+    FROM EKBE INTO CORRESPONDING FIELDS OF TABLE IT_EKBE FOR ALL ENTRIES IN IT_EKPO WHERE EBELN = IT_EKPO-EBELN
+                                                                AND EBELP = IT_EKPO-EBELP
+
+                                                                AND ( bwart = '103'
+                                                                or BWART = '105'
+                                                                or BWART = '106'
+                                                                or bwart = '122'
+                                                                or bwart = '124' ).
+IF sy-subrc eq 0.
+sort it_ekbe by ebeln ebelp.
+ENDIF.
+ENDIF.
+
+  LOOP AT IT_EKBE INTO WA_EKBE.
+
+    WA_FIN-EBELN = WA_EKBE-EBELN.
+    WA_FIN-EBELP = WA_EKBE-EBELP.
+    WA_FIN-BWART = WA_EKBE-BWART.
+    WA_FIN-BUDAT = WA_EKBE-BUDAT.
+    WA_FIN-MENGE1 = WA_EKBE-MENGE.
+    WA_FIN-MATNR = WA_EKBE-MATNR.
+
+    CLEAR WA_EKPO.
+    READ TABLE IT_EKPO INTO WA_EKPO WITH KEY EBELN = WA_EKBE-EBELN
+                                             ebelp = wa_ekbe-ebelp.
+
+      IF SY-SUBRC EQ 0.
+
+      wa_fin-aedat = wa_ekpo-aedat.
+      WA_FIN-TXZ01 = WA_EKPO-TXZ01.
+      WA_FIN-MENGE = WA_EKPO-MENGE.
+      WA_FIN-MEINS = WA_EKPO-MEINS.
+
+      ENDIF.
+
+
+    CLEAR WA_EKKO.
+    READ TABLE IT_EKKO INTO WA_EKKO WITH KEY EBELN = WA_EKBE-EBELN.
+
+
+    APPEND WA_FIN TO IT_FIN .
+
+    CLEAR WA_FIN.
+
+
+  ENDLOOP.
+
+*  sort it_fin by ebeln bwart DESCENDING.
+
+
+LOOP AT IT_FIN INTO WA_FIN.
+ at NEW  EBELN.
+*  READ TABLE it_ekbe INTO wa_ekbe INDEX sy-tabix.
+*   sort it_ekbe by ebeln ebelp.
+    sum_105 = 0.
+    sum_106 = 0.
+    SUM_122 = 0.
+    SUM_124 = 0.
+    data = 0.
+    TOL = 0.
+    fin = 0.
+    DATE = 0.
+endat.
+
+
+  CASE wa_fin-bwart.
+    WHEN '105'(002).
+      sum_105 = sum_105 + wa_fin-menge1.
+
+    WHEN '106'(003).
+      sum_106 = sum_106 + wa_fin-menge1.
+
+    WHEN '122'(004).
+      SUM_122 = SUM_122 + wa_fin-menge1.
+
+    WHEN '124'(005).
+      SUM_124 = SUM_124 + wa_fin-menge1.
+
+    WHEN '103'(006).
+    AT END OF MATNR.
+     MOVE WA_fin-BUDAT TO wa_fin-date. "DATE .
+    ENDAT.
+
+  ENDCASE.
+
+    AT END OF ebeln.
+
+*    CLEAR wa_fin.
+    TOL = SUM_106 + SUM_122 + SUM_124.
+    FIN = sum_105 - TOL.
+
+     MOVE FIN TO WA_fin-data.
+ ENDAT.
+
+  modify it_fin from wa_fin.
+
+ENDLOOP.
+
+  LOOP AT IT_FIN INTO WA_FIN.
+
+    PIN = 0.
+
+    PIN = WA_FIN-MENGE - WA_FIN-data.
+
+    IF PIN > 0.
+    MOVE PIN TO WA_FIN-PIN.
+    MODIFY IT_FIN FROM WA_FIN.
+    CLEAR WA_FIN.
+    ENDIF.
+
+endloop.
+
+
+LOOP AT IT_FIN INTO WA_FIN.
+
+delete it_fin where pin = 0.
+
+  ENDLOOP.
+sort it_fin.
+
+
+ENDFORM.
+
+
+
+
+
+FORM DISP.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'EBELN'.
+  WA_FCAT-SELTEXT_L = 'PO NUMBER'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'AEDAT'.
+  WA_FCAT-SELTEXT_L = 'PO DATE'.
+  WA_FCAT-OUTPUTLEN = 14.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'EBELP'.
+  WA_FCAT-SELTEXT_L = 'ITEM NUMBER'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MATNR'.
+  WA_FCAT-SELTEXT_L = 'MAT NO'.
+  WA_FCAT-NO_ZERO = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TXZ01'.
+  WA_FCAT-SELTEXT_L = 'DISCRIPTION'.
+  WA_FCAT-OUTPUTLEN = 40.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MENGE'.
+  WA_FCAT-SELTEXT_L = 'QUANTITY'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'WESBS'.
+  WA_FCAT-SELTEXT_L = 'RECEIVE QUANTITY'.
+  WA_FCAT-NO_SIGN = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'PIN'.
+  WA_FCAT-SELTEXT_L = 'PENDING QUANTITY'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MEINS'.
+  WA_FCAT-SELTEXT_L = 'MEASURE'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'BUDAT'.
+  WA_FCAT-SELTEXT_L = 'DATE'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+ENDFORM.                    "DISP
+
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      =
+*     I_GRID_SETTINGS                   =
+     IS_LAYOUT                         = LAYOUT
+     IT_FIELDCAT                       = IT_FCAT[]
+*     IT_EXCLUDING                      =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           =
+*     IT_FILTER                         =
+*     IS_SEL_HIDE                       =
+*     I_DEFAULT                         = 'X'
+*     I_SAVE                            = ' '
+*     IS_VARIANT                        =
+*     IT_EVENTS                         =
+*     IT_EVENT_EXIT                     =
+*     IS_PRINT                          =
+*     IS_REPREP_ID                      =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK                      =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = IT_FIN[]
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+ENDFORM.                    "ALV

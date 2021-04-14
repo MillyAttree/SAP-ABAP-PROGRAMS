@@ -1,0 +1,878 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_OBJECT_ORIENT_PROGRAM
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_OBJECT_ORIENT_PROGRAM NO STANDARD PAGE HEADING .
+
+TABLES : mara, makt, vbrk, vbrp, kna1.
+
+TYPES: BEGIN OF itab_bc,
+          kunag LIKE vbrk-kunag,
+          name1 LIKE kna1-name1,
+          kondm LIKE vbrp-kondm,
+          matkl LIKE vbrp-matkl,
+          matnr LIKE vbrp-matnr,
+          maktx LIKE makt-maktx,
+          fkimg LIKE vbrp-fkimg,
+          netwr LIKE vbrp-netwr,
+          kbetr(10) TYPE c,
+          kwert LIKE komv-kwert,
+       END OF itab_bc.
+
+
+TYPES: BEGIN OF itab_pg_mgc,
+          kunag LIKE vbrk-kunag,
+          name1 LIKE kna1-name1,
+          kondm LIKE vbrp-kondm,
+          matkl LIKE vbrp-matkl,
+          fkimg LIKE vbrp-fkimg,
+          netwr LIKE vbrp-netwr,
+          kbetr(10) TYPE c,
+          kwert LIKE komv-kwert,
+       END OF itab_pg_mgc.
+
+DATA : BEGIN OF itab_vbeln OCCURS 0,
+         vbeln LIKE vbrk-vbeln,
+       END OF itab_vbeln.
+
+DATA: itab_b TYPE itab_bc OCCURS 0 WITH HEADER LINE.
+DATA: itab_pg_mg TYPE itab_pg_mgc OCCURS 0 WITH HEADER LINE.
+*&--------------------------------------------------------------------
+*&   Define fieldcatalogs for alv grid
+*&--------------------------------------------------------------------
+DATA gt_fieldcat TYPE lvc_t_fcat WITH HEADER LINE.
+DATA gt_fieldcat1 TYPE lvc_t_fcat WITH HEADER LINE.
+*&--------------------------------------------------------------------
+*&   Define layouts  for alv grid
+*&--------------------------------------------------------------------
+DATA gs_layout TYPE lvc_s_layo.
+DATA gs_layout1 TYPE lvc_s_layo.
+*&--------------------------------------------------------------------
+*&   Define grids and custom controls  for alv grid
+*&--------------------------------------------------------------------
+
+DATA:  grid1  TYPE REF TO cl_gui_alv_grid,
+       grid2  TYPE REF TO cl_gui_alv_grid.
+
+DATA : g_container1 TYPE scrfname VALUE 'ALV1'.
+DATA : g_container2 TYPE scrfname VALUE 'ALV2'.
+
+*&--------------------------------------------------------------------
+*&   Define containers
+*&--------------------------------------------------------------------
+DATA : g_custom_container1 TYPE REF TO cl_gui_custom_container.
+DATA : g_custom_container2 TYPE REF TO cl_gui_custom_container.
+
+*&--------------------------------------------------------------------
+*&  Define variables
+*&--------------------------------------------------------------------
+DATA: gv_no_line TYPE i.
+DATA: gv_no_line_dtl TYPE i.
+DATA: gv_title LIKE sy-title.
+DATA: gv_base_unit LIKE mara-meins,
+      gv_wesbs2 LIKE ekbe-wesbs.
+
+
+DATA  gs_lporb TYPE sibflporb.
+
+*&---------------------------------------------------------------------
+*& Define Selection Screen
+*&---------------------------------------------------------------------
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME  TITLE text-bl1.
+SELECT-OPTIONS : s_vkorg FOR vbrk-vkorg NO INTERVALS,
+                 s_vtweg FOR vbrk-vtweg NO INTERVALS,
+                 s_spart FOR vbrk-spart NO INTERVALS,
+                 s_kondm FOR vbrp-kondm NO INTERVALS,
+                 s_fkdat FOR vbrk-fkdat,
+                 s_kunag FOR vbrk-kunag.
+PARAMETERS : p_chk AS CHECKBOX.
+SELECTION-SCREEN END OF BLOCK b1 .
+*&---------------------------------------------------------------------
+*& Start of selection event
+*&---------------------------------------------------------------------
+START-OF-SELECTION.
+*&---------------------------------------------------------------------
+*&subroutine for select data
+*&---------------------------------------------------------------------
+  PERFORM f_select_data.
+*&---------------------------------------------------------------------
+*&subroutine for select data as per internal table itab_vbeln
+*&---------------------------------------------------------------------
+  PERFORM f_select_vbeln_dtls TABLES itab_vbeln.
+  IF p_chk = 'X'.
+*&---------------------------------------------------------------------
+*&subroutine for Display data
+*&---------------------------------------------------------------------
+    PERFORM f_classical_output.
+  ELSE.
+    PERFORM f_alv_grid_output.
+  ENDIF.                   "p_chk = 'X'.
+
+*&---------------------------------------------------------------------
+*& End of selection event
+*&---------------------------------------------------------------------
+END-OF-SELECTION.
+
+*&---------------------------------------------------------------------
+*& Top of page event
+*&---------------------------------------------------------------------
+TOP-OF-PAGE.
+  FORMAT COLOR 5 INTENSIFIED ON.
+  WRITE: /30 'R A L S O N    I N D I A   L I M I T E D' CENTERED,129 ''.
+  WRITE: /30 'Period From :',s_fkdat-low,' To:',s_fkdat-high,129 ''.
+  FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+*&---------------------------------------------------------------------*
+*&      Form  F_SELECT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM f_select_data .
+
+  SELECT a~vbeln INTO CORRESPONDING FIELDS OF TABLE itab_vbeln
+  FROM vbrk AS a
+  WHERE a~fkdat IN s_fkdat AND
+        a~vkorg IN s_vkorg AND
+        a~spart IN s_spart AND
+        a~kunag IN s_kunag AND
+        a~vtweg IN s_vtweg AND
+        a~fksto NE 'X'  AND
+        ( a~fkart EQ 'F2' OR
+        a~fkart EQ 'ZF3' OR
+        a~fkart EQ 'ZF4' OR
+        a~fkart EQ 'ZF5' OR
+        a~fkart EQ 'ZF6' OR
+        a~fkart EQ 'ZF2' OR
+        a~fkart EQ 'ZF7').
+ENDFORM.                    " F_SELECT_DATA
+*&---------------------------------------------------------------------*
+*&      Form  F_CLASSICAL_OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM f_classical_output .
+  DATA : lv_tot_netwr(16)    TYPE p DECIMALS 2,
+         lv_tot_fkimg(16)    TYPE p DECIMALS 3.
+
+  DATA : lv_gtot_netwr(16)    TYPE p DECIMALS 2,
+         lv_gtot_fkimg(16)    TYPE p DECIMALS 3.
+
+  DATA : lv_tot_kwert(16)    TYPE p DECIMALS 2.
+
+  DATA : lv_gtot_kwert(16)    TYPE p DECIMALS 2.
+
+  DATA : lv_name1(35) TYPE c.
+
+
+  SORT itab_b BY kunag kondm matkl matnr.
+  LOOP AT itab_b.
+    lv_name1 = itab_b-name1.
+    AT NEW kunag.
+      ULINE :/1(105).
+      FORMAT INTENSIFIED OFF COLOR COL_POSITIVE.
+
+      WRITE :/2 'Customer Code :' , itab_b-kunag(10).
+      WRITE : 40 'Name :', lv_name1(35), 105 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+    ENDAT.
+    AT NEW kondm.
+      FORMAT INTENSIFIED OFF COLOR COL_KEY.
+      WRITE :/2 'Material Pricing Group : ' ,30 itab_b-kondm(2), 105 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+      ULINE :/1(105).
+    ENDAT.
+    AT NEW matkl.
+      FORMAT INTENSIFIED OFF COLOR COL_GROUP.
+      WRITE :/40 'Material Group : ' ,55 itab_b-matkl(9), 105 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+      ULINE :/1(129).
+      FORMAT INTENSIFIED OFF COLOR COL_HEADING.
+      WRITE :/2 'MATERIAL',
+             14 'DESCRIPTION',
+             54 'ITEM QTY',
+             73 'ITEM VALUE',
+             92 'COMM',
+            111 'COMM VALUE', 129 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+      ULINE :/1(129).
+    ENDAT.
+
+    lv_tot_netwr = lv_tot_netwr  + itab_b-netwr.
+    lv_tot_fkimg = lv_tot_fkimg  + itab_b-fkimg.
+
+    lv_tot_kwert = lv_tot_kwert + itab_b-kwert.
+
+    lv_gtot_netwr = lv_gtot_netwr  + itab_b-netwr.
+    lv_gtot_fkimg = lv_gtot_fkimg  + itab_b-fkimg.
+
+    lv_gtot_kwert = lv_gtot_kwert + itab_b-kwert.
+
+
+    FORMAT INTENSIFIED OFF COLOR COL_NORMAL.
+    WRITE :/2 itab_b-matnr(18),
+           14 itab_b-maktx(40),
+           54(18) itab_b-fkimg,
+           73(18) itab_b-netwr,
+           92(18) itab_b-kbetr,
+          111(18) itab_b-kwert,129 ''.
+    FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+
+    AT END OF matkl.
+      ULINE :/1(129).
+      FORMAT INTENSIFIED OFF COLOR COL_TOTAL.
+      WRITE :/5 'Total',
+                54(18) lv_tot_fkimg RIGHT-JUSTIFIED,
+                73(18) lv_tot_netwr RIGHT-JUSTIFIED,
+                111(18) lv_tot_kwert RIGHT-JUSTIFIED, 129 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+      lv_tot_netwr = 0.
+      lv_tot_fkimg = 0.
+      lv_tot_kwert = 0.
+    ENDAT.
+
+    AT END OF kunag.
+      ULINE :/1(129).
+      FORMAT INTENSIFIED ON COLOR COL_TOTAL.
+      WRITE :/5 'Grand Total',
+                54(18) lv_gtot_fkimg RIGHT-JUSTIFIED,
+                73(18) lv_gtot_netwr RIGHT-JUSTIFIED,
+                111(18) lv_gtot_kwert RIGHT-JUSTIFIED, 129 ''.
+      FORMAT INTENSIFIED OFF COLOR COL_BACKGROUND.
+      lv_gtot_netwr = 0.
+      lv_gtot_fkimg = 0.
+      lv_gtot_kwert = 0.
+    ENDAT.
+
+
+
+
+
+  ENDLOOP. "itab_b
+ENDFORM.                    " F_CLASSICAL_OUTPUT
+*&---------------------------------------------------------------------*
+*&      Form  F_ALV_GRID_OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM f_alv_grid_output .
+  CALL SCREEN 100.
+ENDFORM.                    " F_ALV_GRID_OUTPUT
+*&---------------------------------------------------------------------*
+*&      Form  F_SELECT_VBELN_DTLS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ITAB_VBELN  text
+*      -->P_ITAB_INV_DTLS  text
+*----------------------------------------------------------------------*
+FORM f_select_vbeln_dtls  TABLES   pitab_vbeln STRUCTURE itab_vbeln.
+
+  DATA : lv_vbrk LIKE vbrk,
+         ls_komv TYPE komv,
+         lt_komv TYPE TABLE OF komv,
+         ls_vbpa TYPE vbpavb,
+         lt_vbpa TYPE TABLE OF vbpavb,
+         ls_vbrk TYPE vbrkvb,
+         lt_vbrk TYPE TABLE OF vbrkvb,
+         ls_vbrp TYPE vbrpvb,
+         lt_vbrp TYPE TABLE OF vbrpvb.
+  DATA : lv_flag(1) TYPE c.
+
+  DATA : lv_kschl(4) TYPE c VALUE 'ZCCF'."'ZKCF'.
+  DATA : lv_kbetr LIKE komv-kbetr.
+  DATA : lv_kwert LIKE komv-kwert.
+  LOOP AT pitab_vbeln.
+
+    REFRESH : lt_komv, lt_vbrk, lt_vbrp, lt_vbpa.
+    CLEAR lv_vbrk.
+
+    lv_vbrk-vbeln = pitab_vbeln-vbeln.
+
+    CALL FUNCTION 'RV_INVOICE_DOCUMENT_READ'
+     EXPORTING
+
+      konv_read = 'X'
+
+      vbrk_i = lv_vbrk
+     TABLES
+      xkomv = lt_komv
+      xvbpa = lt_vbpa
+      xvbrk = lt_vbrk
+      xvbrp = lt_vbrp
+
+     .
+    IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+* WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ELSE.
+
+      LOOP AT lt_vbrk INTO ls_vbrk.
+
+        CLEAR kna1.
+        SELECT SINGLE * FROM kna1 WHERE kunnr EQ ls_vbrk-kunag.
+        MOVE kna1-name1 TO ls_vbrk-namrg.
+        MOVE-CORRESPONDING ls_vbrk TO itab_b.
+        itab_b-name1 = ls_vbrk-namrg.
+        MOVE-CORRESPONDING ls_vbrk TO itab_pg_mg.
+        itab_pg_mg-name1 = ls_vbrk-namrg.
+
+
+
+
+        LOOP AT lt_vbrp INTO ls_vbrp.
+
+*************************************************************
+
+
+            select * from konv into corresponding fields of table lt_komv "*New Added 04.10.2011
+           where knumv = ls_vbrk-knumv
+          and kposn = ls_vbrp-posnr.
+
+
+
+
+***********************************************************
+
+          PERFORM f_chk_pg TABLES s_kondm
+                           USING ls_vbrp-matnr
+                                 ls_vbrp-kondm
+                           CHANGING lv_flag.
+
+
+*     *************************************************************
+
+
+          LOOP AT LT_KOMV INTO LS_KOMV  where  knumv = ls_vbrk-knumv
+                                             and kposn = ls_vbrp-posnr
+                                             and kschl = 'ZKCF'
+                                             OR  KSCHL =  'ZKFP'
+                                             OR  KSCHL =  'ZCCF'
+                                             OR  KSCHL =  'ZCCP'.
+
+******************************************************
+
+
+
+          IF lv_flag = 'T'.
+            PERFORM f_chk_cmn TABLES lt_komv
+                              USING ls_vbrk-knumv
+                                    ls_vbrp-posnr
+                                    LS_KOMV-KSCHL   "lv_kschl
+
+
+                             CHANGING lv_flag
+                                      lv_kbetr
+                                      lv_kwert.
+          ENDIF.
+
+
+
+
+endloop.
+
+
+
+          IF lv_flag = 'T'.
+            CLEAR makt.
+            SELECT SINGLE * FROM makt WHERE matnr EQ ls_vbrp-matnr.
+            MOVE makt-maktx TO ls_vbrp-arktx.
+            MOVE-CORRESPONDING ls_vbrp TO itab_b.
+            itab_b-maktx = ls_vbrp-arktx.
+            itab_b-kbetr = lv_kbetr.
+            itab_b-kwert = lv_kwert.
+            MOVE-CORRESPONDING ls_vbrp TO itab_pg_mg.
+            itab_pg_mg-kbetr = lv_kbetr.
+            itab_pg_mg-kwert = lv_kwert.
+            COLLECT itab_b.
+            COLLECT itab_pg_mg.
+            CLEAR ls_vbrp.
+            CLEAR : lv_kbetr, lv_kwert.
+          ENDIF.
+        ENDLOOP.              " loop at lt_vbrp into ls_vbrp
+        CLEAR itab_b.
+        CLEAR itab_pg_mg.
+        CLEAR :ls_vbrp, ls_vbrk.
+        CLEAR :lv_kbetr, lv_kwert.
+      ENDLOOP.                  " loop at lt_vbrk into ls_vbrk
+
+
+
+    ENDIF.                    " if sy-subrc <> 0 wala
+
+  ENDLOOP.                  "pitab_vbeln
+
+ENDFORM.                    " F_SELECT_VBELN_DTLS
+*&---------------------------------------------------------------------*
+*&      Form  F_CHK_PG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_S_KONDM  text
+*      -->P_LS_VBRP_MATNR  text
+*      -->P_LS_VBRP_KONDM  text
+*      <--P_LV_FLAG  text
+*----------------------------------------------------------------------*
+FORM f_chk_pg  TABLES   p_s_kondm STRUCTURE s_kondm
+               USING    p_ls_vbrp_matnr
+                        p_ls_vbrp_kondm
+               CHANGING p_lv_flag.
+  DATA : lv_line TYPE i.
+  DATA : lv_lflag(1) TYPE c.
+  CLEAR p_lv_flag.
+  CLEAR lv_lflag .
+  DESCRIBE TABLE p_s_kondm LINES lv_line.
+  IF lv_line = 0.
+    p_lv_flag = 'T'.
+  ELSE.
+    READ TABLE p_s_kondm WITH KEY low = p_ls_vbrp_kondm.
+    IF sy-subrc = 0.
+      p_lv_flag = 'T'.
+    ENDIF.
+    IF p_ls_vbrp_matnr <> '000000000000060000' AND
+       p_ls_vbrp_matnr <> '000000000000060010' AND
+       p_ls_vbrp_matnr <> '000000000000060030' AND
+       p_ls_vbrp_matnr <> '000000000000060001' AND
+       p_ls_vbrp_matnr <> '000000000000060002' AND
+       p_ls_vbrp_matnr <> '000000000000060003' AND
+       p_ls_vbrp_matnr <> '000000000000060004'.
+
+      lv_lflag = 'T'.
+    ELSE.
+      lv_lflag = 'F'.
+    ENDIF.
+
+    IF lv_lflag = 'F'.
+      p_lv_flag = 'F'.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.                    " F_CHK_PG
+*&---------------------------------------------------------------------*
+*&      Module  DISPLAY_ALV_OUTPUT  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE display_alv_output OUTPUT.
+  PERFORM f_display_alv_grid.
+ENDMODULE.                 " DISPLAY_ALV_OUTPUT  OUTPUT
+*&---------------------------------------------------------------------*
+*&      Form  F_DISPLAY_ALV_GRID
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM f_display_alv_grid .
+  PERFORM prepare_field_catalog CHANGING gt_fieldcat[].
+  PERFORM prepare_layout CHANGING gs_layout.
+
+  IF g_custom_container1 IS INITIAL.
+    CREATE OBJECT g_custom_container1
+           EXPORTING container_name = g_container1.
+    CREATE OBJECT grid1
+           EXPORTING i_parent = g_custom_container1.
+    CALL METHOD grid1->set_table_for_first_display
+         EXPORTING
+          is_layout = gs_layout
+         CHANGING
+         it_outtab        = itab_b[]
+         it_fieldcatalog = gt_fieldcat[].
+  ENDIF.
+
+*******************************************************
+*******************************************************
+  PERFORM prepare_field_catalog1 CHANGING gt_fieldcat1[].
+  PERFORM prepare_layout1 CHANGING gs_layout1.
+
+  IF g_custom_container2 IS INITIAL.
+    CREATE OBJECT g_custom_container2
+           EXPORTING container_name = g_container2.
+    CREATE OBJECT grid2
+           EXPORTING i_parent = g_custom_container2.
+    CALL METHOD grid2->set_table_for_first_display
+         EXPORTING
+          is_layout = gs_layout1
+         CHANGING
+         it_outtab        = itab_pg_mg[]
+         it_fieldcatalog = gt_fieldcat1[].
+  ENDIF.
+ENDFORM.                    " F_DISPLAY_ALV_GRID
+*&---------------------------------------------------------------------*
+*&      Form  PREPARE_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      <--P_GT_FIELDCAT[]  text
+*----------------------------------------------------------------------*
+FORM prepare_field_catalog CHANGING pgt_fieldcat TYPE lvc_t_fcat.
+
+  DATA ls_fieldcat TYPE lvc_s_fcat.
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-fieldname = 'KUNAG'.
+  ls_fieldcat-scrtext_m = 'Party'.
+  ls_fieldcat-col_pos = 0.
+  ls_fieldcat-outputlen = 8.
+  ls_fieldcat-edit_mask = '==ALPHA'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-fieldname = 'NAME1'.
+  ls_fieldcat-scrtext_m = 'Party Name'.
+  ls_fieldcat-col_pos = 1.
+  ls_fieldcat-outputlen = '35'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-fieldname = 'KONDM'.
+  ls_fieldcat-col_pos = 2.
+  ls_fieldcat-outputlen = 5.
+  ls_fieldcat-scrtext_m = 'P-Grp'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 3.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-fieldname = 'MATKL'.
+  ls_fieldcat-scrtext_m = 'Mat Grp'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 4.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-fieldname = 'MATNR'.
+  ls_fieldcat-scrtext_m = 'Material'.
+  ls_fieldcat-edit_mask = '==ALPHA'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 5.
+  ls_fieldcat-outputlen = 35.
+  ls_fieldcat-fieldname = 'MAKTX'.
+  ls_fieldcat-scrtext_m = 'Description'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 6.
+  ls_fieldcat-outputlen = 13.
+  ls_fieldcat-fieldname = 'FKIMG'.
+  ls_fieldcat-scrtext_m = 'Item Qty'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C300'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 7.
+  ls_fieldcat-outputlen = 15.
+  ls_fieldcat-fieldname = 'NETWR'.
+  ls_fieldcat-scrtext_m = 'Item Value'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C300'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 8.
+  ls_fieldcat-outputlen = 11.
+  ls_fieldcat-fieldname = 'KBETR'.
+  ls_fieldcat-scrtext_m = 'Comm'.
+  ls_fieldcat-do_sum       = ''.
+  ls_fieldcat-emphasize    = 'C400'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+
+  ls_fieldcat-tabname = 'ITAB_B'.
+  ls_fieldcat-col_pos = 9.
+  ls_fieldcat-outputlen = 13.
+  ls_fieldcat-fieldname = 'KWERT'.
+  ls_fieldcat-scrtext_m = 'Comm Value'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C400'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat.
+  CLEAR ls_fieldcat.
+
+
+
+
+ENDFORM.                    " PREPARE_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*&      Form  PREPARE_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      <--P_GS_LAYOUT  text
+*----------------------------------------------------------------------*
+FORM prepare_layout  CHANGING gs_layout TYPE lvc_s_layo.
+
+
+  gs_layout-zebra = 'X'.
+  gs_layout-grid_title = 'Brand wise Summary'.
+  gs_layout1-col_opt = 'X'.
+ENDFORM.                    " PREPARE_LAYOUT
+*&---------------------------------------------------------------------*
+*&      Form  EXCLUDE_TB_FUNCTIONS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      <--P_PT_EXCLUDE  text
+*----------------------------------------------------------------------*
+FORM exclude_tb_functions  CHANGING pt_exclude TYPE ui_functions.
+  DATA ls_exclude TYPE ui_func.
+  ls_exclude = cl_gui_alv_grid=>mc_fc_maximum.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_fc_minimum.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_fc_subtot.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_fc_sort.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_fc_sum.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_mb_subtot.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_mb_sum.
+  APPEND ls_exclude TO pt_exclude.
+  ls_exclude = cl_gui_alv_grid=>mc_mb_filter.
+  APPEND ls_exclude TO pt_exclude.
+ENDFORM.                    " EXCLUDE_TB_FUNCTIONS
+*&---------------------------------------------------------------------*
+*&      Form  SET_COL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_col .
+  DATA ls_cellcolor TYPE lvc_s_scol.
+
+ENDFORM.                    " SET_COL
+*&---------------------------------------------------------------------*
+*&      Form  PREPARE_FIELD_CATALOG1
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      <--P_GT_FIELDCAT1[]  text
+*----------------------------------------------------------------------*
+FORM prepare_field_catalog1  CHANGING pgt_fieldcat1 TYPE lvc_t_fcat.
+
+  DATA ls_fieldcat TYPE lvc_s_fcat.
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-fieldname = 'KUNAG'.
+  ls_fieldcat-scrtext_m = 'Party'.
+  ls_fieldcat-col_pos = 0.
+  ls_fieldcat-outputlen = 8.
+  ls_fieldcat-edit_mask = '==ALPHA'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-fieldname = 'NAME1'.
+  ls_fieldcat-scrtext_m = 'Party Name'.
+  ls_fieldcat-col_pos = 1.
+  ls_fieldcat-outputlen = 35.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-fieldname = 'KONDM'.
+  ls_fieldcat-col_pos = 2.
+  ls_fieldcat-outputlen = 5.
+  ls_fieldcat-scrtext_m = 'P-Grp'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-col_pos = 3.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-fieldname = 'MATKL'.
+  ls_fieldcat-scrtext_m = 'Mat Grp'.
+  ls_fieldcat-datatype  = 'CHAR'.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-col_pos = 4.
+  ls_fieldcat-outputlen = 13.
+  ls_fieldcat-fieldname = 'FKIMG'.
+  ls_fieldcat-scrtext_m = 'Qty'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C300'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-col_pos = 5.
+  ls_fieldcat-outputlen = 15.
+  ls_fieldcat-fieldname = 'NETWR'.
+  ls_fieldcat-scrtext_m = 'Value'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C300'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-col_pos = 6.
+  ls_fieldcat-outputlen = 11.
+  ls_fieldcat-fieldname = 'KBETR'.
+  ls_fieldcat-scrtext_m = 'Comm'.
+  ls_fieldcat-do_sum       = ''.
+  ls_fieldcat-emphasize    = 'C400'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+
+  ls_fieldcat-tabname = 'ITAB_PG_MG'.
+  ls_fieldcat-col_pos = 7.
+  ls_fieldcat-outputlen = 13.
+  ls_fieldcat-fieldname = 'KWERT'.
+  ls_fieldcat-scrtext_m = 'Comm Value'.
+  ls_fieldcat-do_sum       = 'X'.
+  ls_fieldcat-emphasize    = 'C400'.
+  ls_fieldcat-datatype  = ''.
+  APPEND ls_fieldcat TO pgt_fieldcat1.
+  CLEAR ls_fieldcat.
+
+
+
+
+
+ENDFORM.                    " PREPARE_FIELD_CATALOG1
+*&---------------------------------------------------------------------*
+*&      Form  PREPARE_LAYOUT1
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      <--P_GS_LAYOUT1  text
+*----------------------------------------------------------------------*
+FORM prepare_layout1  CHANGING gs_layout1 TYPE lvc_s_layo.
+
+
+  gs_layout1-zebra = 'X'.
+  gs_layout1-grid_title = 'Mat Grp Wise Summary'.
+  gs_layout1-col_opt = 'X'.
+
+ENDFORM.                    " PREPARE_LAYOUT1
+*&---------------------------------------------------------------------*
+*&      Form  SET_COL1
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_col1 .
+
+ENDFORM.                                                    " SET_COL1
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+
+
+
+  CASE sy-ucomm.
+    WHEN 'EXIT'.
+      PERFORM exit_program.
+
+  ENDCASE.
+ENDMODULE.                 " USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*&      Form  EXIT_PROGRAM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exit_program .
+
+  LEAVE TO SCREEN 0.
+
+ENDFORM.                    " EXIT_PROGRAM
+*&---------------------------------------------------------------------*
+*&      Form  CELL_INFO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM cell_info .
+  DATA lt_cell TYPE lvc_t_cell WITH HEADER LINE.
+
+ENDFORM.                    " CELL_INFO
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+
+
+  SET PF-STATUS 'ALVSTAT'.
+  SET TITLEBAR 'ALVTIT'.
+
+ENDMODULE.                 " STATUS_0100  OUTPUT
+
+FORM f_chk_cmn  TABLES   p_lt_komv STRUCTURE komv
+                USING    p_ls_vbrk_knumv
+                         p_ls_vbrp_posnr
+                         p_lv_kschl
+                CHANGING p_lv_flag
+                         p_lv_kbetr
+                         p_lv_kwert.
+
+  READ TABLE p_lt_komv WITH KEY knumv =  p_ls_vbrk_knumv
+                                kposn =  p_ls_vbrp_posnr
+                                kschl = p_lv_kschl.
+
+  IF sy-subrc = 0.
+    p_lv_flag = 'T'.
+    p_lv_kbetr =  p_lt_komv-kbetr.
+    p_lv_kwert =  p_lt_komv-kwert.
+  ELSE.
+    p_lv_flag = 'F'.
+    CLEAR p_lv_kbetr.
+    CLEAR p_lv_kwert.
+  ENDIF.
+ENDFORM.

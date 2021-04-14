@@ -1,0 +1,918 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_ZGLPUR_1
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_ZGLPUR_1 NO STANDARD PAGE HEADING
+                 LINE-SIZE 400
+                 LINE-COUNT 65(5)
+                 MESSAGE-ID zralserr...
+
+
+*&---------------------------------------------------------------------*
+* Prog.Name     : Y37_zglpur_1
+* Transaction   : ZGLPUR
+* Purpose       : To Trace the RE document type details
+************************************************************************
+*To Trace the RE document type details
+************************************************************************
+* Developed by  : Milly Sharma
+* Version       : 6.0
+* Date          : 03.12.2015
+* Module        : SAP-FI
+* Description   : To Trace the RE document type details
+************************************************************************
+
+*&---------------------------------------------------------------------
+*& Define Standard Tables
+*&---------------------------------------------------------------------
+
+
+
+
+
+tables: bsis, "Accounting: Secondary Index for G/L Accounts
+        bkpf, "Accounting Document Header
+        rseg, "Document Item: Incoming Invoice
+        lfa1, "Vendor Master (General Section)
+        makt, "Material Descriptions
+        ekpo, "Purchasing Document Header
+        EKKO, "Purchasing Document Item
+        bseg. "Accounting Document Segment
+TABLES:BSAK , bsik.
+
+
+*&---------------------------------------------------------------------
+*& Define Types & Type pools.
+*&---------------------------------------------------------------------
+
+
+TYPE-POOLS: SLIS.
+
+DATA: FIELDCAT TYPE SLIS_T_FIELDCAT_ALV,
+      FIELDCATA TYPE SLIS_T_FIELDCAT_ALV,
+      FIELDCAT_LN LIKE LINE OF FIELDCAT,
+      SORTCAT TYPE SLIS_T_SORTINFO_ALV,
+      SORTCATA TYPE SLIS_T_SORTINFO_ALV,
+      SORTCAT_LN LIKE LINE OF SORTCAT,
+      EVENTCAT TYPE SLIS_T_EVENT,
+      EVENTCATA TYPE SLIS_T_EVENT,
+      EVENTCAT_LN LIKE LINE OF EVENTCAT.
+
+DATA : COLS TYPE I.
+COLS = 0.
+
+*&---------------------------------------------------------------------
+*& Define Internal tables
+*&---------------------------------------------------------------------
+
+
+data : begin of itab occurs 0,
+       bukrs like bseg-bukrs,
+       belnr like bseg-belnr,
+       gjahr like bseg-gjahr,
+       buzei like bseg-buzei,
+       bschl like bseg-bschl,
+       shkzg like bseg-shkzg,
+       mwskz like bseg-mwskz,
+       dmbtr like mseg-dmbtr,
+       wrbtr like rseg-wrbtr,
+       zuonr like bseg-zuonr,
+       hkont like bseg-hkont,
+       lifnr like bseg-lifnr,
+       matnr like bseg-matnr,
+       menge like bseg-menge,
+       ebeln like bseg-ebeln,
+       ebelp like bseg-ebelp,
+       end of itab.
+
+
+data : begin of itab3 occurs 0,
+       bukrs like bseg-bukrs,
+       belnr like bseg-belnr,
+       gjahr like bseg-gjahr,
+       buzei like bseg-buzei,
+       bschl like bseg-bschl,
+       shkzg like bseg-shkzg,
+       mwskz like bseg-mwskz,
+       dmbtr like mseg-dmbtr,
+       wrbtr like rseg-wrbtr,
+       zuonr like bseg-zuonr,
+       hkont like bseg-hkont,
+       lifnr like bseg-lifnr,
+       matnr like bseg-matnr,
+       menge like bseg-menge,
+       ebeln like bseg-ebeln,
+       ebelp like bseg-ebelp,
+       end of itab3.
+
+
+
+data: BEGIN OF itab2 OCCURS 0,
+       lifnr like bsak-lifnr,
+       bukrs like bsak-bukrs,
+       hkont like bsak-hkont,
+       umsks like bsak-umsks,
+       umskz like bsak-umskz,
+       augdt like bsak-augdt,
+       augbl like bsak-augbl,
+       zuonr like bsak-zuonr,
+       gjahr like bsak-gjahr,
+       belnr like bsak-belnr,
+       buzei like bsak-buzei,
+       budat like bsak-budat,
+       bldat like bsak-bldat,
+       xblnr like bsak-xblnr,
+       blart like bsak-blart,
+       bschl like bsak-bschl,
+       shkzg like bsak-shkzg,
+       mwskz like bsak-mwskz,
+       dmbtr like bsak-dmbtr,
+       wrbtr like bsak-wrbtr,
+       END OF itab2.
+
+data : begin of itab1 occurs 0,  " For bsis table processing
+
+       bukrs like bsis-bukrs,
+       hkont like bsis-hkont,
+       zuonr like bsis-zuonr,
+       gjahr like bsis-gjahr,
+       belnr like bsis-belnr,
+       buzei like bsis-buzei,
+       budat like bsis-budat,
+       bldat like bsis-bldat,
+       xblnr like bsis-xblnr,
+       blart like bsis-blart,
+       bschl like bsis-bschl,
+       shkzg like bsis-shkzg,
+       mwskz like bsis-mwskz,
+       dmbtr like bsis-dmbtr,
+       wrbtr like bsid-wrbtr,
+
+       end of itab1.
+
+
+DATA: BEGIN OF FINAL  occurs 0,
+       belnr like bsis-belnr,
+       hkont like bsis-hkont,
+       bukrs like bsis-bukrs,
+       blart like bsis-blart,
+       bldat like bsis-bldat,
+       lifnr like mseg-lifnr,
+       name1 like lfa1-name1,
+       ebeln like rseg-ebeln,
+       matnr like rseg-matnr,
+       maktx like makt-maktx,
+       xblnr like bkpf-xblnr,
+       menge like mseg-menge,
+       dmbtr like mseg-dmbtr,
+       wrbtr like rseg-wrbtr,
+       shkzg like bsis-shkzg,
+       mwskz like bsis-mwskz,
+       bschl like bsis-bschl,
+       gjahr like bsis-gjahr,
+       zuonr like bsis-zuonr,
+       buzei like bsis-buzei,
+       txz01  like ekpo-txz01,
+      END OF FINAL.
+
+
+data:begin of lifnr occurs 0,
+     lifnr like lfa1-lifnr,
+     name1 like lfa1-name1,
+     end of lifnr.
+
+data:begin of desc occurs 0,
+     matnr like makt-matnr,
+     maktx like makt-maktx,
+     end of desc.
+
+
+data: begin of it_ekko occurs 0,
+      ebeln like ekko-ebeln,
+      lifnr like ekko-lifnr,
+     end of it_ekko.
+
+data: begin of it_ekpo occurs 0,
+      ebeln like ekpo-ebeln,
+      matnr like ekpo-matnr,
+     end of it_ekpo.
+
+
+data: begin of po_det occurs 0,
+      ebeln like ekko-ebeln,
+      lifnr like ekko-lifnr,
+    end of po_det.
+
+data: begin of name occurs 0,
+      lifnr like lfa1-lifnr,
+      name1 like lfa1-name1,
+      end of name.
+
+
+data: begin of po_text occurs 0,
+      ebeln like ekpo-ebeln,
+      txz01 like ekpo-txz01,
+    end of po_text.
+
+
+
+
+SELECTION-SCREEN:BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+select-options :bukrs for bsis-bukrs no intervals default '1000',
+                hkont for bsis-hkont ,
+                budat for bsis-budat obligatory,
+               S_Lifnr for BSAK-lifnr .
+
+
+selection-screen : end of block b1.
+
+data : m_doc like mkpf-mblnr,
+       m_year like mkpf-mjahr.
+
+data:v_hkont like ska1-saknr.
+*&---------------------------------------------------------------------
+*& at selection screen event
+*
+*&---------------------------------------------------------------------
+at selection-screen.
+
+  if hkont is not initial.
+    select single saknr from ska1 into v_hkont where saknr in hkont.
+    if sy-subrc <> 0.
+      message 'Please check your selection parameter for G/L Account ' type 'E'.
+    endif.
+  endif.
+*&---------------------------------------------------------------------
+*& End of at selection screen event
+*&---------------------------------------------------------------------
+
+Start-of-selection.
+
+refresh: itab[] , final[] , itab2[]  , itab3[] .
+
+SELECT
+          bukrs
+          hkont
+          zuonr
+          gjahr
+          belnr
+          buzei
+          budat
+          bldat
+          xblnr
+          blart
+          bschl
+          shkzg
+          mwskz
+          dmbtr
+          wrbtr
+    FROM bsis INTO TABLE itab1 where
+                                      bukrs in bukrs
+                                  and hkont in hkont
+                                  and budat in budat
+                                  and blart = 'RE'.
+IF ITAB1[] IS INITIAL.
+
+  SELECT  lifnr
+          bukrs
+          hkont
+          umsks
+          umskz
+          augdt
+          augbl
+          zuonr
+          gjahr
+          belnr
+          buzei
+          budat
+          bldat
+          xblnr
+          blart
+          bschl
+          shkzg
+          mwskz
+          dmbtr
+          wrbtr
+    FROM bsak INTO TABLE itab2 where lifnr in s_lifnr
+                                  and bukrs in bukrs
+                                  and hkont in hkont
+                                  and budat in budat
+                                  and blart = 'RE'.
+
+
+  SELECT  lifnr
+          bukrs
+          hkont
+          umsks
+          umskz
+          augdt
+          augbl
+          zuonr
+          gjahr
+          belnr
+          buzei
+          budat
+          bldat
+          xblnr
+          blart
+          bschl
+          shkzg
+          mwskz
+          dmbtr
+          wrbtr
+    FROM bsik APPENDING TABLE itab2 where lifnr in s_lifnr
+                                  and bukrs in bukrs
+                                  and hkont in hkont
+                                  and budat in budat
+                                  and blart = 'RE'.
+
+
+
+if itab2[] is NOT INITIAL.
+  SELECT bukrs
+       belnr
+       gjahr
+       buzei
+       bschl
+       shkzg
+       mwskz
+       dmbtr
+       wrbtr
+       zuonr
+       hkont
+       lifnr
+       matnr
+       menge
+       ebeln
+       ebelp
+       FROM BSEG INTO TABLE ITAB
+       FOR ALL ENTRIES IN ITAB2
+       WHERE bukrs = itab2-bukrs
+       and BELNR = ITAB2-BELNR
+       AND   GJAHR = ITAB2-GJAHR
+       AND  buzei = '1'.
+*       or buzei = '1' )  .
+
+
+  SELECT bukrs
+       belnr
+       gjahr
+       buzei
+       bschl
+       shkzg
+       mwskz
+       dmbtr
+       wrbtr
+       zuonr
+       hkont
+       lifnr
+       matnr
+       menge
+       ebeln
+       ebelp
+       FROM BSEG INTO TABLE ITAB3
+       FOR ALL ENTRIES IN ITAB2
+       WHERE bukrs = itab2-bukrs
+       and BELNR = ITAB2-BELNR
+       AND   GJAHR = ITAB2-GJAHR
+*       AND  buzei = '2'.
+       and buzei = '2'   .
+
+
+
+  loop at itab.
+
+    if itab-ebeln <> ' '.
+
+      select ebeln lifnr from ekko into table po_det for all entries in itab where ebeln =  itab-ebeln .   "and lifnr in s_lifnr.
+
+
+      if sy-subrc = 0.
+        select lifnr name1  from lfa1 into table name for all entries in po_det where lifnr =  po_det-lifnr.
+
+      endif.
+
+    endif.
+
+
+  endloop.
+
+
+
+
+
+endif.
+
+if itab[] is NOT INITIAL .
+
+select lifnr name1 from lfa1 into table lifnr for all entries in itab where lifnr = itab-lifnr.
+
+select ebeln lifnr from ekko into table it_ekko for all entries in itab where ebeln = itab-ebeln.
+
+select ebeln matnr from ekpo into table it_ekpo for all entries in itab where ebeln = itab-ebeln.
+
+select ebeln txz01 from ekpo into table po_text for all entries in itab where ebeln = itab-ebeln.
+
+ENDIF.
+
+sort itab by BELNR.
+
+if itab3[] is not INITIAL.
+
+select matnr maktx  from makt into table desc for all entries in itab3 where matnr = itab3-matnr.
+
+endif.
+
+sort itab3 by belnr.
+
+
+IF ITAB[] IS  INITIAL.
+ MESSAGE 'NO RECORD FOUND' TYPE 'I' DISPLAY LIKE 'E'.
+
+ELSE.
+
+
+
+
+loop at itab[] into itab.
+
+  final-belnr = itab-belnr.
+  final-lifnr = itab-lifnr.
+  final-ebeln = itab-ebeln.
+
+ if itab-ebeln <> ' '.
+
+    read table po_det with key ebeln = itab-ebeln.
+    if sy-subrc = 0.
+      final-lifnr = po_det-lifnr.
+
+          read table name with key lifnr = po_det-lifnr.
+      if sy-subrc = 0.
+        final-lifnr = name-lifnr.
+        final-name1 = name-name1.
+      endif.
+
+    endif.
+  endif.
+
+
+*  final-menge = itab-menge.
+*  final-DMBTR = itab-DMBTR.
+    if itab-shkzg = 'H'.
+*    final-menge =  itab-menge * -1.
+    final-DMBTR =  itab-DMBTR * -1.
+
+  else.
+*    final-menge =  itab-menge.
+    final-DMBTR =  itab-DMBTR.
+
+  endif.
+
+  clear itab2.
+
+  read table itab2 with key belnr = itab-belnr
+                            gjahr = itab-gjahr
+                            bukrs = itab-bukrs.
+*                            buzei = itab-buzei
+*                            lifnr = itab-lifnr..
+
+
+
+  if sy-subrc = 0.
+    final-bldat = itab2-bldat.
+    final-hkont = itab2-hkont.
+    final-xblnr = itab2-xblnr.
+  endif.
+
+
+
+   clear itab3.
+
+   READ TABLE itab3 with key bukrs = itab-bukrs
+                             BELNR = ITAB-BELNR
+                             GJAHR = ITAB-GJAHR.
+
+   IF sy-subrc eq 0..
+
+  final-ebeln = itab3-ebeln.
+  final-menge = itab3-menge.
+  final-matnr = itab3-matnr.
+
+*         final-DMBTR =  itab3-DMBTR * -1.
+   ENDIF.
+
+
+  clear lifnr.
+
+  read table lifnr with key lifnr  =  itab-lifnr.
+
+  if sy-subrc = 0.
+
+    final-name1 = lifnr-name1.
+
+  endif.
+
+clear :po_text .
+  read table po_text with key ebeln = itab-ebeln.
+  if sy-subrc = 0.
+
+    final-maktx = po_text-txz01.
+
+  endif.
+clear desc.
+  read table desc with key matnr  =  itab3-matnr.
+
+  if sy-subrc = 0.
+
+    final-maktx = desc-maktx.
+
+  endif.
+
+
+
+
+
+*       AND  buzei = '2'.
+*       and buzei = '1'   .
+*  if itab-shkzg = 'H'.
+*    final-menge =  itab-menge * -1.
+*    final-DMBTR =  itab-DMBTR * -1.
+
+*  elseif itab-shkzg = 'S'.
+*    final-menge =  itab-menge.
+*    final-DMBTR =  itab-DMBTR.
+
+*  endif.
+
+  CLEAR itab3.
+  CLEAR:ITAB2.
+  CLEAR ITAB.
+  collect final.
+  clear: final.
+endloop.
+
+clear final.
+sort final by belnr.
+
+PERFORM BUILD_F.
+
+PERFORM START_LIST_VIEWER.
+ENDIF.
+ENDIF.
+
+
+
+IF ITAB1[] IS  NOT INITIAL .
+
+
+
+
+IF ITAB1[] IS NOT INITIAL.
+  SELECT bukrs
+       belnr
+       gjahr
+       buzei
+       bschl
+       shkzg
+       mwskz
+       dmbtr
+       wrbtr
+       zuonr
+       hkont
+       lifnr
+       matnr
+       menge
+       ebeln
+       ebelp
+       FROM BSEG INTO TABLE ITAB
+       FOR ALL ENTRIES IN ITAB1
+       WHERE BELNR = ITAB1-BELNR
+       AND   GJAHR = ITAB1-GJAHR
+       AND   HKONT = ITAB1-HKONT
+*       AND   zuonr = itab1-zuonr
+       AND   buzei = itab1-buzei.
+
+
+
+
+  loop at itab.
+
+    if itab-ebeln <> ' '.
+
+      select ebeln lifnr from ekko into table po_det for all entries in itab where ebeln =  itab-ebeln .   "and lifnr in s_lifnr.
+
+
+      if sy-subrc = 0.
+        select lifnr name1  from lfa1 into table name for all entries in po_det where lifnr =  po_det-lifnr.
+
+      endif.
+
+    endif.
+
+
+  endloop.
+
+ENDIF.
+
+
+if itab[] is not initial.
+
+select lifnr name1 from lfa1 into table lifnr for all entries in itab where lifnr = itab-lifnr.
+
+select matnr maktx  from makt into table desc for all entries in itab where matnr = itab-matnr.
+
+select ebeln lifnr from ekko into table it_ekko for all entries in itab where ebeln = itab-ebeln.
+
+select ebeln matnr from ekpo into table it_ekpo for all entries in itab where ebeln = itab-ebeln.
+
+select ebeln txz01 from ekpo into table po_text for all entries in itab where ebeln = itab-ebeln.
+
+endif.
+
+
+
+*&---------------------------------------------------------------------
+*& END OF SELECTION SCREEN
+*
+*&---------------------------------------------------------------------
+
+sort itab by BELNR.
+
+
+IF ITAB[] IS  INITIAL.
+ MESSAGE 'NO RECORD FOUND' TYPE 'I' DISPLAY LIKE 'E'.
+
+ELSE.
+
+
+
+loop at itab[] into itab.
+
+  final-belnr = itab-belnr.
+  final-lifnr = itab-lifnr.
+  final-ebeln = itab-ebeln.
+
+  if itab-ebeln <> ' '.
+
+    read table po_det with key ebeln = itab-ebeln.
+    if sy-subrc = 0.
+      final-lifnr = po_det-lifnr.
+
+          read table name with key lifnr = po_det-lifnr.
+      if sy-subrc = 0.
+        final-lifnr = name-lifnr.
+        final-name1 = name-name1.
+      endif.
+
+    endif.
+  endif.
+
+  final-matnr = itab-matnr.
+  final-menge = itab-menge.
+  final-DMBTR = itab-DMBTR.
+
+  clear itab1.
+
+  read table itab1 with key belnr = itab-belnr
+                            gjahr = itab-gjahr
+                            hkont = itab-hkont
+*                            zuonr = itab-zuonr
+                            buzei = itab-buzei..
+
+
+
+  if sy-subrc = 0.
+    final-bldat = itab1-bldat.
+    final-hkont = itab1-hkont.
+    final-xblnr = itab1-xblnr.
+  endif.
+
+  clear lifnr.
+
+  read table lifnr with key lifnr  =  itab-lifnr.
+
+  if sy-subrc = 0.
+
+    final-name1 = lifnr-name1.
+
+  endif.
+
+clear :po_text .
+  read table po_text with key ebeln = itab-ebeln.
+  if sy-subrc = 0.
+
+    final-maktx = po_text-txz01.
+
+  endif.
+clear desc.
+  read table desc with key matnr  =  itab-matnr.
+
+  if sy-subrc = 0.
+
+    final-maktx = desc-maktx.
+
+  endif.
+
+  if itab-shkzg = 'H'.
+    final-menge =  itab-menge * -1.
+    final-DMBTR =  itab-DMBTR * -1.
+
+  else.
+    final-menge =  itab-menge.
+    final-DMBTR =  itab-DMBTR.
+
+  endif.
+
+
+  CLEAR:ITAB1.
+  CLEAR ITAB.
+  append final.
+  clear: final.
+endloop.
+clear final.
+sort final by belnr.
+
+PERFORM BUILD_F.
+*PERFORM BUILD_EVENTCAT.
+PERFORM START_LIST_VIEWER.
+ENDIF.
+
+
+
+
+ENDIF.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+FORM BUILD_F.
+* COLUMN 1
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BSAS'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'BELNR'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = SPACE.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 2
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BSAS'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'BLDAT'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = SPACE.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 3
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BSEG'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'LIFNR'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = SPACE.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 4
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'LFA1'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'NAME1'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = SPACE.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 5
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'RSEG'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'EBELN'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 6
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'RSEG'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'MATNR'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 7
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'MAKT'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'MAKTX'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 8
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BKPF'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'XBLNR'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 9
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BSEG'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'MENGE'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+* COLUMN 10
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'BSEG'.
+  FIELDCAT_LN-TABNAME = 'FINAL'.
+  FIELDCAT_LN-FIELDNAME = 'DMBTR'.
+  FIELDCAT_LN-KEY = 'x'.
+  FIELDCAT_LN-DO_SUM = 'x'.
+  FIELDCAT_LN-COL_POS = COLS.
+*fieldcat_ln-sum = 'x'.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+ENDFORM.
+
+*FORM BUILD_EVENTCAT.
+**  EVENTCAT_LN-NAME = 'top_of_page'.
+**  EVENTCAT_LN-FORM = 'page_header'.
+*  APPEND EVENTCAT_LN TO EVENTCAT.
+*ENDFORM.                               " BUILD_EVENTCAT
+
+FORM START_LIST_VIEWER.
+  DATA: PGM LIKE SY-REPID.
+  PGM = SY-REPID.
+  CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+    EXPORTING
+      I_CALLBACK_PROGRAM      = PGM
+*      I_CALLBACK_USER_COMMAND = 'user_command'
+      IT_FIELDCAT             = FIELDCAT
+*      IT_SORT                 = SORTCAT
+*      I_SAVE                  = 'A'
+    TABLES
+      T_OUTTAB                = FINAL[].
+*  EXCEPTIONS
+*  program_error = 1
+*  OTHERS = 2.
+ENDFORM.

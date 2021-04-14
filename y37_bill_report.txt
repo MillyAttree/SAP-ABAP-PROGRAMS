@@ -1,0 +1,845 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_BILL_REPORT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_BILL_REPORT NO STANDARD PAGE HEADING LINE-COUNT 300(10) LINE-SIZE 300 MESSAGE-ID ZRV.
+
+TYPE-POOLS: SLIS.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+
+DATA : COLS TYPE I.
+COLS = 0.
+
+TABLES: VBRK, VBRP , KNA1, KONV, T685T .
+
+DATA: BEGIN OF ITAB1 OCCURS 0.
+        INCLUDE STRUCTURE ZSALE1.
+DATA:  END OF ITAB1.
+
+TYPES: BEGIN OF TY_VBRK,
+      VBELN TYPE VBRK-VBELN,       " BILLING DOC
+      FKDAT TYPE VBRK-FKDAT,       " BILLING DATE
+      VTWEG TYPE VBRK-VTWEG,       " DISTRIBUTION CHANNNEL
+      FKART TYPE VBRK-FKART,       "BILLING TYPE
+      KUNAG TYPE VBRK-KUNAG,       " SOLD-TO-PARTY
+      KNUMV TYPE VBRK-KNUMV,       "NO. OF DOC CONDITION
+      END OF TY_VBRK.
+
+DATA: IT_VBRK TYPE STANDARD TABLE OF TY_VBRK,
+      WA_VBRK TYPE TY_VBRK.
+
+TYPES: BEGIN OF TY_VBRP,
+      VBELN TYPE VBRP-VBELN,
+      KONDM TYPE VBRP-KONDM,       " MATERIAL PRICING GROUP
+      FKIMG TYPE VBRP-FKIMG,       " ACTUAL INVOICE QVANTITY
+      UMVKZ TYPE VBRP-UMVKZ,       " CONVERSION FACTOR
+      POSNR TYPE VBRP-POSNR,       " BILLING ITEM
+      VGBEL TYPE VBRP-VGBEL,       " DOCUMENT NO. OF REFRENCE DOC
+      END OF TY_VBRP.
+
+DATA: IT_VBRP TYPE STANDARD TABLE OF TY_VBRP,
+      WA_VBRP TYPE TY_VBRP.
+
+
+
+
+DATA: BEGIN OF IT_PRICE OCCURS 0,
+*      KNUMV LIKE KONV-KNUMV,
+      KWERT LIKE KONV-KWERT,       "
+      KSCHL LIKE KONV-KSCHL,
+      KBETR LIKE KONV-KBETR,
+      VTEXT LIKE T685T-VTEXT,
+     END OF IT_PRICE.
+
+*DATA: IT_PRICE TYPE STANDARD TABLE OF TY_PRICE,
+*      WA_PRICE TYPE TY_PRICE.
+
+TYPES: BEGIN OF TY_FIN,
+      VBELN TYPE VBRK-VBELN,       " BILLING DOC
+      FKDAT TYPE VBRK-FKDAT,       " BILLING DATE
+      VTWEG TYPE VBRK-VTWEG,       " DISTRIBUTION CHANNNEL
+      FKART TYPE VBRK-FKART,       "BILLING TYPE
+      KUNAG TYPE VBRK-KUNAG,       " SOLD-TO-PARTY
+      KNUMV TYPE VBRK-KNUMV,       "NO. OF DOC CONDITION
+      KONDM TYPE VBRP-KONDM,       " MATERIAL PRICING GROUP
+      FKIMG TYPE VBRP-FKIMG,       " ACTUAL INVOICE QVANTITY
+      UMVKZ TYPE VBRP-UMVKZ,       " CONVERSION FACTOR
+      POSNR TYPE VBRP-POSNR,       " BILLING ITEM
+      VGBEL TYPE VBRP-VGBEL,       " DOCUMENT NO. OF REFRENCE DOC
+
+      END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+
+DATA: NET TYPE P DECIMALS 2,
+      EXI TYPE P DECIMALS 2,
+      H_DIS LIKE EXI.
+
+DATA: TY TYPE P DECIMALS 0,
+      OT TYPE P DECIMALS 2.
+
+DATA: TU LIKE TY,
+      HU LIKE TY.
+
+DATA: TY_AMT LIKE VBRP-NETWR,
+      OT_AMT LIKE VBRP-NETWR.
+
+DATA: TU_AMT LIKE TY_AMT,
+      HU_AMT LIKE TY_AMT.
+
+DATA: BASIC TYPE P DECIMALS 2.
+DATA : CST TYPE P DECIMALS 2,
+      DIS TYPE P DECIMALS 2,
+      R_OFF LIKE CST,
+      CC_DIS LIKE CST,
+      C_COMM1 LIKE CST,
+      C_COMM2 LIKE CST,
+      ON_CON LIKE CST,
+      FREIGHT LIKE CST,
+      C_DIS LIKE CST.
+
+DATA: CHK LIKE VBRP-AUREF.
+DATA: TEMP TYPE P DECIMALS 2.
+
+DATA: LST LIKE CST,
+      CST_SUR LIKE CST.
+
+DATA: VAT5 LIKE CST.
+DATA: LST_SUR LIKE ZSALEBOOK-LST_SUR.
+
+
+INITIALIZATION.
+  REFRESH : IT_FIN.
+
+
+
+  SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS: FKDAT FOR VBRK-FKDAT OBLIGATORY,
+                  VTWEG FOR VBRK-VTWEG OBLIGATORY DEFAULT '10',
+                  FKART FOR VBRK-FKART,
+                  KUNAG FOR VBRK-KUNAG.
+  SELECTION-SCREEN END OF BLOCK B1.
+
+
+START-OF-SELECTION.
+
+  PERFORM GET_DATA.
+
+  PERFORM DISP.
+
+  PERFORM ALV.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM GET_DATA.
+
+  SELECT VBELN
+         FKDAT
+         VTWEG
+         FKART
+         KUNAG
+         KNUMV
+     FROM VBRK INTO TABLE IT_VBRK WHERE FKDAT IN FKDAT AND VTWEG IN VTWEG AND FKART IN FKART
+                                                                          AND KUNAG IN KUNAG
+                                                                          AND FKART <> 'G2'
+                                                                          AND FKART <> 'S1'
+                                                                          AND FKART <> 'S2'
+                                                                          AND FKART <> 'RE'
+                                                                          AND FKART <> 'L2'.
+
+  IF SY-SUBRC EQ 0.
+    SORT IT_VBRK BY VBELN FKDAT.
+  ENDIF.
+
+  IF IT_VBRK IS NOT INITIAL .
+    SELECT VBELN
+           KONDM
+           FKIMG
+           UMVKZ
+           POSNR
+           VGBEL
+      FROM VBRP INTO TABLE IT_VBRP FOR ALL ENTRIES IN IT_VBRK WHERE VBELN = IT_VBRK-VBELN.
+
+  ENDIF.
+
+
+
+  LOOP AT IT_VBRP INTO WA_VBRP.
+
+
+
+    WA_FIN-VBELN = WA_VBRP-VBELN.
+    WA_FIN-KONDM = WA_VBRP-KONDM.
+    WA_FIN-FKIMG = WA_VBRP-FKIMG.
+    WA_FIN-UMVKZ = WA_VBRP-UMVKZ.
+    WA_FIN-POSNR = WA_VBRP-POSNR.
+    WA_FIN-VGBEL = WA_VBRP-VGBEL.
+
+    CLEAR WA_VBRK.
+    READ TABLE IT_VBRK INTO WA_VBRK WITH KEY VBELN = WA_VBRP-VBELN.
+    IF SY-SUBRC EQ 0.
+      WA_FIN-FKDAT = WA_VBRK-FKDAT.
+      WA_FIN-VTWEG = WA_VBRK-VTWEG.
+      WA_FIN-FKART = WA_VBRK-FKART.
+      WA_FIN-KUNAG = WA_VBRK-KUNAG.
+      WA_FIN-KNUMV = WA_VBRK-KNUMV.
+    ENDIF.
+
+
+
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+
+  ENDLOOP.
+
+  LOOP AT IT_FIN INTO WA_FIN.
+
+    AT NEW VBELN.
+      TY = 0.
+      TU = 0.
+      HU = 0.
+      OT = 0.
+      TY_AMT = 0.
+      TU_AMT = 0.
+      HU_AMT = 0.
+      OT_AMT = 0.
+
+      READ TABLE IT_FIN INTO WA_FIN INDEX SY-TABIX.
+
+*      READ TABLE ITAB INDEX SY-TABIX.
+
+      SELECT SINGLE * FROM KNA1 WHERE KUNNR = WA_FIN-KUNAG.
+
+    ENDAT.
+
+
+
+    IF WA_FIN-KONDM = 'TY'.
+      TY = TY + ( WA_FIN-FKIMG * WA_FIN-UMVKZ ).
+      TEMP = WA_FIN-FKIMG * WA_FIN-UMVKZ.
+    ELSEIF WA_FIN-KONDM = 'TU'.
+      TU = TU + ( WA_FIN-FKIMG * WA_FIN-UMVKZ ).
+      TEMP = WA_FIN-FKIMG * WA_FIN-UMVKZ.
+    ELSEIF WA_FIN-KONDM = 'HU' .
+      HU = HU + ( WA_FIN-FKIMG * WA_FIN-UMVKZ ).
+      TEMP = WA_FIN-FKIMG * WA_FIN-UMVKZ.
+    ELSE.
+      OT = OT + ( WA_FIN-FKIMG * WA_FIN-UMVKZ ).
+      TEMP = WA_FIN-FKIMG * WA_FIN-UMVKZ.
+    ENDIF.
+
+*   SELECT KWERT
+*          KSCHL
+*          KBETR
+*************************************************************************
+    SELECT * FROM KONV WHERE KNUMV = WA_FIN-KNUMV AND KPOSN = WA_FIN-POSNR.
+
+      CHECK SY-SUBRC = 0.
+
+      CASE KONV-KSCHL.
+
+        WHEN 'ZPR0'(002).
+
+          IF WA_FIN-KONDM = 'TY'.
+            TY_AMT = TY_AMT + ( TEMP * KONV-KBETR ).
+
+
+          ELSEIF WA_FIN-KONDM = 'TU'.
+            TU_AMT = TU_AMT + ( TEMP * KONV-KBETR ).
+
+
+          ELSEIF WA_FIN-KONDM = 'HU' OR WA_FIN-KONDM = 'AC'.
+            HU_AMT = HU_AMT + ( TEMP * KONV-KBETR ).
+
+
+          ELSE.
+            OT_AMT = OT_AMT + ( TEMP * KONV-KBETR ).
+
+
+          ENDIF.
+      ENDCASE.
+    ENDSELECT.
+
+*******************************************************
+    AT END OF VBELN.
+
+      READ TABLE IT_FIN INTO WA_FIN INDEX SY-TABIX.
+      PERFORM GET_ST.
+
+
+
+
+      EXI = 0.
+      BASIC = 0.
+      CST = 0.
+      DIS = 0.
+      R_OFF = 0.
+      H_DIS = 0.
+      CC_DIS = 0.
+      C_COMM1 = 0.
+      C_COMM2 = 0.
+      ON_CON = 0.
+      FREIGHT = 0.
+      C_DIS = 0.
+      LST = 0.
+      CST_SUR = 0.
+*      JIN5 = 0.
+      LST_SUR = 0.
+      VAT5 = 0.
+
+      LOOP AT IT_PRICE.
+
+        IF IT_PRICE-KSCHL = 'ZPR0'.
+          BASIC = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'JEX2'.
+          EXI = IT_PRICE-KWERT.
+        ENDIF.
+
+
+        IF IT_PRICE-KSCHL = 'JIN1'.
+          CST = IT_PRICE-KWERT.
+        ENDIF.
+
+
+        IF IT_PRICE-KSCHL = 'DIFF'.
+          R_OFF = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZHA0'.
+          H_DIS = IT_PRICE-KWERT.
+        ENDIF.
+
+
+        IF IT_PRICE-KSCHL = 'ZCCD'.
+          CC_DIS = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZKCF'.
+          C_COMM1 = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZKFP'.
+          C_COMM2 = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZHFF'.
+          ON_CON = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZHD0'.
+          FREIGHT = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'K007'.
+          C_DIS = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'JIN2'.
+          LST = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'JIN4'.
+          CST_SUR = IT_PRICE-KWERT.
+        ENDIF.
+
+        IF IT_PRICE-KSCHL = 'ZVTS'.
+          LST_SUR = IT_PRICE-KWERT.
+        ENDIF.
+
+      ENDLOOP.
+
+      C_COMM2 = C_COMM2 + C_COMM1.
+
+      NET = 0.
+
+      NET =  BASIC + EXI + CST + LST + CST_SUR +  FREIGHT + DIS + H_DIS +
+       CC_DIS + C_COMM2 + ON_CON + C_DIS + R_OFF + LST_SUR.
+
+
+
+     MOVE:  WA_FIN-VBELN TO ITAB1-VBELN,
+            WA_FIN-FKDAT TO ITAB1-FKDAT,
+            KNA1-NAME1 TO ITAB1-NAME1,
+            KNA1-ORT01 TO ITAB1-ORT01,
+            TY TO ITAB1-TYRE_QT,
+            TU TO ITAB1-TUBE_QT,
+            HU TO ITAB1-HUB_QT,
+            OT TO ITAB1-OTH_QT,
+            TY_AMT TO ITAB1-TYRE_V,
+            TU_AMT TO ITAB1-TUBE_V,
+            HU_AMT TO ITAB1-HUB_V,
+            OT_AMT TO ITAB1-OTH_V,
+            BASIC TO ITAB1-BASIC,
+            EXI TO ITAB1-EX_DUTY,
+            CST TO ITAB1-CST,
+            LST TO ITAB1-LST,
+            CST_SUR TO ITAB1-CST_SUR,
+            LST_SUR TO ITAB1-LST_SUR,
+            DIS TO ITAB1-DISC,
+            H_DIS TO ITAB1-HEAD_DISC,
+            CC_DIS TO ITAB1-CON_DISC,
+            C_COMM2 TO ITAB1-CON_COMM,
+            ON_CON TO ITAB1-FR_COMM,
+            FREIGHT TO ITAB1-FREIGHT,
+            C_DIS TO ITAB1-CUST_DISC,
+            R_OFF TO ITAB1-ROUND_OFF,
+            NET TO ITAB1-NETVALUE,
+            WA_FIN-VGBEL TO ITAB1-VGBEL.
+      APPEND ITAB1.
+      CLEAR ITAB1.
+
+
+    ENDAT.
+
+
+  ENDLOOP.
+
+ENDFORM.                    "GET_DATA
+
+*&---------------------------------------------------------------------*
+*&      Form  get_st
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM GET_ST.
+
+  CLEAR IT_PRICE.
+  REFRESH IT_PRICE.
+
+
+  SELECT * FROM KONV WHERE KNUMV = WA_FIN-KNUMV
+                     AND   KSCHL NE 'SKTO'.
+
+    SELECT SINGLE * FROM T685T WHERE SPRAS = 'EN'
+                               AND  KSCHL = KONV-KSCHL.
+*                                     and   kschl <> 'SKTO'.
+    IF KONV-KWERT NE 0.
+      READ TABLE IT_PRICE WITH KEY
+                           KSCHL = KONV-KSCHL.
+      IF SY-SUBRC <> 0.
+        MOVE KONV-KBETR TO IT_PRICE-KBETR.
+      ELSE.
+        IT_PRICE-KBETR = '00000000000.00' .
+      ENDIF.
+
+      MOVE KONV-KSCHL TO IT_PRICE-KSCHL.
+      MOVE T685T-VTEXT TO IT_PRICE-VTEXT.
+      MOVE KONV-KWERT  TO IT_PRICE-KWERT.
+      COLLECT IT_PRICE.
+    ENDIF.
+*    APPEND IT_PRICE.
+*    CLEAR IT_PRICE.
+  ENDSELECT.
+ENDFORM.                    "get_st
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+
+
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'VBELN'.
+  WA_FCAT-SELTEXT_L = 'BILL DOCUMENT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'FKDAT'.
+  WA_FCAT-SELTEXT_L = 'BILL DATE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'NAME1'.
+  WA_FCAT-SELTEXT_L = 'NAME'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 20.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'ORT01'.
+  WA_FCAT-SELTEXT_L = 'CITY'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'TYRE_QT'.
+  WA_FCAT-SELTEXT_L = 'TYRE QUANTITY'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'TUBE_QT'.
+  WA_FCAT-SELTEXT_L = 'TUBE QUANTITY'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'HUB_QT'.
+  WA_FCAT-SELTEXT_L = 'HUB QUANTITY'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'OTH_QT'.
+  WA_FCAT-SELTEXT_L = 'SCP AMMOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'TYRE_V'.
+  WA_FCAT-SELTEXT_L = 'TYRE VALUE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'TUBE_V'.
+  WA_FCAT-SELTEXT_L = 'TUBE VALUE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'HUB_V'.
+  WA_FCAT-SELTEXT_L = 'HUB VALUE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'OTH_V'.
+  WA_FCAT-SELTEXT_L = 'SCP VALUE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'BASIC'.
+  WA_FCAT-SELTEXT_L = 'TOTAL AMMOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'EX_DUTY'.
+  WA_FCAT-SELTEXT_L = 'EXISE AMMOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CST'.
+  WA_FCAT-SELTEXT_L = 'CASH SALES TAX'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'LST'.
+  WA_FCAT-SELTEXT_L = 'VALUE ADDED TAX'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CST_SUR'.
+  WA_FCAT-SELTEXT_L = 'CST SURCHARGE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'LST_SUR'.
+  WA_FCAT-SELTEXT_L = 'LST SURCHARGE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'DISC'.
+  WA_FCAT-SELTEXT_L = 'DISCOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'HEAD_DISC'.
+  WA_FCAT-SELTEXT_L = 'HEAD DISCOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CON_DISC'.
+  WA_FCAT-SELTEXT_L = 'CONSIGNEE DISCOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CON_COMM'.
+  WA_FCAT-SELTEXT_L = 'CONSIGNEE COMMISION'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'FR_COMM'.
+  WA_FCAT-SELTEXT_L = 'FREIGHT COMMISION'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'FREIGHT'.
+  WA_FCAT-SELTEXT_L = 'FREIGHT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CUST_DISC'.
+  WA_FCAT-SELTEXT_L = 'CUSTOMER DISCOUNT'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'ROUND_OFF'.
+  WA_FCAT-SELTEXT_L = 'ROUND OFF'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'NETVALUE'.
+  WA_FCAT-SELTEXT_L = 'NET VALUE'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'VGBEL'.
+  WA_FCAT-SELTEXT_L = 'DELIVERY NO.'.
+  WA_FCAT-TABNAME = 'ZSALE1'.
+*  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+
+
+ENDFORM.                    "DISP
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*       I_INTERFACE_CHECK                 = ' '
+*       I_BYPASSING_BUFFER                = ' '
+*       I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*       I_CALLBACK_PF_STATUS_SET          = ' '
+*       I_CALLBACK_USER_COMMAND           = ' '
+     I_CALLBACK_TOP_OF_PAGE            = 'TOP_OF_PAGE'
+*       I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*       I_CALLBACK_HTML_END_OF_LIST       = ' '
+*       I_STRUCTURE_NAME                  = 'ZSALE1'
+     I_BACKGROUND_ID                   = 'ALV_BACKGROUND '
+     I_GRID_TITLE                      = 'BILL DOCUMENT LIST '
+*       I_GRID_SETTINGS                   =
+     IS_LAYOUT                         = LAYOUT
+     IT_FIELDCAT                       = IT_FCAT[]
+*       IT_EXCLUDING                      =
+*       IT_SPECIAL_GROUPS                 =
+*       IT_SORT                           =
+*       IT_FILTER                         =
+*       IS_SEL_HIDE                       =
+     I_DEFAULT                         = 'X'
+*       I_SAVE                            = ' '
+*       IS_VARIANT                        =
+*       IT_EVENTS                         =
+*       IT_EVENT_EXIT                     =
+*       IS_PRINT                          =
+*       IS_REPREP_ID                      =
+*       I_SCREEN_START_COLUMN             = 0
+*       I_SCREEN_START_LINE               = 0
+*       I_SCREEN_END_COLUMN               = 0
+*       I_SCREEN_END_LINE                 = 0
+*       I_HTML_HEIGHT_TOP                 = 0
+*       I_HTML_HEIGHT_END                 = 0
+*       IT_ALV_GRAPHICS                   =
+*       IT_HYPERLINK                      =
+*       IT_ADD_FIELDCAT                   =
+*       IT_EXCEPT_QINFO                   =
+*       IR_SALV_FULLSCREEN_ADAPTER        =
+*     IMPORTING
+*       E_EXIT_CAUSED_BY_CALLER           =
+*       ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = ITAB1[]
+   EXCEPTIONS
+     PROGRAM_ERROR                     = 1
+     OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.                    "CALL_FUNCTION
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  TOP_OF_PAGE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM TOP_OF_PAGE.
+
+  DATA:  IT_HEADER TYPE SLIS_T_LISTHEADER,
+         WA_HEADER TYPE SLIS_LISTHEADER.
+
+  WA_HEADER-TYP = 'H'.
+  WA_HEADER-INFO = 'BILLING DOCUMENT LIST'.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+
+  DATA: DATE(12) TYPE C.
+
+  WRITE: SY-DATUM TO DATE DD/MM/YYYY.
+  WA_HEADER-TYP = 'S'.
+  CONCATENATE 'DATE  :'  DATE INTO WA_HEADER-INFO SEPARATED BY SPACE.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = IT_HEADER[]
+      I_LOGO             = 'RALSONLOGO1'.
+*   I_END_OF_LIST_GRID       =
+*   I_ALV_FORM               =
+  .
+
+ENDFORM.                    "TOP_OF_PAGE

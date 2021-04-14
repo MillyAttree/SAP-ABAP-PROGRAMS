@@ -1,0 +1,163 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_DOCUMENT_SEGMENT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_DOCUMENT_SEGMENT NO STANDARD PAGE HEADING.
+TABLES: MKPF, MSEG.
+
+TYPES: BEGIN OF TY_MKPF,
+       MBLNR LIKE MKPF-MBLNR,
+       MJAHR LIKE MKPF-MJAHR,
+       BLART LIKE MKPF-BLART,
+       BUDAT LIKE MKPF-BUDAT,
+       END OF TY_MKPF.
+
+DATA: IT_MKPF TYPE STANDARD TABLE OF TY_MKPF,
+      WA_MKPF TYPE TY_MKPF.
+
+TYPES: BEGIN OF TY_MSEG,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       BWART LIKE MSEG-BWART,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MENGE LIKE MSEG-MENGE,
+       END OF TY_MSEG.
+
+DATA: IT_MSEG TYPE STANDARD TABLE OF TY_MSEG,
+      WA_MSEG TYPE TY_MSEG.
+
+TYPES: BEGIN OF TY_FIN,
+       MBLNR LIKE MKPF-MBLNR,
+       MJAHR LIKE MKPF-MJAHR,
+       BLART LIKE MKPF-BLART,
+       ZEILE LIKE MSEG-ZEILE,
+       BWART LIKE MSEG-BWART,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MENGE LIKE MSEG-MENGE,
+       END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+INITIALIZATION.
+
+  SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+*  SELECT-OPTIONS: S_MBLNR FOR MKPF-MBLNR,
+*                  S_MJAHR FOR MKPF-MJAHR,
+*                  S_MATNR FOR MSEG-MATNR,
+*                  S_BWART FOR MSEG-BWART.
+SELECT-OPTIONS: S_BUDAT FOR MKPF-BUDAT,
+                S_MATNR FOR MSEG-MATNR.
+  SELECTION-SCREEN END OF BLOCK B1.
+
+START-OF-SELECTION.
+
+  SELECT MBLNR
+         MJAHR
+         BLART
+    FROM MKPF INTO TABLE IT_MKPF WHERE BUDAT IN S_BUDAT.       "MBLNR IN S_MBLNR AND MJAHR IN S_MJAHR.
+  IF SY-SUBRC EQ 0.
+    SORT IT_MKPF BY MBLNR.
+  ENDIF.
+
+  IF IT_MKPF[] IS NOT INITIAL .
+    SELECT MBLNR
+           MJAHR
+           ZEILE
+           BWART
+           MATNR
+           WERKS
+           LGORT
+           MENGE
+      FROM MSEG INTO TABLE IT_MSEG FOR ALL ENTRIES IN IT_MKPF WHERE MBLNR = IT_MKPF-MBLNR
+                                                                AND MJAHR = IT_MKPF-MJAHR
+                                                                AND MATNR IN S_MATNR.
+                                                        "        AND BWART IN S_BWART.
+    IF SY-SUBRC EQ 0.
+      SORT IT_MSEG BY MBLNR.
+    ENDIF.
+  ENDIF.
+
+  LOOP AT IT_MSEG INTO WA_MSEG..
+    WA_FIN-MBLNR = WA_MSEG-MBLNR.
+    WA_FIN-MJAHR = WA_MSEG-MJAHR.
+    WA_FIN-ZEILE = WA_MSEG-ZEILE.
+    WA_FIN-BWART = WA_MSEG-BWART.
+    WA_FIN-MATNR = WA_MSEG-MATNR.
+    WA_FIN-WERKS = WA_MSEG-WERKS.
+    WA_FIN-LGORT = WA_MSEG-LGORT.
+    WA_FIN-MENGE = WA_MSEG-MENGE.
+
+    CLEAR WA_MKPF.
+    READ TABLE IT_MKPF INTO WA_MKPF WITH KEY MBLNR = WA_FIN-MBLNR.
+    IF SY-SUBRC EQ 0.
+      WA_FIN-BLART = WA_MKPF-BLART.
+
+    ENDIF.
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+  ENDLOOP.
+
+  LOOP AT IT_FIN INTO WA_FIN .
+    AT FIRST.
+      FORMAT COLOR COL_HEADING.
+      WRITE: SY-ULINE(100),
+             /1 SY-VLINE,
+             25 'DOCUMENT SEGMENT REPORT',
+             100 SY-VLINE,
+             / SY-ULINE(100),
+             /1 SY-VLINE,
+             2 'MATERIAL DOC.',
+             20 SY-VLINE,
+             22 'YEAR',
+             30 SY-VLINE,
+             32 'TYPE',
+             40 SY-VLINE,
+             42 'ITEM',
+             50 SY-VLINE,
+             52 'MOVEMENT',
+             60 SY-VLINE,
+             62 'MAT NO.',
+             70 SY-VLINE,
+             72 'PLANT',
+             80 SY-VLINE,
+             82 'LOCATION',
+             90 SY-VLINE,
+             92 'QUANTITY',
+             100 SY-VLINE,
+             / SY-ULINE(100).
+      FORMAT COLOR OFF.
+    ENDAT.
+
+    WRITE:
+         /1 SY-VLINE,
+         2 WA_FIN-MBLNR,
+         20 SY-VLINE,
+         22 WA_FIN-MJAHR,
+         30 SY-VLINE,
+         32 WA_FIN-BLART,
+         40 SY-VLINE,
+         42 WA_FIN-ZEILE,
+         50 SY-VLINE,
+         52 WA_FIN-BWART,
+         60 SY-VLINE,
+         62 WA_FIN-MATNR,
+         70 SY-VLINE,
+         72 WA_FIN-WERKS,
+         80 SY-VLINE,
+         82 WA_FIN-LGORT,
+         90 SY-VLINE,
+         92 WA_FIN-MENGE LEFT-JUSTIFIED,
+         100 SY-VLINE,
+         / SY-ULINE(100).
+
+  ENDLOOP.

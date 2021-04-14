@@ -1,0 +1,392 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_REPORT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_REPORT NO STANDARD PAGE HEADING.
+
+TYPE-POOLS: SLIS.
+
+DATA: FIELDCATALOG TYPE SLIS_T_FIELDCAT_ALV WITH HEADER LINE,
+      GD_TAB_GROUP TYPE SLIS_T_SP_GROUP_ALV,
+      GD_LAYOUT    TYPE SLIS_LAYOUT_ALV,
+      GD_REPID     LIKE SY-REPID,
+      IT_SORT      TYPE SLIS_T_SORTINFO_ALV,
+       WA_SORT      TYPE SLIS_SORTINFO_ALV...
+
+TABLES : MAKT,MKPF,MSEG,MARA.
+
+DATA : BEGIN OF ITAB OCCURS 0,
+       MATNR LIKE MSEG-MATNR,
+       LGORT LIKE MSEG-LGORT,
+       BUDAT LIKE MKPF-BUDAT,
+       MBLNR LIKE MKPF-MBLNR,
+       ERFMG LIKE MSEG-ERFMG,
+       ERFME LIKE MSEG-ERFME,
+       BWART LIKE MSEG-BWART,
+       FERTH LIKE MARA-FERTH,
+       FORMT LIKE MARA-FORMT,
+  n like mkpf-budat ,
+       TOT_STK LIKE MSEG-ERFMG,
+       AUG   LIKE MSEG-ERFMG,
+       SEP   LIKE MSEG-ERFMG,
+       OCT   LIKE MSEG-ERFMG,
+       END OF ITAB,
+
+BEGIN OF ITAB1 OCCURS 0,
+       BUDAT LIKE MKPF-BUDAT,
+       MATNR LIKE MSEG-MATNR,
+       MAKTX LIKE MAKT-MAKTX,
+       LGORT LIKE MSEG-LGORT,
+       TOT_STK LIKE MSEG-ERFMG,
+       ERFME LIKE MSEG-ERFME,
+       BWART LIKE MSEG-BWART,
+       FERTH LIKE MARA-FERTH,
+       FORMT LIKE MARA-FORMT,
+  n like mkpf-budat,
+       JUL   LIKE MSEG-ERFMG,
+       AUG   LIKE MSEG-ERFMG,
+       SEP   LIKE MSEG-ERFMG,
+       OCT   LIKE MSEG-ERFMG,
+       END OF ITAB1.
+
+data: n(10) TYPE c.
+
+DATA: TOT TYPE P ,
+      TOT_701 TYPE p.
+DATA: GTOT LIKE TOT,
+     GTOT_702 LIKE TOT_701 .
+DATA: TOT_STK TYPE p,
+      G_STK TYPE p.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+SELECT-OPTIONS : MATNR FOR MSEG-MATNR,
+                 MATKL FOR MARA-MATKL,
+                 s_BUDAT FOR MKPF-BUDAT OBLIGATORY ,
+                 LGORT FOR MSEG-LGORT.
+SELECTION-SCREEN END OF BLOCK B1.
+
+
+
+
+START-OF-SELECTION.
+
+PERFORM  DATA.
+PERFORM  DISPLAY.
+PERFORM ALV.
+
+
+FORM DATA .
+
+SELECT * INTO CORRESPONDING FIELDS OF TABLE ITAB FROM
+                ( MKPF INNER JOIN MSEG
+                ON MKPF~MBLNR = MSEG~MBLNR
+                AND MKPF~MJAHR = MSEG~MJAHR )
+                INNER JOIN MARA ON MSEG~MATNR = MARA~MATNR
+                WHERE BWART  IN  ('131','132','701','702')
+                AND MATKL IN MATKL AND
+                MSEG~MATNR IN MATNR
+                AND BUDAT IN S_BUDAT
+                AND LGORT IN LGORT
+                AND XAUTO <> 'X'.
+
+SORT ITAB BY  MATNR LGORT.
+LOOP AT ITAB.
+
+
+
+
+    AT FIRST.
+      READ TABLE ITAB INDEX SY-TABIX.
+
+   ENDAT.
+
+    AT NEW MATNR.
+      TOT = 0.
+      READ TABLE ITAB INDEX SY-TABIX.
+      SELECT SINGLE * FROM MAKT WHERE MATNR = ITAB-MATNR.
+
+
+    ENDAT.
+
+
+    IF ITAB-BWART = '131' or ITAB-BWART = '701'.
+      TOT_STK = TOT_STK + ITAB-ERFMG.
+
+
+    ELSE.
+      TOT_STK = TOT_STK - ITAB-ERFMG.
+
+
+      ENDIF.
+
+
+
+  AT END OF LGORT.
+
+      READ TABLE ITAB INDEX SY-TABIX.
+
+
+ITAB1-MATNR = ITAB-MATNR.
+ITAB1-MAKTX = MAKT-MAKTX.
+ITAB1-TOT_STK = TOT_STK.
+ITAB1-ERFME   = ITAB-ERFME.
+ITAB1-LGORT = ITAB-LGORT.
+ITAB1-FERTH = ITAB-FERTH.
+ITAB1-FORMT = ITAB-FORMT.
+ITAB1-budat = itab-budat.
+append itab1.
+CLEAR ITAB1.
+  TOT_STK = 0.
+
+   ENDAT.
+
+
+    ENDLOOP.
+
+
+LOOP AT itab1.
+   READ TABLE ITAB INDEX SY-TABIX.
+
+write:/ itab1-budat,itab1-matnr, itab1-tot_stk,itab1-sep, itab1-oct.
+CALL FUNCTION 'ISP_GET_MONTH_NAME'
+  EXPORTING
+   date               = itab1-budat
+    language           = sy-langu
+*   MONTH_NUMBER       = '00'
+ IMPORTING
+*   LANGU_BACK         = LANGU_BACK
+   longtext           = n
+*   SHORTTEXT          = SHORTTEXT
+ EXCEPTIONS
+   calendar_id        = 1
+   date_error         = 2
+   not_found          = 3
+   wrong_input        = 4.
+
+case n.
+
+   when 'July'(005).
+     MOVE ITAB1-TOT_STK to itab1-JUL.
+   when 'August'(002).
+      MOVE ITAB1-TOT_STK to itab1-AUG.
+   when 'September'(003).
+      MOVE ITAB1-TOT_STK to itab1-SEP.
+   when 'October'(004).
+       MOVE ITAB1-TOT_STK to itab1-OCT.
+*   when '04'.
+
+
+
+           ENDCASE.
+modify itab1.
+
+
+
+ENDLOOP.
+
+
+
+ENDFORM.
+
+
+
+FORM DISPLAY .
+
+
+  FIELDCATALOG-FIELDNAME   = 'FERTH'.
+  FIELDCATALOG-SELTEXT_M   = 'Licence No'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'FORMT'.
+  FIELDCATALOG-SELTEXT_M   = 'Licence Group'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+
+  FIELDCATALOG-FIELDNAME   = 'MATNR'.
+  FIELDCATALOG-SELTEXT_M   = 'Material'.
+  FIELDCATALOG-OUTPUTLEN   =  15.
+  FIELDCATALOG-NO_ZERO     =  'X'.
+*  FIELDCATALOG-FIX_COLUMN  =  'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+
+  FIELDCATALOG-FIELDNAME   = 'MAKTX'.
+  FIELDCATALOG-SELTEXT_M   = 'Description'.
+  FIELDCATALOG-OUTPUTLEN   =  25.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'TOT_STK'.
+  FIELDCATALOG-SELTEXT_M   = 'Production'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  FIELDCATALOG-DO_SUM     =  'X'.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'ERFME'.
+  FIELDCATALOG-SELTEXT_M   = 'Unit'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'JUL'.
+  FIELDCATALOG-SELTEXT_M   = 'JUL'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'AUG'.
+  FIELDCATALOG-SELTEXT_M   = 'AUG'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+
+  FIELDCATALOG-FIELDNAME   = 'SEP'.
+  FIELDCATALOG-SELTEXT_M   = 'SEP'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'OCT'.
+  FIELDCATALOG-SELTEXT_M   = 'OCT'.
+  FIELDCATALOG-OUTPUTLEN   =  12.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+  FIELDCATALOG-FIELDNAME   = 'LGORT'.
+  FIELDCATALOG-SELTEXT_M   = 'S.Loc'.
+  FIELDCATALOG-OUTPUTLEN   =  10.
+  APPEND FIELDCATALOG TO FIELDCATALOG.
+  CLEAR  FIELDCATALOG.
+
+
+  GD_LAYOUT-NO_INPUT          = 'X'.
+  GD_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+  GD_LAYOUT-TOTALS_TEXT       = 'Totals'(201).
+*  gd_layout-totals_only        = 'X'.
+*  gd_layout-f2code            = 'DISP'.  "Sets fcode for when double
+*                                         "click(press f2)
+  GD_LAYOUT-ZEBRA             = 'X'.
+
+
+*  WA_SORT-SPOS      = 2.
+*  WA_SORT-FIELDNAME = 'FORMT'.
+*  wa_sort-up        = 'X'.
+*  WA_SORT-SUBTOT    = 'X'.
+*  APPEND WA_SORT TO IT_SORT.
+ENDFORM.                    " DISPLAY
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM ALV .
+
+
+  GD_REPID = SY-REPID.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      I_BACKGROUND_ID        = 'ALV_BACKGROUND'
+      I_CALLBACK_PROGRAM     = GD_REPID
+      I_CALLBACK_TOP_OF_PAGE = 'TOP-OF-PAGE'  "see FORM
+      IS_LAYOUT              = GD_LAYOUT
+      IT_FIELDCAT            = FIELDCATALOG[]
+*     IT_SORT                = IT_SORT
+*     it_special_groups      = gd_tabgroup
+*     IT_EVENTS              = GT_XEVENTS
+      I_SAVE                 = 'X'
+*     is_variant             = z_template
+    TABLES
+      T_OUTTAB               = ITAB1
+    EXCEPTIONS
+      PROGRAM_ERROR          = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+
+
+
+ENDFORM.                    " ALV
+
+
+*&---------------------------------------------------------------------*
+*&      Form  top-of-page
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM TOP-OF-PAGE.
+*ALV Header declarations
+  DATA: T_HEADER TYPE SLIS_T_LISTHEADER,
+        WA_HEADER TYPE SLIS_LISTHEADER,
+        T_LINE LIKE WA_HEADER-INFO,
+        LD_LINES TYPE I,
+        LD_LINESC(10) TYPE C.
+
+* Title
+  WA_HEADER-TYP  = 'H'.
+  WA_HEADER-INFO = 'BIS Production Data'.
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR WA_HEADER.
+
+
+  DATA: NO_LINEC_C  TYPE C LENGTH 20.                   "LINE TO DISPLAY NO OF LINES
+  DATA: NO_LINE_C  TYPE C LENGTH 4.
+  DATA: DATE(12) TYPE C.
+*&------------------------------------------modified to display selection date in alv--------------------------------------------------*
+  DATA : DATE1_C(12) TYPE C.
+  DATA : DATE2_C(12) TYPE C.
+  DATA : SEC_LINE_C TYPE STRING.
+
+  DESCRIBE TABLE ITAB1 LINES NO_LINE_C .
+
+  CONCATENATE 'No of Records :' NO_LINE_C INTO NO_LINEC_C SEPARATED BY SPACE.
+  WA_HEADER-TYP = 'S'.
+  WA_HEADER-INFO = NO_LINEC_C.
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR WA_HEADER.
+
+  WRITE s_BUDAT-LOW TO DATE1_C DD/MM/YYYY.
+  WRITE s_BUDAT-HIGH TO DATE2_C DD/MM/YYYY.
+
+  CONCATENATE 'From :  ' DATE1_C  'To: ' DATE2_C INTO SEC_LINE_C SEPARATED BY SPACE.
+
+  WA_HEADER-TYP  = 'S'.
+  WA_HEADER-INFO = SEC_LINE_C.
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR WA_HEADER.
+
+*&--------------------------------------------------------------modification------------------------------------------------------------*
+
+  WRITE: SY-DATUM TO DATE DD/MM/YY.
+* Date
+  WA_HEADER-TYP  = 'S'.
+*  WA_HEADER-KEY = 'Date: '.
+  CONCATENATE  'Date :  ' DATE  INTO WA_HEADER-INFO SEPARATED BY SPACE.   "todays date
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR: WA_HEADER.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = T_HEADER
+      I_LOGO             = 'RALSONLOGO1'
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+ENDFORM.                    "top-of-page

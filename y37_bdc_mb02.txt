@@ -1,0 +1,65 @@
+report Y37_BDC_MB02
+       no standard page heading line-size 255.
+
+include bdcrecx1.
+
+parameters: dataset(132) lower case.
+***    DO NOT CHANGE - the generated data section - DO NOT CHANGE    ***
+*
+*   If it is nessesary to change the data section use the rules:
+*   1.) Each definition of a field exists of two lines
+*   2.) The first line shows exactly the comment
+*       '* data element: ' followed with the data element
+*       which describes the field.
+*       If you don't have a data element use the
+*       comment without a data element name
+*   3.) The second line shows the fieldname of the
+*       structure, the fieldname must consist of
+*       a fieldname and optional the character '_' and
+*       three numbers and the field length in brackets
+*   4.) Each field must be type C.
+*
+*** Generated data section with specific formatting - DO NOT CHANGE  ***
+data: begin of record,
+* data element: MBLNR
+        MBLNR_001(010),
+* data element: MJAHR
+        MJAHR_002(004),
+* data element:
+        XFULL_003(001),
+      end of record.
+
+*** End generated data section ***
+
+start-of-selection.
+
+perform open_dataset using dataset.
+perform open_group.
+
+do.
+
+read dataset dataset into record.
+if sy-subrc <> 0. exit. endif.
+
+perform bdc_dynpro      using 'SAPMM07M' '0460'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'RM07M-ZEILE'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=AB'.
+perform bdc_field       using 'RM07M-MBLNR'
+                              record-MBLNR_001.
+perform bdc_field       using 'RM07M-MJAHR'
+                              record-MJAHR_002.
+perform bdc_field       using 'XFULL'
+                              record-XFULL_003.
+perform bdc_dynpro      using 'SAPMM07M' '0420'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '/EBCK'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'MKPF-BUDAT'.
+perform bdc_transaction using 'MB02'.
+
+enddo.
+
+perform close_group.
+perform close_dataset using dataset.

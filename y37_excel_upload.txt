@@ -1,0 +1,92 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_EXCEL_UPLOAD
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_EXCEL_UPLOAD.
+
+TYPE-pools: TRUXS.
+
+data: IT_RAW TYPE TRUXS_T_TEXT_DATA.
+
+TABLES : ZEMPLOYEES.
+
+TYPES: BEGIN OF TY_TEST,
+      EMPLOYEE TYPE ZEENUM,
+      EMP_CONTACT TYPE YEENUM,
+      DEPARTMENT TYPE ZDEPT,
+      ADDRESS TYPE YADD,
+      DOB TYPE ZDOB,
+      SALARY TYPE YSALARY,
+      HIREDATE TYPE YHIREDATE,
+      SIGNATURE TYPE ZSIGN,
+      END OF TY_TEST.
+
+DATA: IT_TEST TYPE STANDARD TABLE OF TY_TEST,
+      WA_TEST TYPE TY_TEST.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+skip.
+PARAMETERS: P_FILE TYPE RLGRAP-FILENAME.
+skip.
+SELECTION-SCREEN END OF block b1.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR P_FILE.
+
+  CALL FUNCTION 'KD_GET_FILENAME_ON_F4'
+   EXPORTING
+     PROGRAM_NAME        = SYST-REPID
+     DYNPRO_NUMBER       = SYST-DYNNR
+*     FIELD_NAME          = ' '
+*     STATIC              = ' '
+*     MASK                = ' '
+*     FILEOPERATION       = 'R'
+*     PATH                =
+    CHANGING
+      FILE_NAME           = P_FILE
+*     LOCATION_FLAG       = 'P'
+*   EXCEPTIONS
+*     MASK_TOO_LONG       = 1
+*     OTHERS              = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+  START-OF-SELECTION.
+
+    CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+      EXPORTING
+*       I_FIELD_SEPERATOR          =
+*       I_LINE_HEADER              =
+        I_TAB_RAW_DATA             = IT_RAW
+        I_FILENAME                 = P_FILE
+      TABLES
+        I_TAB_CONVERTED_DATA       = IT_TEST[]
+*     EXCEPTIONS
+*       CONVERSION_FAILED          = 1
+*       OTHERS                     = 2
+              .
+    IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+  SORT IT_TEST[].
+
+   LOOP AT IT_TEST INTO WA_TEST.
+
+     ZEMPLOYEES-EMPLOYEE = WA_TEST-EMPLOYEE.
+     ZEMPLOYEES-EMP_CONTACT = WA_TEST-EMP_CONTACT.
+     ZEMPLOYEES-DEPARTMENT = WA_TEST-DEPARTMENT.
+     ZEMPLOYEES-ADDRESS = WA_TEST-ADDRESS.
+     ZEMPLOYEES-DOB = WA_TEST-DOB.
+     ZEMPLOYEES-SALARY = WA_TEST-SALARY.
+     ZEMPLOYEES-HIREDATE = WA_TEST-HIREDATE.
+     ZEMPLOYEES-SIGNATURE = WA_TEST-SIGNATURE.
+
+     INSERT ZEMPLOYEES.
+
+   ENDLOOP.

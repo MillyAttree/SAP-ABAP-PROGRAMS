@@ -1,0 +1,101 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_FORM
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_FORM.
+
+
+TABLES:  kna1,vbrk,vbrp.
+
+
+PARAMETERS :
+  p_kunnr LIKE vbrk-kunag,
+  p_vbeln LIKE vbrk-vbeln.
+
+
+DATA :  fm_name TYPE rs38l_fnam.             " Name of the Function Module
+
+
+DATA :t_vbrk LIKE STANDARD TABLE OF vbrk.
+
+
+DATA: t_vbrp LIKE STANDARD TABLE OF vbrp.
+
+
+
+DATA :
+  fs_kna1 TYPE kna1,                           " Holds Customer Details
+  fs_vbrk like LINE OF t_vbrk,         " Holds BillingDoc Header Details
+  fs_vbrp LIKE LINE OF t_vbrp.         " Holds BillingDoc Item Details
+
+
+START-OF-SELECTION.
+  SELECT SINGLE *
+           FROM kna1
+           INTO fs_kna1
+          WHERE kunnr EQ p_kunnr.
+
+
+  SELECT *
+    FROM vbrk
+    INTO TABLE t_vbrk
+     WHERE kunag EQ p_kunnr
+     AND vbeln EQ p_vbeln.
+
+
+if t_vbrk is not initial.
+  SELECT *
+     FROM vbrp
+     INTO TABLE t_vbrp
+     FOR ALL ENTRIES IN t_vbrk
+     WHERE vbeln = t_vbrk-vbeln.
+
+endif.
+
+  CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+    EXPORTING
+      formname                   = 'Y37_FORM'
+    IMPORTING
+      fm_name                    = fm_name
+    EXCEPTIONS
+      no_form                     = 1
+      no_function_module = 2
+      OTHERS                   = 3.
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+
+  CALL FUNCTION fm_name " '/1BCDWB/SF00000172'
+    EXPORTING
+*     ARCHIVE_INDEX              =
+*     ARCHIVE_INDEX_TAB          =
+*     ARCHIVE_PARAMETERS         =
+*     CONTROL_PARAMETERS         =
+*     MAIL_APPL_OBJ              =
+*     MAIL_RECIPIENT             =
+*     MAIL_SENDER                =
+*     OUTPUT_OPTIONS             =
+*     USER_SETTINGS              = 'X'
+      FS_KNA1                    = FS_KNA1
+      IT_VBRK                    = T_VBRK
+      IT_VBRP                    = T_VBRP
+*   IMPORTING
+*     DOCUMENT_OUTPUT_INFO       =
+*     JOB_OUTPUT_INFO            =
+*     JOB_OUTPUT_OPTIONS         =
+*   EXCEPTIONS
+*     FORMATTING_ERROR           = 1
+*     INTERNAL_ERROR             = 2
+*     SEND_ERROR                 = 3
+*     USER_CANCELED              = 4
+*     OTHERS                     = 5
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.

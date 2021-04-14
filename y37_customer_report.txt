@@ -1,0 +1,313 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_CUSTOMER_REPORT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_CUSTOMER_REPORT NO STANDARD PAGE HEADING LINE-COUNT 300(10) LINE-SIZE 300 MESSAGE-ID ZRV.
+
+TABLES:  LIKP, LIPS, KNA1, MAKT.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+
+DATA: COLS TYPE I.
+
+COLS = 0.
+
+DATA: BEGIN OF ITAB OCCURS 0.
+        INCLUDE STRUCTURE ZCUST.
+DATA: END OF ITAB.
+
+
+DATA: BEGIN OF ITAB1 OCCURS 0,
+      VBELN TYPE LIKP-VBELN,
+      WADAT_IST TYPE LIKP-WADAT_IST,
+      KUNNR TYPE LIKP-KUNNR,
+      LFART TYPE LIKP-LFART,
+      VRKME TYPE LIPS-MEINS,
+      LFIMG TYPE LIPS-LFIMG,
+      UMVKZ TYPE LIPS-UMVKZ,
+      MATNR TYPE LIPS-MATNR,
+      ARKTX TYPE LIPS-MATKL,
+      BWART TYPE LIPS-BWART,
+      LGORT TYPE LIPS-LGORT,
+
+       END OF ITAB1.
+
+
+DATA : BEGIN OF IT_FIN OCCURS 0,
+        KUNNR TYPE KNA1-KUNNR,
+        NAME1 TYPE KNA1-NAME1,
+        ORT01 TYPE KNA1-ORT01,
+        MATNR TYPE MAKT-MATNR,
+        MAKTX TYPE MAKT-MAKTX,
+        END OF IT_FIN.
+
+
+
+DATA: net TYPE P DECIMALS 2,
+      T LIKE NET.
+
+
+
+
+INITIALIZATION.
+
+
+
+  SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS: S_WADAT FOR LIKP-WADAT_IST OBLIGATORY,
+                  S_KUNNR FOR LIKP-KUNNR,
+                  S_MATNR FOR LIPS-MATNR.
+  SELECTION-SCREEN END OF BLOCK B1.
+
+
+
+START-OF-SELECTION.
+
+
+  PERFORM GET_DATA.
+
+  PERFORM DISP_DATA.
+
+  PERFORM ALV.
+
+
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+**----------------------------------------------------------------------*
+FORM GET_DATA.
+
+  SELECT  LIKP~VBELN
+          LIKP~WADAT_IST
+          LIKP~KUNNR
+          LIKP~LFART
+          LIPS~MEINS
+          LIPS~LFIMG
+          LIPS~UMVKZ
+          LIPS~MATNR
+          LIPS~MATKL
+          LIPS~BWART
+          LIPS~LGORT
+
+    INTO TABLE ITAB1 FROM LIKP INNER JOIN LIPS ON LIKP~VBELN = LIPS~VBELN WHERE likp~WADAT_IST IN S_WADAT
+                                                                           AND likp~KUNNR IN S_KUNNR
+                                                                           AND lips~MATNR IN S_MATNR
+                                                                           AND likp~LFART EQ 'LF'
+                                                                           AND lips~LGORT EQ '9001'
+                                                                           AND lips~BWART EQ '601' .
+
+  SORT ITAB1 BY WADAT_IST KUNNR MATNR.
+
+*  DELETE ADJACENT DUPLICATES FROM ITAB1 COMPARING KUNNR MATNR.
+
+  LOOP AT ITAB1.
+
+     READ TABLE ITAB INDEX SY-TABIX.
+
+    PERFORM DISP.
+
+    SELECT SINGLE * FROM KNA1 WHERE KUNNR = ITAB1-KUNNR.
+
+   NET = 0.
+      NET = ITAB1-LFIMG .
+
+ AT END OF matnr.
+move itab1-matnr to itab-matnr.
+
+ ENDAT.
+
+
+      MOVE: ITAB1-KUNNR TO ITAB-CUSTOMER,
+            KNA1-NAME1 TO ITAB-NAME,
+*            ITAB1-MATNR TO ITAB-MATNR,
+            MAKT-MAKTX TO ITAB-MAKTX,
+            NET TO ITAB-M_QTY,
+            KNA1-ORT01 TO ITAB-CITY,
+            ITAB1-BWART TO ITAB-MOVEMENTS.
+
+       collect itab.
+
+
+  ENDLOOP.
+
+
+
+ENDFORM.                    "GET_DATA
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+  CLEAR: IT_FIN.
+*  REFRESH IT_FIN.
+
+
+*SELECT * FROM VBFA WHERE VBELN = ITAB-VBELN AND VBTYP_N = 'J'.
+*
+* SELECT SINGLE * FROM VBFA WHERE VBELN = VBFA-VBELV AND AUART EQ 'FD'.
+
+  SELECT * FROM MAKT WHERE MATNR = ITAB1-MATNR.
+
+    IF SY-SUBRC EQ 0.
+
+      READ TABLE IT_FIN WITH KEY MATNR = ITAB1-MATNR.
+
+      MOVE IT_FIN-MAKTX TO ITAB-MAKTX.
+      COLLECT IT_FIN.
+    ENDIF.
+
+*    APPEND IT_FIN.
+
+  ENDSELECT.
+ENDFORM.                    "DISP
+
+*&---------------------------------------------------------------------*
+*&      Form  alv
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+
+FORM DISP_DATA.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CUSTOMER'.
+  WA_FCAT-SELTEXT_L = 'CUSTOMER'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 12.
+  WA_FCAT-NO_ZERO = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'NAME'.
+  WA_FCAT-SELTEXT_L = 'CUSTOMER NAME'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 30.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'MATNR'.
+  WA_FCAT-SELTEXT_L = 'MATERIAL NO.'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 15.
+  WA_FCAT-NO_ZERO = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'MAKTX'.
+  WA_FCAT-SELTEXT_L = 'MATERIAL DESCRIPTION'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 30.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'M_QTY'.
+  WA_FCAT-SELTEXT_L = 'MATERIAL QVANTITY'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-DO_SUM = 'X'.
+  WA_FCAT-OUTPUTLEN = 16.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'CITY'.
+  WA_FCAT-SELTEXT_L = 'CITY'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  ADD 1 TO COLS.
+  WA_FCAT-FIELDNAME = 'MOVEMENTS'.
+  WA_FCAT-SELTEXT_L = 'MOVEMENTS'.
+  WA_FCAT-TABNAME = 'ZCUST'.
+  WA_FCAT-OUTPUTLEN = 10.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+
+ENDFORM.                    "DISP_DATA
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*         I_INTERFACE_CHECK                 = ' '
+*         I_BYPASSING_BUFFER                = ' '
+*         I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*         I_CALLBACK_PF_STATUS_SET          = ' '
+*         I_CALLBACK_USER_COMMAND           = ' '
+*         I_CALLBACK_TOP_OF_PAGE            = ' '
+*         I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*         I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  = 'ZCUST'
+*         I_BACKGROUND_ID                   = ' '
+*         I_GRID_TITLE                      =
+*         I_GRID_SETTINGS                   =
+         IS_LAYOUT                        = LAYOUT
+         IT_FIELDCAT                       = IT_FCAT[]
+*         IT_EXCLUDING                      =
+*         IT_SPECIAL_GROUPS                 =
+*         IT_SORT                           =
+*         IT_FILTER                         =
+*         IS_SEL_HIDE                       =
+*         I_DEFAULT                         = 'X'
+*         I_SAVE                            = ' '
+*         IS_VARIANT                        =
+*         IT_EVENTS                         =
+*         IT_EVENT_EXIT                     =
+*         IS_PRINT                          =
+*         IS_REPREP_ID                      =
+*         I_SCREEN_START_COLUMN             = 0
+*         I_SCREEN_START_LINE               = 0
+*         I_SCREEN_END_COLUMN               = 0
+*         I_SCREEN_END_LINE                 = 0
+*         I_HTML_HEIGHT_TOP                 = 0
+*         I_HTML_HEIGHT_END                 = 0
+*         IT_ALV_GRAPHICS                   =
+*         IT_HYPERLINK                      =
+*         IT_ADD_FIELDCAT                   =
+*         IT_EXCEPT_QINFO                   =
+*         IR_SALV_FULLSCREEN_ADAPTER        =
+*       IMPORTING
+*         E_EXIT_CAUSED_BY_CALLER           =
+*         ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = ITAB[]
+*       EXCEPTIONS
+*         PROGRAM_ERROR                     = 1
+*         OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+
+ENDFORM.                    "alv

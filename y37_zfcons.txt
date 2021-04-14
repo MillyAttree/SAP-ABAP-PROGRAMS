@@ -1,0 +1,350 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_ZFCONS
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_ZFCONS NO STANDARD PAGE HEADING
+LINE-SIZE 150 LINE-COUNT 54 .
+
+TYPE-POOLS: SLIS.
+
+TABLES: MKPF,MSEG.
+
+DATA:
+      FIELDCAT TYPE SLIS_T_FIELDCAT_ALV,
+      FIELDCAT_LN  LIKE LINE OF FIELDCAT,
+     WA_LAYOUT       TYPE SLIS_LAYOUT_ALV,
+     GT_EVENT    TYPE SLIS_T_EVENT,
+     WA_EVENT    TYPE SLIS_ALV_EVENT,
+     gt_sort     type slis_t_sortinfo_alv,
+     wa_sort     type slis_sortinfo_alv.
+
+DATA: BEGIN OF ITAB OCCURS 0,
+*      INCLUDE STRUCTURE ZFUEL.
+      BKTXT  TYPE ZBKTXT,
+      BLDAT  TYPE ZBLDAT,
+      XBLNR  TYPE ZXBLNR,
+      ERFMG  TYPE ZERFMG,
+      DMBTR  TYPE ZDMBTR,
+      MBLNR  TYPE ZMBLNR,
+      BWART  TYPE ZBWART,
+      SGTXT  TYPE SGTXT,
+      KOSTL  TYPE KOSTL,
+      MATNR TYPE  MATNR,
+      RATE   TYPE ZRATE1,
+      MAKTX  TYPE MAKTX,
+
+
+ END OF ITAB.
+
+DATA: RRATE LIKE MSEG-DMBTR VALUE 0,
+      COLS TYPE I.
+
+DATA:LV_MAKTX TYPE MAKTX.
+
+SELECTION-SCREEN: BEGIN OF BLOCK BLK WITH FRAME TITLE TEXT-001.
+SELECT-OPTIONS: MATNR FOR MSEG-MATNR,
+                WERKS FOR MSEG-WERKS OBLIGATORY,
+                LGORT FOR MSEG-LGORT,
+                KOSTL FOR MSEG-KOSTL,
+                BWART FOR MSEG-BWART OBLIGATORY,
+                BLDAT FOR MKPF-BLDAT OBLIGATORY,
+                SGTXT FOR MSEG-SGTXT.
+*                mjahr for mseg-mjahr.
+SELECTION-SCREEN: END OF BLOCK BLK.
+
+SELECT MKPF~BKTXT MKPF~BLDAT MKPF~XBLNR MSEG~ERFMG
+       MSEG~DMBTR MSEG~MBLNR MSEG~BWART MSEG~SGTXT MSEG~KOSTL  MSEG~MATNR "29.10.2014
+       INTO (MKPF-BKTXT, MKPF-BLDAT, MKPF-XBLNR,
+                        MSEG-ERFMG, MSEG-DMBTR,
+                        MSEG-MBLNR, MSEG-BWART,
+                MSEG-SGTXT,        MSEG-KOSTL , MSEG-MATNR )
+FROM MKPF INNER JOIN MSEG ON MKPF~MBLNR = MSEG~MBLNR
+
+WHERE MATNR IN MATNR
+AND   WERKS IN WERKS
+AND   LGORT IN LGORT
+AND   BWART IN BWART
+AND   BLDAT IN BLDAT
+AND   KOSTL IN KOSTL
+AND   MSEG~MJAHR = BLDAT+3(4)
+AND   SGTXT IN SGTXT.
+*AND   BKTXT like '%'. "'HSD%'.
+
+  RRATE = MSEG-DMBTR / MSEG-ERFMG.
+  IF MSEG-BWART = '201'.
+    MSEG-DMBTR = MSEG-DMBTR * -1.
+    MSEG-ERFMG = MSEG-ERFMG * -1.
+  ENDIF.
+  MOVE : MKPF-BKTXT TO ITAB-BKTXT,
+         MKPF-BLDAT TO ITAB-BLDAT,
+         MKPF-XBLNR TO ITAB-XBLNR,
+         MSEG-ERFMG TO ITAB-ERFMG,
+         MSEG-DMBTR TO ITAB-DMBTR,
+         RRATE TO ITAB-RATE,
+         MSEG-KOSTL TO ITAB-KOSTL,
+         MSEG-MBLNR TO ITAB-MBLNR,
+         MSEG-BWART TO ITAB-BWART,
+         MSEG-SGTXT TO ITAB-SGTXT.
+  CLEAR:LV_MAKTX.
+  SELECT SINGLE MAKTX INTO  LV_MAKTX FROM MAKT
+                            WHERE MATNR = MSEG-MATNR .
+
+  MOVE LV_MAKTX TO ITAB-MAKTX.
+
+  APPEND ITAB.
+  RRATE = 0.
+ENDSELECT.
+
+*BUILT FIELD CATALOG
+
+CLEAR WA_LAYOUT.
+WA_LAYOUT-ZEBRA = 'X'.
+WA_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+
+PERFORM BUILD_F.
+*DISPLAY LIST
+PERFORM START_LIST_VIEWER.
+
+*&---------------------------------------------------------------------*
+*&      Form  BUILD_F
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM BUILD_F.
+** COLUMN 1
+  CLEAR:FIELDCAT_LN .
+  ADD 1 TO COLS.
+  FIELDCAT_LN-TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME   = 'BKTXT'.
+  FIELDCAT_LN-SELTEXT_M   = 'Header Text'.
+  FIELDCAT_LN-OUTPUTLEN     = '25'.
+  FIELDCAT_LN-KEY         = 'X'.
+  FIELDCAT_LN-COL_POS     = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+CLEAR FIELDCAT_LN .
+
+  ADD 1 TO COLS.
+  FIELDCAT_LN-TABNAME       = 'ITAB'.
+  FIELDCAT_LN-SELTEXT_M     = 'Item Text'..
+  FIELDCAT_LN-FIELDNAME     = 'SGTXT'.
+  FIELDCAT_LN-OUTPUTLEN     = '50'.
+  FIELDCAT_LN-KEY           = 'X'.
+  FIELDCAT_LN-COL_POS       = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+
+
+* COLUMN 2
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME   = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME     = 'BLDAT'.
+  FIELDCAT_LN-SELTEXT_M     = 'Fill Date'..
+  FIELDCAT_LN-OUTPUTLEN     = '10'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-COL_POS       = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+* COLUMN 3
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME   = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME     = 'XBLNR'.
+  FIELDCAT_LN-SELTEXT_M     = 'Issue Vouche no.'..
+  FIELDCAT_LN-OUTPUTLEN     = '16'.
+  FIELDCAT_LN-KEY           = 'X'.
+  FIELDCAT_LN-COL_POS       = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+* COLUMN 4
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'BWART'.
+  FIELDCAT_LN-OUTPUTLEN     = '4'.
+  FIELDCAT_LN-SELTEXT_M     = 'Mov'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+* COLUMN 5
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'MBLNR'.
+  FIELDCAT_LN-OUTPUTLEN     = '12'.
+  FIELDCAT_LN-SELTEXT_M     = 'Mat Doc.'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+
+
+
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'MAKTX'.
+  FIELDCAT_LN-SELTEXT_M     = 'Mat DESC.'.
+  FIELDCAT_LN-OUTPUTLEN     = '40'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+
+
+* COLUMN 6
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'ERFMG'.
+  FIELDCAT_LN-SELTEXT_M     = 'Quantity'.
+  FIELDCAT_LN-OUTPUTLEN     = '17'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'x'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+* COLUMN 7
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'DMBTR'.
+  FIELDCAT_LN-SELTEXT_M     = 'Amount'.
+  FIELDCAT_LN-OUTPUTLEN     = '16'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'X'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+** COLUMN 8.
+  ADD 1 TO COLS.
+  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'KOSTL'.
+  FIELDCAT_LN-SELTEXT_M     = 'Cost Centre'.
+  FIELDCAT_LN-OUTPUTLEN     = '11'.
+  FIELDCAT_LN-KEY = 'X'.
+  FIELDCAT_LN-COL_POS = COLS.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+*
+* COLUMN 9.
+  ADD 1 TO COLS.
+*  FIELDCAT_LN-REF_TABNAME = 'ITAB'.
+  FIELDCAT_LN-TABNAME = 'ITAB'.
+  FIELDCAT_LN-FIELDNAME = 'RATE'.
+  FIELDCAT_LN-SELTEXT_M     = 'Rate'.
+  FIELDCAT_LN-OUTPUTLEN     = '18'.
+  FIELDCAT_LN-DO_SUM = 'X'.
+  FIELDCAT_LN-KEY = 'X'.
+*
+  FIELDCAT_LN-COL_POS = COLS.
+  FIELDCAT_LN-NO_OUT = SPACE.
+  FIELDCAT_LN-QFIELDNAME = SPACE.
+  FIELDCAT_LN-HOTSPOT = 'X'.
+  APPEND FIELDCAT_LN TO FIELDCAT.
+
+
+ENDFORM.                    " BUILD_F
+
+*&---------------------------------------------------------------------*
+*&      Form  START_LIST_VIEWER
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM START_LIST_VIEWER.
+  DATA: PGM LIKE SY-REPID.
+  PGM = SY-REPID.
+*  CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+*       EXPORTING
+*            I_CALLBACK_PROGRAM      = PGM
+*            I_CALLBACK_USER_COMMAND = 'user_command'
+*            IT_FIELDCAT             = FIELDCAT
+*            I_SAVE                  = 'A'
+*       TABLES
+*            T_OUTTAB                = ITAB.
+
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+*   EXPORTING
+**     I_INTERFACE_CHECK                 = ' '
+**     I_BYPASSING_BUFFER                = ' '
+**     I_BUFFER_ACTIVE                   = ' '
+*     I_CALLBACK_PROGRAM                =  SY-REPID
+**     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           =  'USER_COMMAND'
+**     I_CALLBACK_TOP_OF_PAGE            = ' '
+**     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+**     I_CALLBACK_HTML_END_OF_LIST       = ' '
+**     I_STRUCTURE_NAME                  =
+**     I_BACKGROUND_ID                   = ' '
+**     I_GRID_TITLE                      =
+**     I_GRID_SETTINGS                   =
+*     IS_LAYOUT                          = WA_LAYOUT
+*     IT_FIELDCAT                        = FIELDCAT[]
+**     IT_EXCLUDING                      =
+**     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           = GT_SORT[]
+**     IT_FILTER                         =
+**     IS_SEL_HIDE                       =
+**     I_DEFAULT                         = 'X'
+*     I_SAVE                             = 'X'
+**     IS_VARIANT                        =
+**     IT_EVENTS                         =
+**     IT_EVENT_EXIT                     =
+**     IS_PRINT                          =
+**     IS_REPREP_ID                      =
+**     I_SCREEN_START_COLUMN             = 0
+**     I_SCREEN_START_LINE               = 0
+**     I_SCREEN_END_COLUMN               = 0
+**     I_SCREEN_END_LINE                 = 0
+**     I_HTML_HEIGHT_TOP                 = 0
+**     I_HTML_HEIGHT_END                 = 0
+**     IT_ALV_GRAPHICS                   =
+**     IT_HYPERLINK                      =
+**     IT_ADD_FIELDCAT                   =
+**     IT_EXCEPT_QINFO                   =
+**     IR_SALV_FULLSCREEN_ADAPTER        =
+**   IMPORTING
+**     E_EXIT_CAUSED_BY_CALLER           =
+**     ES_EXIT_CAUSED_BY_USER            =
+*    TABLES
+*      T_OUTTAB                          = ITAB[]
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF SY-SUBRC <> 0.
+** Implement suitable error handling here
+*  ENDIF.
+
+
+
+
+CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+  EXPORTING
+    i_callback_program =  SY-REPID
+*   is_layout          = WA_layout
+    it_fieldcat        = FIELDCAT
+  TABLES
+    t_outtab           = ITAB
+  EXCEPTIONS
+    program_error      = 1
+    OTHERS             = 2.
+IF sy-subrc <> 0.
+
+  MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+ENDIF.
+
+
+
+
+ENDFORM.                    " START_LIST_VIEWER

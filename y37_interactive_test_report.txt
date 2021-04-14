@@ -1,0 +1,337 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_TEST_3
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+
+REPORT  Y37_TEST_3 NO STANDARD PAGE HEADING LINE-SIZE 142.
+
+
+
+*&--------------------------------------------------------------------*
+*&---------------------------------------------------*                *
+*TABLES DECLARATION                                  *                *
+*&---------------------------------------------------*                *
+*&--------------------------------------------------------------------*
+
+TABLES: vbrk, vbrp.
+
+*&-------------------------------------------------------------------*
+*&                        TYPES DECLARATION
+*&-------------------------------------------------------------------*
+
+typEs: BEGIN OF  RECORD ,
+
+
+
+"    RTPPC lIkE VBAP-NETPR,                " RatE/PCs             "
+    "INQTY like VBRP-FKIMG,              " INVOICE QTTY         "
+   " INVDT lIkE VBRK-fkdat,              " InvoICE DatE         "
+      SLORG lIkE VBRK-VKORG,              " SalEs OrG            "
+    NTGEW LIKE VBRP-NTGEW,
+        VALUE TYPE VBRP-NETWR,
+        GEWEI TYPE VBRP-GEWEI,
+        vrkme type vbrp-vrkme,
+        fkimg type vbrp-fkimg,
+      END OF  rECorD.
+
+     DATA: ITAB TYPE STANDARD TABLE OF RECORD WITH HEADER LINE.
+
+
+typEs: BEGIN OF  SUMRY ,
+
+
+    INQTY like VBRP-FKIMG,              " INVOICE QTTY         "
+    DESCP lIkE VBRP-ARKTX,                " DEsCrIptIon          "
+    VRKME like VBRP-VRKME,              " TOTAL  AFTER itm wise + ecess+bed  "
+    VALUE type vbrp-netwr,
+    NTGEW TYPE VBRP-NTGEW,
+    GEWEI TYPE VBRP-GEWEI,
+    MTGRP LIKE VBRP-MATKL,
+    INVNO lIkE VBRK-VBELN,              " Sap InvoICE No       "
+    INVDT lIkE VBRK-fkdat,              " InvoICE DatE         "
+    SLORG lIkE VBRK-VKORG,                " SalEs OrG            "
+
+      END OF  SUMRY.
+
+     DATA: UTAB TYPE STANDARD TABLE OF SUMRY WITH HEADER LINE.
+
+*&--------------------------------------------------------------------*
+*&                      VARIABLES DECLARATION
+*&--------------------------------------------------------------------*
+
+DATA : v_color TYPE sy-tabix .
+
+
+*&--------------------------------------------------------------------*
+*&              PARAMETERS AND SELECTION-SCRQEEN DECLARATION
+*&--------------------------------------------------------------------*
+
+SELECT-OPTIONS : DATE1 FOR VBRK-FKDAT.     "Date
+
+
+
+
+START-OF-SELECTION.
+
+
+data: ldate type vbrk-fkdat,
+      hdate type vbrk-fkdat.
+
+    DATA:  toqty TYPE p DECIMALS 3,    "Total DRQ Amount
+      toval TYPE p DECIMALS 3,    "Total CRQ Amount
+      totqty TYPE p DECIMALS 3,    "Total DRQ Amount
+      totval TYPE p DECIMALS 3,
+      qtypc type p decimals 3 .   "Total CRQ Amount
+    data: mtgroup type vbrp-matkl,
+          mtgroup1 type vbrp-matkl.
+*&--------------------------------------------------------------------*
+*&              FETCHING OF DATA FROM DB TABLES
+*&--------------------------------------------------------------------*
+LDATE = ( date1-LOW ).
+HDATE = ( date1-HIGH ).
+
+
+SELECT DISTINCT
+
+   J~VKORG    sum( I~ntgew )    sum( I~netwr ) I~GEWEI i~vrkme i~fkimg
+INTO (ITAB-SLORG,ITAB-ntgew,ITAB-VALUE, ITAB-GEWEI, ITAB-VRKME , ITAB-FKIMG)
+FROM  VBRP as I  inner JoIn VBRK as J on J~VBELN = I~VBELN
+  WHERE  J~fkdat IN DATE1 group by J~VKORG I~GEWEI I~VRKME I~FKIMG.
+
+
+
+  APPEND ITAB.
+
+  endselect.
+sort itab by slorg.
+loop at itab.
+  if itab-vrkme = 'PC' and itab-gewei = 'G'.
+  itab-ntgew = itab-ntgew / 1000000.
+else.
+  itab-ntgew = itab-ntgew / 1000.
+  endif.
+
+  if itab-vrkme = 'TO'.
+    clear: itab-ntgew.
+    itab-ntgew = itab-FKIMG.
+    "modify itab.
+   endif.
+   modify itab.
+   endloop.
+
+
+
+
+  LOOP AT ITAB .
+"clear: toqty,toval.
+
+
+
+
+
+at end of slorg.
+  sum.
+
+  write:/32 sy-vline, 35 sy-vline.
+    format color 7.
+  write:  40 itab-slorg, 49 itab-ntgew, 76 itab-value, 100 sy-vline.
+  format color intensified off.
+  write: 103 sy-vline.
+     endat.
+
+toqty = toqty + itab-ntgew.
+toval = toval + itab-value.
+
+
+     ENDLOOP.
+
+ WRITE: /30(76) SY-ULINE.
+
+ WRITE:/32 sy-vline.
+ FORMAT COLOR = 3.
+ WRITE: 35 sy-vline, 36'TOTAL',
+ 52 toqty,
+ 80 toval,
+ 100 sy-vline,
+ 103 sy-vline.
+    FORMAT COLOR INTENSIFIED OFF.
+WRITE: /30(76) SY-ULINE.
+write:/32 sy-vline, 35 sy-vline, 100 sy-vline , 103 sy-vline.
+    "FORMAT COLOR INTENSIFIED OFF.
+
+
+
+
+data fld(30).
+data val(30).
+
+at line-selection.
+new-page line-size 145.
+get cursor field fld value val.
+
+
+
+SELECT
+
+       " a~NETPR
+        b~FKIMG
+        b~ARKTX
+        b~VRKME
+        b~netwr
+        b~NTGEW
+        b~gewei
+        b~matkl
+        c~VBELN
+        c~fkdat
+        c~VKORG
+
+INTO TABLE utab
+FROM  "VBAP AS a JoIn
+ VBRP as b  "on b~AUBEL = a~VBELN anD b~AUPOS = a~posnr
+   JoIn VBRK as c on c~VBELN = b~VBELN
+  WHERE  c~fkdat IN DATE1  and vkorg = val .
+
+sort utab by mtgrp invdt.
+loop at utab.
+  if utab-vrkme = 'PC' and utab-gewei = 'G'.
+    utab-ntgew = utab-ntgew / 1000000.
+    else.
+      utab-ntgew = utab-ntgew / 1000.
+      endif.
+      if utab-vrkme = 'TO'.
+        clear: utab-ntgew.
+        utab-ntgew = utab-inqty.
+        endif.
+       modify utab.
+       endloop.
+
+   IF SY-SUBRC <> 0.
+      MESSAGE 'Wrong Selection' TYPE 'E'.
+    ENDIF.
+
+
+
+clear: mtgroup, mtgroup1.
+
+loop at UTAB.
+
+mtgroup = mtgroup1.
+
+
+
+
+
+
+v_color = sy-tabix MOD 2.
+            IF v_color EQ 0.
+FORMAT COLOR 1 INTENSIFIED OFF.
+ELSE.
+FORMAT COLOR 2 INTENSIFIED OFF.
+ENDIF.
+
+  WRITE:/
+  sy-vline,03 UTAB-slorg,
+  10 utab-invdt,
+  24 utab-invno.
+write:  36 utab-mtgrp .
+ write: 43 utab-descp,
+  82 utab-inqty,
+  105 utab-vrkme,
+  107 utab-ntgew,
+  123 utab-value,
+  145 sy-vline.
+
+  FORMAT RESET.
+
+
+  "mtgroup1 = utab-mtgrp.
+
+"if mtgroup1 <> mtgroup and mtgroup NE 0.
+
+ " endif.
+  "on change of utab-mtgrp.
+ " write: /1(145) sy-uline.
+ "write: /1(145) sy-uline.
+"endon.
+
+
+  totqty = totqty + utab-ntgew.
+  totval = totval + utab-value.
+
+
+
+
+   endloop.
+
+
+
+WRITE: /1(145) SY-ULINE.
+
+ FORMAT COLOR = 3.
+ WRITE:/
+ sy-vline,'TOTAL',
+ "50 qtypc,
+ 108 totqty,
+ 127 totval,
+ 145 sy-vline.
+    FORMAT COLOR INTENSIFIED OFF.
+WRITE: /1(145) SY-ULINE.
+clear: TOTQTY, TOTVAL.
+
+  top-of-page during line-selection.
+ FORMAT COLOR = 1.
+   WRITE: /1(145) SY-ULINE.
+  WRITE:/
+  sy-vline,'PLANT',
+  10 'BILL DATE',
+  24 'BILL NO',
+  34 'MAT.GRP',
+  44 'DESCRIPTION',
+  90 'QUANTITY',
+  103 'UNIT',
+  115 'QTY in Tonns',
+  135 'VALUE',
+  145 sy-vline.
+  WRITE: /1(145) SY-ULINE.
+  FORMAT COLOR INTENSIFIED OFF.
+
+  TOP-OF-PAGE.
+  SKIP.
+skip.
+
+Write:/5'            ,~~~                              ______            ______      ______   _______                _________   ' color   = 6 INVERSE NO-GAP.
+write:/5'          (          /\           I          !                 [      ]    !            !          /\           !        I' color  = 6 INVERSE NO-GAP.
+write:/5'           \        /  \          I          !                 !      !    !            !         /  \          !        I' color  = 6 INVERSE NO-GAP.
+write:/5'            \      /----\         I          !------           !      !    !-----       !        /----\         !        I ' color = 6 INVERSE NO-GAP.
+write:/5'             )    /      \        I          !                 !      !    !            !       /      \        !        I ' color  = 6 INVERSE NO-GAP.
+"write:/'  ___'     /          \     I______    !______           [______!    !______      !      /        \   ____L____    I______ ' color = 6 INVERSE NO-GAP.
+write:/5'         ___/    /        \       I______    !______           [______]    !______      !      /        \   ____I_____   I_______' color  = 6 INVERSE NO-GAP.
+
+
+"SKIP.
+"SKIP.
+"skip.
+"SKIP.
+
+SKIP.
+SKIP.
+skip.
+SKIP.
+write:/61 'SALE SUMMARY' color   = 5 INVERSE NO-GAP.
+write:/48'DATE FROM  ' color   = 5 INVERSE NO-GAP,ldate color   = 6 INVERSE NO-GAP, '   TO  ' color   = 5 INVERSE NO-GAP,hdate color   = 6 INVERSE NO-GAP.
+
+
+  write: 32 sy-vline,35 sy-vline,100 sy-vline, 103 sy-vline.
+ WRITE: /30(76) SY-ULINE.
+WRITE:/32 sy-vline.
+   format color 5.
+  write: 35 sy-vline, 40'PLANT', 60 'QUANTITY',87 'VALUE',100 sy-vline.
+
+    WRITE: 103 sy-vline.
+   FORMAT COLOR INTENSIFIED OFF.
+
+ WRITE: /30(76) SY-ULINE.

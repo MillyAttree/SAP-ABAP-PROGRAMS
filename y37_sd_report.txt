@@ -1,0 +1,472 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_SD_REPORT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_SD_REPORT NO STANDARD PAGE HEADING LINE-COUNT 100(10) LINE-SIZE 300 MESSAGE-ID ZRV.
+
+TYPE-POOLS: SLIS.
+
+TABLES: VBAK, VBAP, VBFA ,LIKP, LIPS.
+
+
+TYPES: BEGIN OF TY_VBAK,
+        VBELN TYPE VBAK-VBELN,
+        ERDAT TYPE VBAK-ERDAT,
+
+      END OF TY_VBAK.
+
+DATA : IT_VBAK TYPE TABLE OF TY_VBAK,
+        WA_VBAK TYPE TY_VBAK.
+
+TYPES: BEGIN OF TY_VBAP,
+        VBELN TYPE VBAP-VBELN,
+        POSNR TYPE VBAP-POSNR,
+        MATNR TYPE VBAP-MATNR,
+        NETPR TYPE VBAP-NETPR,
+      END OF TY_VBAP.
+
+DATA : IT_VBAP TYPE TABLE OF TY_VBAP,
+      WA_VBAP TYPE TY_VBAP.
+
+TYPES: BEGIN OF TY_VBFA,
+        VBELV TYPE VBFA-VBELV,
+        POSNV TYPE VBFA-POSNV,
+        VBELN TYPE VBFA-VBELN,
+        POSNN TYPE VBFA-POSNN,
+        VBTYP_N TYPE VBFA-VBTYP_N,
+       END OF TY_VBFA.
+
+DATA: IT_VBFA TYPE STANDARD TABLE OF TY_VBFA,
+      WA_VBFA TYPE TY_VBFA.
+
+TYPES: BEGIN OF TY_LIKP,
+        VBELN TYPE LIKP-VBELN,
+        LFDAT TYPE LIKP-LFDAT,
+      END OF TY_LIKP.
+
+DATA : IT_LIKP TYPE TABLE OF TY_LIKP,
+      WA_LIKP TYPE TY_LIKP.
+
+TYPES: BEGIN OF TY_LIPS,
+        VBELN TYPE LIPS-VBELN,
+        POSNR TYPE LIPS-POSNR,
+        LFIMG TYPE LIPS-LFIMG,                " QVANTITY
+        NETPR TYPE LIPS-NETPR,
+
+      END OF TY_LIPS.
+
+DATA : IT_LIPS TYPE TABLE OF TY_LIPS,
+      WA_LIPS TYPE TY_LIPS.
+
+TYPES: BEGIN OF TY_FIN,
+        VBELN TYPE VBAP-VBELN,
+        ERDAT TYPE VBAP-ERDAT,
+        POSNR TYPE VBAP-POSNR,
+        MATNR TYPE VBAP-MATNR,
+        NETPR TYPE VBAP-NETPR,
+        VBELN1 TYPE LIKP-VBELN,
+         LFDAT TYPE LIKP-LFDAT,
+        POSNR1 TYPE LIPS-POSNR,
+         LFIMG TYPE LIPS-LFIMG,
+        NETPR1 TYPE LIPS-NETPR,
+      END OF TY_FIN.
+
+DATA : IT_FIN TYPE TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      GD_LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+DATA: P_VBELN TYPE VBELN,
+      F_VBELN TYPE VBELN.
+
+INITIALIZATION.
+
+  SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS: S_VBELN FOR VBAK-VBELN.
+  SELECT-OPTIONS: S_ERDAT FOR VBAK-ERDAT.
+  SKIP.
+  SELECTION-SCREEN BEGIN OF LINE.
+  PARAMETERS : R1 RADIOBUTTON GROUP G1 DEFAULT 'X'.
+  SELECTION-SCREEN COMMENT 5(20) TEXT-003 FOR FIELD R1.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  PARAMETERS : R2 RADIOBUTTON GROUP G1.
+  SELECTION-SCREEN COMMENT 8(20) TEXT-004 FOR FIELD R2.
+  SELECTION-SCREEN END OF LINE.
+  SELECTION-SCREEN END OF BLOCK B1.
+
+
+AT SELECTION-SCREEN.
+  IF S_VBELN IS NOT INITIAL.
+    SELECT SINGLE VBELN FROM VBAK INTO P_VBELN WHERE VBELN IN S_VBELN.
+    IF SY-SUBRC NE 0.
+      MESSAGE 'NO VALUE' TYPE 'I'.
+      STOP.
+    ENDIF.
+  ENDIF.
+
+
+
+
+
+START-OF-SELECTION.
+
+  PERFORM GET_DATA.
+
+  PERFORM DISP.
+
+  PERFORM ALV.
+
+END-OF-SELECTION.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM GET_DATA.
+
+
+
+  SELECT VBELN ERDAT  FROM VBAK INTO TABLE IT_VBAK WHERE VBELN IN S_VBELN AND ERDAT IN S_ERDAT.
+  IF SY-SUBRC EQ 0.
+    SORT  IT_VBAK BY VBELN.
+  ENDIF.
+
+
+  IF IT_VBAK IS NOT INITIAL.
+    SELECT VBELN POSNR MATNR NETPR FROM VBAP INTO TABLE IT_VBAP FOR ALL ENTRIES IN IT_VBAK
+      WHERE VBELN = IT_VBAK-VBELN.
+  ENDIF.
+
+  IF IT_VBAP IS NOT INITIAL.
+    SELECT VBELV
+        POSNV
+        VBELN
+        POSNN
+        VBTYP_N FROM VBFA INTO TABLE IT_VBFA FOR ALL ENTRIES IN IT_VBAP WHERE VBELV = IT_VBAP-VBELN AND VBTYP_N = 'J'.
+  ENDIF.
+
+  IF  IT_VBFA IS NOT INITIAL .
+    SELECT VBELN LFDAT  FROM LIKP INTO TABLE IT_LIKP FOR ALL ENTRIES IN IT_VBFA
+                                                WHERE VBELN = IT_VBFA-VBELN.
+    IF SY-SUBRC EQ 0.
+      SORT  IT_LIKP BY VBELN.
+    ENDIF.
+  ENDIF.
+
+
+
+  IF IT_LIKP IS NOT INITIAL.
+    SELECT VBELN POSNR LFIMG NETPR FROM LIPS INTO TABLE IT_LIPS FOR ALL ENTRIES IN IT_LIKP
+      WHERE VBELN = IT_LIKP-VBELN.
+  ENDIF.
+
+
+
+  LOOP AT IT_VBFA INTO WA_VBFA.
+
+     CLEAR WA_VBAP.
+    READ TABLE IT_VBAP INTO WA_VBAP WITH KEY VBELN = WA_VBFA-VBELV
+                                              POSNR = WA_VBFA-POSNV.
+    IF SY-SUBRC EQ 0.
+    WA_FIN-VBELN = WA_VBAP-VBELN.
+    WA_FIN-POSNR = WA_VBAP-POSNR.
+    WA_FIN-MATNR = WA_VBAP-MATNR.
+    WA_FIN-NETPR = WA_VBAP-NETPR.
+    ENDIF.
+
+    CLEAR WA_VBAK.
+    READ TABLE IT_VBAK INTO WA_VBAK WITH KEY VBELN = WA_VBAP-VBELN.
+    IF SY-SUBRC EQ 0.
+      WA_FIN-ERDAT = WA_VBAK-ERDAT.
+    ENDIF.
+
+    CLEAR WA_LIPS.
+    READ TABLE IT_LIPS INTO WA_LIPS WITH KEY VBELN = WA_VBFA-VBELN
+                                             POSNR = WA_VBFA-POSNN .
+    IF SY-SUBRC EQ 0.
+      WA_FIN-VBELN1 = WA_LIPS-VBELN.
+      WA_FIN-POSNR1 = WA_LIPS-POSNR.
+      WA_FIN-LFIMG = WA_LIPS-LFIMG.
+      WA_FIN-NETPR1 = WA_LIPS-NETPR.
+
+    ENDIF.
+
+
+    CLEAR: WA_LIKP.
+    READ TABLE IT_LIKP INTO WA_LIKP WITH KEY VBELN = WA_LIPS-VBELN.
+
+    IF SY-SUBRC EQ 0.
+      WA_FIN-LFDAT = WA_LIKP-LFDAT.
+    ENDIF.
+
+
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+  ENDLOOP.
+
+
+
+
+ENDFORM.                    "GET_DATA
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'VBELN'.
+  WA_FCAT-SELTEXT_L = 'SALES NO.'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'ERDAT'.
+  WA_FCAT-SELTEXT_L = 'CREATED ON'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NETPR'.
+  WA_FCAT-SELTEXT_L = 'NET PRICE'.
+  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'POSNR'.
+  WA_FCAT-SELTEXT_L = 'SALES ITEM'.
+  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MATNR'.
+  WA_FCAT-SELTEXT_L = 'MATERIAL NO.'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'VBELN1'.
+  WA_FCAT-SELTEXT_L = 'DELIVERY NO.'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'LFDAT'.
+  WA_FCAT-SELTEXT_L = 'DELIVERY DATE'.
+*  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NETPR1'.
+  WA_FCAT-SELTEXT_L = 'NET PRICE'.
+  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'LFIMG'.
+  WA_FCAT-SELTEXT_L = 'QVANTITY'.
+*  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'POSNR1'.
+  WA_FCAT-SELTEXT_L = 'DELIVERY ITEM'.
+  WA_FCAT-JUST = 'L'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+*  CLEAR WA_FCAT.
+*  WA_FCAT-FIELDNAME = 'MATNR1'.
+*  WA_FCAT-SELTEXT_L = 'MATERIAL NO.'.
+*  APPEND WA_FCAT TO IT_FCAT.
+
+ENDFORM.                    "DISP
+
+
+
+
+
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+  IF R1 EQ 'X'.
+    CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+     EXPORTING
+*            I_INTERFACE_CHECK              = ' '
+*            I_BYPASSING_BUFFER             =
+*            I_BUFFER_ACTIVE                = ' '
+       I_CALLBACK_PROGRAM             = SY-REPID
+*            I_CALLBACK_PF_STATUS_SET       = ' '
+            I_CALLBACK_USER_COMMAND        = 'F_USER_COMMAND'
+*            I_STRUCTURE_NAME               =
+       IS_LAYOUT                      = GD_LAYOUT
+       IT_FIELDCAT                    = IT_FCAT[]
+*            IT_EXCLUDING                   =
+*            IT_SPECIAL_GROUPS              =
+*            IT_SORT                        =
+*            IT_FILTER                      =
+*            IS_SEL_HIDE                    =
+*            I_DEFAULT                      = 'X'
+*            I_SAVE                         = ' '
+*            IS_VARIANT                     =
+*            IT_EVENTS                      =
+*            IT_EVENT_EXIT                  =
+*            IS_PRINT                       =
+*            IS_REPREP_ID                   =
+*            I_SCREEN_START_COLUMN          = 0
+*            I_SCREEN_START_LINE            = 0
+*            I_SCREEN_END_COLUMN            = 0
+*            I_SCREEN_END_LINE              = 0
+*            IR_SALV_LIST_ADAPTER           =
+*            IT_EXCEPT_QINFO                =
+*            I_SUPPRESS_EMPTY_DATA          = ABAP_FALSE
+*          IMPORTING
+*            E_EXIT_CAUSED_BY_CALLER        =
+*            ES_EXIT_CAUSED_BY_USER         =
+      TABLES
+        T_OUTTAB                       = IT_FIN[]
+     EXCEPTIONS
+       PROGRAM_ERROR                  = 1
+       OTHERS                         = 2
+              .
+    IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+
+  ELSEIF R2 EQ 'X'.
+
+
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+     EXPORTING
+*            I_INTERFACE_CHECK                 = ' '
+*            I_BYPASSING_BUFFER                = ' '
+*            I_BUFFER_ACTIVE                   = ' '
+       I_CALLBACK_PROGRAM                = SY-REPID
+*            I_CALLBACK_PF_STATUS_SET          = 'TEST '(005)
+       I_CALLBACK_USER_COMMAND           = 'F_USER_COMMAND'
+*            I_CALLBACK_TOP_OF_PAGE            = ' '
+*            I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*            I_CALLBACK_HTML_END_OF_LIST       = ' '
+*            I_STRUCTURE_NAME                  =
+*            I_BACKGROUND_ID                   = ' '
+*            I_GRID_TITLE                      =
+*            I_GRID_SETTINGS                   =
+       IS_LAYOUT                         = GD_LAYOUT
+       IT_FIELDCAT                       = IT_FCAT[]
+*            IT_EXCLUDING                      =
+*            IT_SPECIAL_GROUPS                 =
+*            IT_SORT                           =
+*            IT_FILTER                         =
+*            IS_SEL_HIDE                       =
+*            I_DEFAULT                         = 'X'
+*            I_SAVE                            = ' '
+*            IS_VARIANT                        =
+*            IT_EVENTS                         =
+*            IT_EVENT_EXIT                     =
+*            IS_PRINT                          =
+*            IS_REPREP_ID                      =
+*            I_SCREEN_START_COLUMN             = 0
+*            I_SCREEN_START_LINE               = 0
+*            I_SCREEN_END_COLUMN               = 0
+*            I_SCREEN_END_LINE                 = 0
+*            I_HTML_HEIGHT_TOP                 = 0
+*            I_HTML_HEIGHT_END                 = 0
+*            IT_ALV_GRAPHICS                   =
+*            IT_HYPERLINK                      =
+*            IT_ADD_FIELDCAT                   =
+*            IT_EXCEPT_QINFO                   =
+*            IR_SALV_FULLSCREEN_ADAPTER        =
+*          IMPORTING
+*            E_EXIT_CAUSED_BY_CALLER           =
+*            ES_EXIT_CAUSED_BY_USER            =
+      TABLES
+        T_OUTTAB                          = IT_FIN[]
+     EXCEPTIONS
+       PROGRAM_ERROR                     = 1
+       OTHERS                            = 2
+              .
+    IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+  ELSE.
+    EXIT.
+
+  ENDIF.
+
+ENDFORM.                    "ALV
+
+
+
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  F_USER_COMMAND
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->UCOMM      text
+*      -->SELFIELD   text
+*----------------------------------------------------------------------*
+FORM F_USER_COMMAND USING UCOMM TYPE SY-UCOMM SELFIELD TYPE SLIS_SELFIELD.
+
+  CASE  UCOMM.
+
+
+    WHEN '&IC1'.
+
+      READ TABLE IT_FIN INTO WA_FIN INDEX SELFIELD-TABINDEX.
+
+      IF SY-SUBRC EQ 0.
+
+*        IF SELFIELD-FIELDNAME = 'vbeln' AND NOT WA_FIN-VBELN IS INITIAL.
+
+          SET PARAMETER ID 'AUN' FIELD WA_FIN-VBELN.
+
+          CALL TRANSACTION 'VA03' AND SKIP FIRST SCREEN.
+
+*        ELSEIF  SELFIELD-FIELDNAME = 'vbeln1'.      " AND NOT WA_FIN-VBELN1 IS INITIAL.
+
+        ELSE.
+
+         SET PARAMETER ID 'VL' FIELD WA_FIN-VBELN1.
+
+          CALL TRANSACTION 'VL03N' AND SKIP FIRST SCREEN.
+*
+*        ELSE.
+*          EXIT.
+
+*        ENDIF.
+      ENDIF.
+
+  ENDCASE.
+ENDFORM.                    "F_USER_COMMAND

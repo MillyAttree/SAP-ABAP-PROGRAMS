@@ -1,0 +1,34 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_ROHMBUS
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_ROHMBUS.
+
+parameters : s_index type i.
+
+
+start-of-selection.
+data : v_temp type i.
+
+do s_index times.
+ v_temp = sy-index.
+   do v_temp times.
+     write '*'.
+   enddo.
+write /.
+enddo.
+
+do s_index times.
+ v_temp = s_index - sy-index.
+    do v_temp times.
+     write '*'.
+   enddo.
+write /.
+enddo.
+
+
+end-of-selection.

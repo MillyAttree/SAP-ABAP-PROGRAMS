@@ -1,0 +1,1167 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_OPEN
+*&
+*&---------------------------------------------------------------------*
+************************************************************************
+* DEVELOPED BY : MILLY SHARMA
+* DATE         : 16-12-2015
+* REASON       : TO FETCH OPEN CLOSE DATA GOWDOWN AND BRANCHES
+* VERSION      : 6.0
+************************************************************************
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_OPEN.
+
+
+TYPE-POOLS: SLIS.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT.
+
+
+
+TABLES: MSEG, MAKT, S031, MBEW.
+
+
+DATA : BEGIN OF IT_MBEW OCCURS 0,
+       MATNR LIKE MBEW-MATNR,
+       BWKEY LIKE MBEW-BWKEY,
+       BWTAR LIKE MBEW-BWTAR,
+       STPRS LIKE MBEW-STPRS,
+       END OF IT_MBEW.
+
+
+TYPES: BEGIN OF TY_FINAL,
+       MATNR LIKE MARD-MATNR,
+       WERKS LIKE MARD-WERKS,
+       LGORT LIKE MARD-LGORT,
+       LABST LIKE MARD-LABST,
+       STPRS LIKE MBEW-STPRS,
+       END OF TY_FINAL.
+
+DATA: IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+      WA_FINAL TYPE TY_FINAL.
+
+TYPES: BEGIN OF TY_MSEG,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       xauto like mseg-xauto,
+       SHKZG LIKE MSEG-SHKZG,
+       sobkz like mseg-sobkz,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+       END OF TY_MSEG.
+
+DATA: IT_MSEG TYPE STANDARD TABLE OF TY_MSEG,
+      WA_MSEG TYPE TY_MSEG.
+
+
+TYPES: BEGIN OF TYT_MSEG,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       xauto like mseg-xauto,
+       SHKZG LIKE MSEG-SHKZG,
+       sobkz like mseg-sobkz,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+       END OF TYT_MSEG.
+
+DATA: ITI_MSEG TYPE STANDARD TABLE OF TYT_MSEG,
+      WAW_MSEG TYPE TYT_MSEG.
+
+
+TYPES: BEGIN OF TYTT_MSEG,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       xauto like mseg-xauto,
+       SHKZG LIKE MSEG-SHKZG,
+       sobkz like mseg-sobkz,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+       END OF TYTT_MSEG.
+
+DATA: ITII_MSEG TYPE STANDARD TABLE OF TYTT_MSEG,
+      WAWW_MSEG TYPE TYTT_MSEG.
+
+TYPES: BEGIN OF T_MSEG,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       SHKZG LIKE MSEG-SHKZG,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+
+       END OF T_MSEG.
+
+DATA: I_MSEG TYPE STANDARD TABLE OF T_MSEG,
+      W_MSEG TYPE T_MSEG.
+
+TYPES: BEGIN OF TT_MSEG,
+       MATNR LIKE MSEG-MATNR,
+       WERKS LIKE MSEG-WERKS,
+       LGORT LIKE MSEG-LGORT,
+       MBLNR LIKE MSEG-MBLNR,
+       MJAHR LIKE MSEG-MJAHR,
+       ZEILE LIKE MSEG-ZEILE,
+       SHKZG LIKE MSEG-SHKZG,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+
+       END OF TT_MSEG.
+
+DATA: II_MSEG TYPE STANDARD TABLE OF TT_MSEG,
+      WW_MSEG TYPE TT_MSEG.
+
+TYPES: BEGIN OF TY_FIN,
+       MATNR LIKE MARD-MATNR,
+       WERKS LIKE MARD-WERKS,
+       LGORT LIKE MARD-LGORT,
+       LABST LIKE MARD-LABST,
+       MBLNR LIKE MSEG-MBLNR,
+       SHKZG LIKE MSEG-SHKZG,
+       SOBKZ LIKE MSEG-SOBKZ,
+       MEINS LIKE MSEG-MEINS,
+       BWART LIKE MSEG-BWART,
+       BUDAT LIKE MSEG-BUDAT_MKPF,
+       MENGE LIKE MSEG-MENGE,
+
+       END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+DATA: BEGIN OF ITAB OCCURS 0,
+      MATNR LIKE MARD-MATNR,
+      MAKTX LIKE MAKT-MAKTX,
+      OPENING LIKE MARD-LABST,
+      CLOSING LIKE MARD-LABST,
+      PRODUCTION LIKE MSEG-MENGE,
+      OEM        LIKE MSEG-MENGE,
+      CON        LIKE MSEG-MENGE,
+      CONSIGNER  LIKE MSEG-MENGE,
+      ostock     like s031-mzubb,
+      WERKS LIKE MARD-WERKS,
+      LGORT LIKE MARD-LGORT,
+      BUDAT LIKE MSEG-BUDAT_MKPF,
+      END OF ITAB.
+
+data: BEGIN OF ITAB2 OCCURS 0,
+      ostock like s031-mzubb,
+      WERKS LIKE MARD-WERKS,
+      LGORT LIKE MARD-LGORT,
+      BUDAT LIKE MSEG-BUDAT_MKPF,
+      SHKZG LIKE MSEG-SHKZG,
+      MENGE LIKE MSEG-MENGE,
+      MATNR LIKE MARD-MATNR,
+      MAKTX LIKE MAKT-MAKTX,
+      END OF ITAB2.
+
+data: BEGIN OF ITAB4 OCCURS 0,
+      OPENstock like s031-mzubb,
+      WERKS LIKE MARD-WERKS,
+      BUDAT LIKE MSEG-BUDAT_MKPF,
+      SHKZG LIKE MSEG-SHKZG,
+      MENGE LIKE MSEG-MENGE,
+      MATNR LIKE MARD-MATNR,
+      MAKTX LIKE MAKT-MAKTX,
+      END OF ITAB4.
+
+DATA: BEGIN OF ITAB3 OCCURS 0,
+      MATNR   LIKE MSEG-MATNR,
+      WERKS   LIKE MSEG-WERKS,
+      REC     LIKE MSEG-MENGE,
+      ISS     LIKE MSEG-MENGE,
+      END OF ITAB3.
+
+DATA: BEGIN OF ITAB5 OCCURS 0,
+      MATNR   LIKE MSEG-MATNR,
+      WERKS   LIKE MSEG-WERKS,
+      RECP    LIKE MSEG-MENGE,
+      ISSU    LIKE MSEG-MENGE,
+      END OF ITAB5.
+
+DATA:  BEGIN OF ITAB1 OCCURS 0,
+      MATNR      LIKE MARD-MATNR,
+      MAKTX      LIKE MAKT-MAKTX,
+      WERKS      LIKE MSEG-WERKS,
+      LGORT      LIKE MSEG-LGORT,
+      REC        LIKE MSEG-MENGE,
+      ISS        LIKE MSEG-MENGE,
+      CLOSING    LIKE MARD-LABST,
+      PRODUCTION LIKE MSEG-MENGE,
+      OEM        LIKE MSEG-MENGE,
+      CON        LIKE MSEG-MENGE,
+      CONSIGNER  LIKE MSEG-MENGE,
+      ostock     like s031-mzubb,
+      OPENstock  like s031-mzubb,
+      RECP       LIKE MSEG-MENGE,
+      ISSU       LIKE MSEG-MENGE,
+      CLOSS      LIKE MARD-LABST,
+      TOT1       LIKE MARD-LABST,
+      TOT        LIKE S031-MZUBB,
+      STPRS      LIKE MBEW-STPRS,
+      VALUE      LIKE MARD-LABST,
+      END OF ITAB1.
+
+TYPES : BEGIN OF ty_s031,
+        mzubb like s031-mzubb,
+        magbb like s031-magbb,
+        matnr like s031-matnr,
+        werks like s031-werks,
+        lgort like s031-lgort,
+        ssour like s031-ssour,
+        vrsio like s031-vrsio,
+*        spmon like s031-spmon,
+        sptag like s031-sptag,
+        spwoc like s031-spwoc,
+        spbup like s031-spbup,
+        END OF ty_s031.
+
+data: it_s031 TYPE STANDARD TABLE OF ty_s031,
+      wa_s031 TYPE ty_s031.
+
+DATA:  VALUE      LIKE MARD-LABST.
+
+TYPES : BEGIN OF t_s031,
+        mzubb like s031-mzubb,
+        magbb like s031-magbb,
+        matnr like s031-matnr,
+        werks like s031-werks,
+        lgort like s031-lgort,
+        END OF t_s031.
+
+data: i_s031 TYPE STANDARD TABLE OF t_s031,
+      w_s031 TYPE t_s031.
+
+
+DATA: CLOSS   LIKE MARD-LABST,
+      CLOSING LIKE MARD-LABST.
+
+DATA: MAKTX LIKE MAKT-MAKTX.
+
+DATA:  RECP       LIKE MSEG-MENGE,
+       ISSU       LIKE MSEG-MENGE.
+
+DATA:  REC        LIKE MSEG-MENGE,
+       ISS        LIKE MSEG-MENGE,
+       PRODUCTION LIKE MSEG-MENGE,
+       OEM        LIKE MSEG-MENGE,
+       CON        LIKE MSEG-MENGE,
+       CONSIGNER  LIKE MSEG-MENGE.
+
+DATA:  RECEIPT  LIKE MSEG-MENGE,
+       ISSUE    LIKE MSEG-MENGE,
+       OPEN     LIKE MSEG-MENGE.
+
+DATA:  RECEI    LIKE MSEG-MENGE,
+       ISSUS    LIKE MSEG-MENGE,
+       OPEN_QTY LIKE MSEG-MENGE.
+
+DATA: STOCK_131 LIKE MSEG-MENGE,
+      STOCK_132 LIKE MSEG-MENGE,
+      STOCK_601 LIKE MSEG-MENGE,
+      STOCK_602 LIKE MSEG-MENGE,
+      STOCK_631 LIKE MSEG-MENGE,
+      STOCK_632 LIKE MSEG-MENGE,
+      STOCK_633 LIKE MSEG-MENGE,
+      STOCK_634 LIKE MSEG-MENGE,
+      STOCK_651 LIKE MSEG-MENGE.
+
+ data :  R_BUDAT(10) TYPE C,
+         Z_BUDAT(10) TYPE C,
+         H_BUDAT(10) TYPE C.
+
+data: v_month TYPE c LENGTH 6.
+data: o_stock like s031-mzubb.
+data: ostock like s031-mzubb.
+data: OPEN_stock like s031-mzubb.
+data: OPENstock like s031-mzubb.
+
+DATA: TOT  LIKE S031-MZUBB,
+      TOT1 LIKE MARD-LABST.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+PARAMETERS: P_WERKS LIKE MSEG-WERKS.
+SELECT-OPTIONS: S_MATNR FOR MSEG-MATNR,
+                S_LGORT FOR MSEG-LGORT,
+                S_BUDAT FOR MSEG-BUDAT_MKPF OBLIGATORY.
+SELECTION-SCREEN END OF BLOCK B1.
+
+
+START-OF-SELECTION.
+
+  PERFORM DATA.
+
+  PERFORM DISP.
+
+  PERFORM ALV.
+
+
+*************************************************************
+*************************************************************
+*************************************************************
+FORM DATA.
+
+   V_MONTH = S_BUDAT-LOW+0(6).
+
+      SELECT   SUM( MZUBB ) SUM( MAGBB ) matnr werks lgort ssour vrsio sptag spwoc spbup
+         into TABLE it_s031
+         FROM S031
+         WHERE MATNR in s_MATNR
+         AND   WERKS eq p_WERKS
+         AND   LGORT in s_LGORT
+         AND   SPMON LT V_MONTH
+         GROUP BY matnr werks lgort ssour vrsio sptag spwoc spbup.
+
+
+   LOOP AT it_s031 INTO wa_s031.
+   o_stock = wa_s031-mzubb - wa_s031-magbb.
+     IF O_STOCK < 0.
+     O_STOCK = O_STOCK * -1.
+     ENDIF.
+
+Z_BUDAT = v_MONTH.
+CONCATENATE Z_BUDAT '01' INTO R_BUDAT.
+
+if S_BUDAT-LOW = R_BUDAT.
+
+    READ TABLE IT_S031 INTO WA_S031 INDEX SY-TABIX.
+
+
+MOVE: O_STOCK         TO ITAB2-OSTOCK,
+      wa_s031-WERKS   TO ITAB2-WERKS,
+      wa_s031-LGORT   TO ITAB2-LGORT,
+      wa_s031-MATNR   TO ITAB2-MATNR.
+
+
+APPEND ITAB2.
+CLEAR ITAB2.
+
+
+ELSE.
+
+PERFORM TOTAL.
+
+ENDIF.
+ ENDLOOP.
+**********************************************************************
+*                 GOWDOWN CLOSING
+
+**********************************************************************
+SELECT MATNR
+           WERKS
+           LGORT
+           MBLNR
+           MJAHR
+           ZEILE
+           xauto
+           SHKZG
+           sobkz
+           MEINS
+           BWART
+           BUDAT_MKPF
+           MENGE
+      FROM MSEG INTO  CORRESPONDING FIELDS OF TABLE ITI_MSEG WHERE MATNR IN S_MATNR
+                                                              AND WERKS EQ P_WERKS
+                                                              AND LGORT IN S_LGORT
+                                                              AND  BUDAT_MKPF IN S_BUDAT.
+
+    LOOP AT ITI_MSEG INTO WAW_MSEG.
+
+    REC = 0.
+    ISS = 0.
+
+
+     IF WAW_MSEG-SHKZG = 'S'.
+      REC = REC + WAW_MSEG-MENGE .
+    ELSEIF WAW_MSEG-SHKZG = 'H' .
+      ISS = ISS + WAW_MSEG-MENGE .
+    ENDIF.
+
+   MOVE :   WAW_MSEG-MATNR TO ITAB3-MATNR,
+            WAW_MSEG-WERKS TO ITAB3-WERKS,
+            REC TO ITAB3-REC,
+            ISS TO ITAB3-ISS.
+   COLLECT ITAB3.
+   CLEAR ITAB3.
+    ENDLOOP.
+***********************************************************************
+*                       PRODUCTION   OEM CON
+************************************************************************
+*LOOP AT itab2..
+
+    SELECT MATNR
+           WERKS
+           LGORT
+           MBLNR
+           MJAHR
+           ZEILE
+           xauto
+           SHKZG
+           sobkz
+           MEINS
+           BWART
+           BUDAT_MKPF
+           MENGE
+      FROM MSEG INTO  CORRESPONDING FIELDS OF TABLE IT_MSEG WHERE MATNR IN S_MATNR
+                                                             AND WERKS EQ P_WERKS
+*                                                             AND LGORT IN S_LGORT
+                                                             AND  BUDAT_MKPF IN S_BUDAT
+                                                             AND (
+*                                                                   BWART = '131'
+*                                                              OR   BWART = '132'
+*                                                              OR   BWART = '631'
+*                                                              OR   BWART = '632'
+*                                                              OR   BWART = '633'
+*                                                              OR   BWART = '634'
+                                                                    BWART = '651' ).
+
+    SELECT  MATNR
+            WERKS
+            LGORT
+            MBLNR
+            MJAHR
+            ZEILE
+            xauto
+            SHKZG
+            sobkz
+            MEINS
+            BWART
+            BUDAT_mkpf
+            MENGE
+        FROM MSEG APPENDING TABLE IT_MSEG WHERE MATNR IN S_MATNR
+                                                             AND WERKS EQ P_WERKS
+                                                             AND LGORT IN S_LGORT
+                                                             AND  BUDAT_MKPF IN S_BUDAT
+                                                             AND ( BWART = '601'
+                                                              OR   BWART = '602' ).
+
+
+ IF SY-SUBRC EQ 0.
+      SORT IT_MSEG BY MATNR.
+    ENDIF.
+
+
+  LOOP AT IT_MSEG INTO WA_MSEG.
+
+    WA_FIN-MATNR = WA_MSEG-MATNR.
+    WA_FIN-WERKS = WA_MSEG-WERKS.
+    WA_FIN-LGORT = WA_MSEG-LGORT.
+    WA_FIN-MBLNR = WA_MSEG-MBLNR.
+    WA_FIN-SHKZG = WA_MSEG-SHKZG.
+    WA_FIN-SOBKZ = WA_MSEG-SOBKZ.
+    WA_FIN-MEINS = WA_MSEG-MEINS.
+    WA_FIN-BWART = WA_MSEG-BWART.
+    WA_FIN-BUDAT = WA_MSEG-BUDAT.
+    WA_FIN-MENGE = WA_MSEG-MENGE.
+
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+  ENDLOOP.
+
+  LOOP AT IT_FIN INTO WA_FIN.
+    AT NEW MATNR.
+    PRODUCTION = 0.
+    OEM        = 0.
+    CON        = 0.
+    CONSIGNER  = 0.
+    STOCK_131  = 0.
+    STOCK_132  = 0.
+    STOCK_601  = 0.
+    STOCK_602  = 0.
+    STOCK_631  = 0.
+    STOCK_632  = 0.
+    STOCK_633  = 0.
+    STOCK_634  = 0.
+    STOCK_651  = 0.
+    ENDAT.
+    IF WA_FIN-BWART = '131'.
+      STOCK_131 = STOCK_131 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '132'.
+      STOCK_132 = STOCK_132 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '601'.
+      STOCK_601 = STOCK_601 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '602'.
+      STOCK_602 = STOCK_602 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '651'.
+      STOCK_651 = STOCK_651 + WA_FIN-MENGE.
+    ENDIF.
+    if WA_FIN-SOBKZ = 'W'.
+    IF WA_FIN-BWART = '631'.
+      STOCK_631 = STOCK_631 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '632'.
+      STOCK_632 = STOCK_632 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '633'.
+      STOCK_633 = STOCK_633 + WA_FIN-MENGE.
+    ELSEIF WA_FIN-BWART = '634'.
+      STOCK_634 = STOCK_634 + WA_FIN-MENGE.
+    ENDIF.
+    ENDIF.
+
+    PRODUCTION = STOCK_131 - STOCK_132.
+    OEM        = STOCK_601 - STOCK_602 - STOCK_651.
+    CON        = STOCK_631 - STOCK_632.
+    CONSIGNER  = STOCK_633 - STOCK_634.
+
+    OEM  = OEM * -1.
+    CONSIGNER = CONSIGNER * -1.
+   MOVE : WA_FIN-WERKS TO ITAB-WERKS,
+          WA_FIN-BUDAT TO ITAB-BUDAT.
+   AT END OF MATNR.
+   MOVE:  WA_FIN-MATNR TO ITAB-MATNR,
+          PRODUCTION   TO ITAB-PRODUCTION,
+          OEM          TO ITAB-OEM,
+          CON          TO ITAB-CON,
+          CONSIGNER    TO ITAB-CONSIGNER.
+   ENDAT.
+    COLLECT ITAB.
+    CLEAR ITAB.
+
+  ENDLOOP.
+
+
+
+*ENDLOOP.
+********************************************************************
+*                        BRANCH OPENING
+********************************************************************
+
+*LOOP AT ITAB2.
+  SELECT   SUM( MZUBB ) SUM( MAGBB ) matnr werks lgort
+          INTO TABLE I_S031
+          FROM S031
+         WHERE MATNR IN S_MATNR
+         AND   WERKS EQ P_WERKS
+         AND   LGORT = ''
+         AND   SPMON LT V_MONTH
+         GROUP BY matnr werks lgort.
+
+ LOOP AT i_s031 INTO w_s031.
+   OPEN_stock = w_s031-mzubb - w_s031-magbb.
+     IF OPEN_STOCK < 0.
+     OPEN_STOCK = OPEN_STOCK * -1.
+     ENDIF.
+
+
+Z_BUDAT = v_MONTH.
+CONCATENATE Z_BUDAT '01' INTO R_BUDAT.
+
+if S_BUDAT-LOW = R_BUDAT.
+
+   READ TABLE I_S031 INTO W_S031 INDEX SY-TABIX.
+
+    SELECT SINGLE * FROM MAKT WHERE MATNR = W_S031-MATNR.
+
+MOVE: OPEN_STOCK     TO ITAB4-OPENSTOCK,
+      w_s031-WERKS   TO ITAB4-WERKS,
+      w_s031-MATNR   TO ITAB4-MATNR,
+      MAKT-MAKTX     TO ITAB4-MAKTX.
+
+
+APPEND ITAB4.
+CLEAR ITAB4.
+
+
+ELSE.
+
+PERFORM TOTAL1.
+
+ENDIF.
+ ENDLOOP.
+*ENDLOOP.
+******************************************************************
+*                     BRANCH CLOSING
+******************************************************************
+ SELECT MATNR
+           WERKS
+           LGORT
+           MBLNR
+           MJAHR
+           ZEILE
+           xauto
+           SHKZG
+           sobkz
+           MEINS
+           BWART
+           BUDAT_MKPF
+           MENGE
+      FROM MSEG INTO  CORRESPONDING FIELDS OF TABLE ITII_MSEG WHERE MATNR IN S_MATNR
+                                                              AND WERKS EQ P_WERKS
+                                                              AND LGORT = ''
+                                                              AND BUDAT_MKPF IN S_BUDAT
+                                                              AND SOBKZ = 'W'.
+
+    LOOP AT ITII_MSEG INTO WAWW_MSEG.
+
+    RECP = 0.
+    ISSU = 0.
+
+
+     IF WAWW_MSEG-SHKZG = 'S'.
+      RECP = RECP + WAWW_MSEG-MENGE .
+    ELSEIF WAWW_MSEG-SHKZG = 'H' .
+      ISSU = ISSU + WAWW_MSEG-MENGE .
+    ENDIF.
+
+   MOVE :   WAWW_MSEG-MATNR TO ITAB5-MATNR,
+            WAWW_MSEG-WERKS TO ITAB5-WERKS,
+            RECP TO ITAB5-RECP,
+            ISSU TO ITAB5-ISSU.
+   COLLECT ITAB5.
+   CLEAR ITAB5.
+    ENDLOOP.
+
+****************************************************************
+
+
+*****************************************************************
+
+
+LOOP AT ITAB4.
+
+MOVE : ITAB4-OPENSTOCK TO ITAB1-OPENSTOCK,
+       ITAB4-MATNR     TO ITAB1-MATNR,
+       ITAB4-MAKTX     TO  ITAB1-MAKTX,
+       ITAB4-WERKS     TO  ITAB1-WERKS.
+
+
+SELECT SINGLE * FROM MBEW  WHERE MATNR = ITAB4-MATNR
+                            AND  BWKEY = ITAB4-WERKS.
+
+MOVE MBEW-STPRS TO ITAB1-STPRS.
+
+CLEAR ITAB2.
+READ TABLE ITAB2 WITH KEY MATNR = ITAB4-MATNR
+                          WERKS = ITAB4-WERKS.
+MOVE : ITAB2-OSTOCK TO ITAB1-OSTOCK,
+       ITAB2-LGORT  TO ITAB1-LGORT.
+
+
+CLEAR ITAB.
+READ TABLE ITAB WITH KEY matnr = itab4-matnr
+                         werks = itab4-werks.
+
+IF SY-SUBRC EQ 0.
+MOVE  :   ITAB-PRODUCTION  TO  ITAB1-PRODUCTION,
+          ITAB-OEM         TO  ITAB1-OEM,
+          ITAB-CON         TO  ITAB1-CON,
+          ITAB-CONSIGNER   TO  ITAB1-CONSIGNER.
+
+
+ENDIF.
+
+ CLEAR ITAB3.
+ READ TABLE ITAB3 with key matnr = itab4-matnR
+                           werks = itab4-werkS.
+ MOVE :  ITAB3-REC  TO  ITAB1-REC,
+         ITAB3-ISS  TO  ITAB1-ISS.
+
+CLEAR ITAB5.
+READ TABLE ITAB5 WITH KEY matnr = itab4-matnR
+                          werks = itab4-werkS.
+MOVE :  ITAB5-RECP  TO  ITAB1-RECP,
+        ITAB5-ISSU  TO  ITAB1-ISSU.
+
+   APPEND ITAB1.
+   CLEAR ITAB1.
+
+ ENDLOOP.
+*********************************************************************
+LOOP AT ITAB.
+
+SELECT SINGLE * FROM MAKT WHERE MATNR = ITAB-MATNR.
+MOVE  :   MAKT-MAKTX       TO  ITAB1-MAKTX.
+MOVE  :   ITAB-MATNR       TO  ITAB1-MATNR,
+          ITAB-WERKS       TO  ITAB1-WERKS.
+MOVE  :   ITAB-PRODUCTION  TO  ITAB1-PRODUCTION,
+          ITAB-OEM         TO  ITAB1-OEM,
+          ITAB-CON         TO  ITAB1-CON,
+          ITAB-CONSIGNER   TO  ITAB1-CONSIGNER.
+
+SELECT SINGLE * FROM MBEW  WHERE MATNR = ITAB-MATNR
+                            AND  BWKEY = ITAB-WERKS.
+
+MOVE MBEW-STPRS TO ITAB1-STPRS.
+
+CLEAR ITAB2.
+READ TABLE ITAB2 WITH KEY MATNR = ITAB-MATNR
+                          WERKS = ITAB-WERKS.
+MOVE : ITAB2-OSTOCK TO ITAB1-OSTOCK,
+       ITAB2-LGORT  TO ITAB1-LGORT.
+
+
+ CLEAR ITAB3.
+ READ TABLE ITAB3 with key matnr = itab-matnR
+                           werks = itab-werkS.
+ MOVE :  ITAB3-REC  TO  ITAB1-REC,
+         ITAB3-ISS  TO  ITAB1-ISS.
+
+CLEAR ITAB4.
+READ TABLE ITAB4 WITH KEY MATNR = ITAB-MATNR
+                          WERKS = ITAB-WERKS.
+MOVE : ITAB4-OPENSTOCK TO ITAB1-OPENSTOCK.
+
+
+CLEAR ITAB5.
+READ TABLE ITAB5 WITH KEY matnr = itab-matnR
+                          werks = itab-werkS.
+MOVE :  ITAB5-RECP  TO  ITAB1-RECP,
+        ITAB5-ISSU  TO  ITAB1-ISSU.
+
+APPEND ITAB1.
+CLEAR ITAB1.
+ENDLOOP.
+************************************************************************
+LOOP AT ITAB2 .
+
+
+SELECT SINGLE * FROM MAKT WHERE MATNR = ITAB2-MATNR.
+MOVE  :   MAKT-MAKTX   TO  ITAB1-MAKTX.
+MOVE  :   ITAB2-MATNR  TO  ITAB1-MATNR,
+          ITAB2-WERKS  TO  ITAB1-WERKS.
+MOVE  :   ITAB2-OSTOCK TO ITAB1-OSTOCK,
+          ITAB2-LGORT  TO ITAB1-LGORT.
+
+SELECT SINGLE * FROM MBEW  WHERE MATNR = ITAB2-MATNR
+                            AND  BWKEY = ITAB2-WERKS.
+
+MOVE MBEW-STPRS TO ITAB1-STPRS.
+
+CLEAR ITAB.
+READ TABLE ITAB WITH KEY matnr = itab2-matnr
+                         werks = itab2-werks.
+MOVE  :   ITAB-PRODUCTION  TO  ITAB1-PRODUCTION,
+          ITAB-OEM         TO  ITAB1-OEM,
+          ITAB-CON         TO  ITAB1-CON,
+          ITAB-CONSIGNER   TO  ITAB1-CONSIGNER.
+
+ CLEAR ITAB3.
+ READ TABLE ITAB3 with key matnr = itab2-matnR
+                           werks = itab2-werkS.
+ MOVE :  ITAB3-REC  TO  ITAB1-REC,
+         ITAB3-ISS  TO  ITAB1-ISS.
+
+CLEAR ITAB4.
+READ TABLE ITAB4 WITH KEY MATNR = ITAB2-MATNR
+                          WERKS = ITAB2-WERKS.
+MOVE : ITAB4-OPENSTOCK TO ITAB1-OPENSTOCK.
+
+
+CLEAR ITAB5.
+READ TABLE ITAB5 WITH KEY matnr = itab2-matnR
+                          werks = itab2-werkS.
+MOVE :  ITAB5-RECP  TO  ITAB1-RECP,
+        ITAB5-ISSU  TO  ITAB1-ISSU.
+
+APPEND ITAB1.
+CLEAR ITAB1.
+ENDLOOP.
+
+
+
+
+**************************************************************************
+LOOP AT ITAB1.
+
+CLOSS   = 0.
+closing = 0.
+
+CLOSING = ITAB1-OSTOCK + itab1-REC - itab1-ISS.
+CLOSS = ITAB1-OPENSTOCK + itab1-RECP - itab1-ISSU.
+MOVE: CLOSING TO ITAB1-CLOSING,
+      CLOSS   TO ITAB1-CLOSS.
+MODIFY ITAB1.
+
+ENDLOOP.
+
+LOOP AT ITAB1..
+TOT1    = 0.
+TOT     = 0.
+TOT = ITAB1-OSTOCK + ITAB1-OPENSTOCK.
+TOT1 = ITAB1-CLOSING + ITAB1-CLOSS.
+MOVE: TOT  TO ITAB1-TOT,
+      TOT1 TO ITAB1-TOT1.
+MODIFY ITAB1.
+ENDLOOP.
+
+LOOP AT ITAB1.
+
+VALUE = 0.
+VALUE = ITAB1-TOT1 * ITAB1-STPRS.
+MOVE VALUE TO ITAB1-VALUE.
+MODIFY ITAB1.
+
+ENDLOOP.
+
+
+LOOP AT ITAB1.
+
+DELETE ITAB1 WHERE OSTOCK     = 0
+              AND  OPENSTOCK  = 0
+              AND  TOT        = 0
+              AND  TOT1       = 0
+              AND  PRODUCTION = 0
+              AND  OEM        = 0
+              AND  CON        = 0
+              AND  CONSIGNER  = 0
+              AND  CLOSING    = 0
+              AND  CLOSS      = 0
+              AND  VALUE      = 0.
+
+ENDLOOP.
+
+sort itab1 by matnr.
+
+LOOP AT ITAB1.
+DELETE ITAB1 WHERE WERKS = ''.
+ENDLOOP.
+
+
+LOOP AT ITAB1.
+
+DELETE ADJACENT DUPLICATES FROM ITAB1 COMPARING matnr .
+                                  .
+
+ENDLOOP.
+
+
+
+ ENDFORM.
+
+*FORM TIP.
+
+*
+*ENDFORM.
+
+
+FORM TOTAL.
+
+   SELECT  MATNR
+           WERKS
+           LGORT
+           MBLNR
+           MJAHR
+           ZEILE
+           SHKZG
+           MEINS
+           BWART
+           BUDAT_MKPF
+           MENGE
+
+      FROM MSEG INTO CORRESPONDING FIELDS OF TABLE I_MSEG FOR ALL ENTRIES IN it_s031
+                                                            WHERE MATNR = it_S031-MATNR
+                                                            AND   WERKS = it_S031-WERKS
+                                                            AND   LGORT = it_S031-LGORT
+                                                            and   BUDAT_MKPF GE r_budat
+                                                            and   BUDAT_MKPF LT S_BUDAT-LOW  .
+
+   IF SY-SUBRC NE 0.
+
+MOVE: O_STOCK         TO ITAB2-OSTOCK,
+      wa_s031-WERKS   TO ITAB2-WERKS,
+      wa_s031-LGORT   TO ITAB2-LGORT,
+      wa_s031-MATNR   TO ITAB2-MATNR.
+
+
+APPEND ITAB2.
+CLEAR ITAB2.
+
+ELSE.
+
+  LOOP AT I_MSEG INTO W_MSEG WHERE MATNR = wa_S031-MATNR
+                             AND   WERKS = wa_S031-WERKS
+                             AND   LGORT = wa_S031-LGORT.
+
+
+
+       AT NEW MATNR.
+
+        RECEIPT  = 0.
+        ISSUE    = 0.
+
+         ENDAT.
+        IF W_MSEG-SHKZG = 'S'.
+        RECEIPT = RECEIPT + W_MSEG-MENGE .
+        ELSEIF W_MSEG-SHKZG = 'H' .
+        ISSUE = ISSUE + W_MSEG-MENGE .
+        ENDIF.
+
+      OPEN  =  RECEIPT - ISSUE.
+
+       AT END OF MATNR.
+       OSTOCK = O_STOCK + OPEN .   "   RECEIPT - ISSUE.     TOTAL OPEN STOCK
+
+       MOVE : OSTOCK TO ITAB2-OSTOCK.
+       clear: OPEN  ,  RECEIPT , ISSUE.
+       clear:OSTOCK.
+         ENDAT.
+          MOVE:W_MSEG-WERKS  TO ITAB2-WERKS,
+               W_MSEG-LGORT  TO ITAB2-LGORT,
+               W_MSEG-MATNR  TO ITAB2-MATNR.
+
+       COLLECT ITAB2.
+       CLEAR ITAB2.
+
+
+ENDLOOP.
+   ENDIF.
+ENDFORM.
+
+
+FORM TOTAL1.
+
+   SELECT  MATNR
+           WERKS
+           LGORT
+           MBLNR
+           MJAHR
+           ZEILE
+           SHKZG
+           MEINS
+           BWART
+           BUDAT_MKPF
+           MENGE
+
+      FROM MSEG INTO CORRESPONDING FIELDS OF TABLE II_MSEG FOR ALL ENTRIES IN i_s031
+                                                            WHERE MATNR = i_S031-MATNR
+                                                            AND   WERKS = i_S031-WERKS
+                                                            AND   LGORT = ''
+                                                            and   BUDAT_MKPF GE r_budat
+                                                            and   BUDAT_MKPF LT S_BUDAT-LOW  .
+
+
+IF SY-SUBRC NE 0.
+
+ READ TABLE I_S031 INTO W_S031 INDEX SY-TABIX.
+
+    SELECT SINGLE * FROM MAKT WHERE MATNR = W_S031-MATNR.
+
+MOVE: OPEN_STOCK     TO ITAB4-OPENSTOCK,
+      w_s031-WERKS   TO ITAB4-WERKS,
+      w_s031-MATNR   TO ITAB4-MATNR,
+      MAKT-MAKTX     TO ITAB4-MAKTX.
+
+
+APPEND ITAB4.
+CLEAR ITAB4.
+
+ELSE.
+
+  LOOP AT II_MSEG INTO WW_MSEG WHERE MATNR = w_S031-MATNR
+                             AND   WERKS = w_S031-WERKS
+                             AND   LGORT = ''.
+
+
+
+       AT NEW MATNR.
+*        open_qty = 0.
+        RECEI  = 0.
+        ISSUS  = 0.
+*        ostock   = 0.
+*        READ TABLE I_MSEG INTO W_MSEG INDEX SY-TABIX.
+
+        SELECT SINGLE * FROM MAKT WHERE MATNR = WW_MSEG-MATNR.
+
+         ENDAT.
+        IF WW_MSEG-SHKZG = 'S'.
+        RECEI = RECEI + WW_MSEG-MENGE .
+        ELSEIF WW_MSEG-SHKZG = 'H' .
+        ISSUS = ISSUS + WW_MSEG-MENGE .
+        ENDIF.
+
+         OPEN_QTY  =  RECEI - ISSUS.
+
+       AT END OF MATNR.
+       OPENSTOCK = OPEN_STOCK + OPEN_QTY .   "   RECEIPT - ISSUE.     TOTAL OPEN STOCK
+
+       MOVE : OPENSTOCK TO ITAB4-OPENSTOCK.
+       clear: OPEN_QTY  ,  RECEI , ISSUS.
+       clear:OPENSTOCK.
+         ENDAT.
+          MOVE:WW_MSEG-WERKS  TO ITAB4-WERKS,
+               WW_MSEG-MATNR  TO ITAB4-MATNR,
+               MAKT-MAKTX     TO ITAB4-MAKTX.
+       COLLECT ITAB4.
+       CLEAR ITAB4.
+
+
+ENDLOOP.
+ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MATNR'.
+  WA_FCAT-SELTEXT_L = 'MAT NO.'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  WA_FCAT-NO_ZERO   = 'X'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'MAKTX'.
+  WA_FCAT-SELTEXT_L = 'DESCRIPTION.'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  WA_FCAT-OUTPUTLEN = 40.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'OSTOCK'.
+  WA_FCAT-SELTEXT_L = 'OPENING.'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'OPENSTOCK'.
+  WA_FCAT-SELTEXT_L = 'B_OPEN'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TOT'.
+  WA_FCAT-SELTEXT_L = 'O_TOT'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'PRODUCTION'.
+  WA_FCAT-SELTEXT_L = 'PRODUCTION'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'OEM'.
+  WA_FCAT-SELTEXT_L = 'OEM'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CON'.
+  WA_FCAT-SELTEXT_L = 'CONSIGNEE'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CONSIGNER'.
+  WA_FCAT-SELTEXT_L = 'CONSIGNER'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CLOSING'.
+  WA_FCAT-SELTEXT_L = 'CLOSING'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'CLOSS'.
+  WA_FCAT-SELTEXT_L = 'B_CLOSS'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TOT1'.
+  WA_FCAT-SELTEXT_L = 'C_TOTAL'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'VALUE'.
+  WA_FCAT-SELTEXT_L = 'VALUE UNRISTRICTED'.
+  WA_FCAT-TABNAME   = 'ITAB1'.
+  APPEND WA_FCAT TO IT_FCAT.
+
+ENDFORM.                    "DISP
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      =
+*     I_GRID_SETTINGS                   =
+*     IS_LAYOUT                         =
+     IT_FIELDCAT                       = IT_FCAT[]
+*     IT_EXCLUDING                      =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           =
+*     IT_FILTER                         =
+*     IS_SEL_HIDE                       =
+*     I_DEFAULT                         = 'X'
+*     I_SAVE                            = ' '
+*     IS_VARIANT                        =
+*     IT_EVENTS                         =
+*     IT_EVENT_EXIT                     =
+*     IS_PRINT                          =
+*     IS_REPREP_ID                      =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK                      =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = ITAB1[]
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+ENDFORM.                    "ALV

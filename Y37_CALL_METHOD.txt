@@ -1,0 +1,22 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_CALL_METHOD
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_CALL_METHOD.
+
+DATA: CLASS1 TYPE REF TO ZSAPTEC.
+DATA: CLASS_INH TYPE REF TO ZSAPTECH_INH.
+data: class_fr type ref to zsaptec_fr.
+
+CREATE OBJECT: CLASS1, CLASS_INH, class_fr.
+
+CALL METHOD CLASS1->ZPUBLIC.
+*CALL METHOD CLASS1->ZPRIVATE.
+*CALL METHOD CLASS1->ZPROTECTED.
+CALL METHOD ZSAPTEC=>ZSTATIC.
+CALL METHOD CLASS_INH->ZINH_PUBLIC.
+call METHOD class_fr->zpublic_fr.

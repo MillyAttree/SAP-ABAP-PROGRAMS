@@ -1,0 +1,97 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_CONTROL_BREAK_STATEMENT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_CONTROL_BREAK_STATEMENT NO STANDARD PAGE HEADING LINE-COUNT 100(10) LINE-SIZE 100.
+
+TABLES MARA.
+
+TYPES: BEGIN OF TY_MARA,
+       MATNR TYPE MATNR,
+       ERSDA TYPE ERSDA,
+       ERNAM TYPE ERNAM,
+       MTART TYPE MTART,
+       END OF TY_MARA.
+
+DATA: IT_MARA TYPE STANDARD TABLE OF TY_MARA,
+      WA_MARA TYPE TY_MARA,
+      WA_TEMP TYPE TY_MARA.
+
+INITIALIZATION.
+
+TOP-OF-PAGE.
+  WRITE:/20 'FULL TABLE DATA'.
+
+END-OF-PAGE.
+*       WRITE:/
+
+START-OF-SELECTION.
+
+  SELECT MATNR ERSDA ERNAM MTART FROM MARA INTO TABLE IT_MARA UP TO 20 ROWS.    " WHERE MATNR GE 40.
+   IF SY-SUBRC EQ 0.
+       SORT IT_MARA BY MATNR.
+   ENDIF.
+
+
+
+  LOOP AT IT_MARA INTO WA_MARA.
+    WRITE:/ SY-TABIX,
+             WA_MARA-MATNR,
+            WA_MARA-ERSDA,
+            WA_MARA-ERNAM,
+            WA_MARA-MTART.
+  ENDLOOP.
+
+  WRITE:/ 'AT FIRST'.
+  LOOP AT IT_MARA INTO WA_MARA.
+    WA_TEMP = WA_MARA.
+    AT FIRST.
+      WRITE:/ WA_TEMP-MATNR,
+              WA_TEMP-ERSDA,
+              WA_TEMP-ERNAM,
+              WA_TEMP-MTART.
+    ENDAT.
+  ENDLOOP.
+
+  WRITE:/ 'AT LAST'.
+  LOOP AT IT_MARA INTO WA_MARA.
+ WA_TEMP = WA_MARA.
+
+    AT LAST.
+    WRITE:/ WA_TEMP-MATNR,
+              WA_TEMP-ERSDA,
+              WA_TEMP-ERNAM,
+              WA_TEMP-MTART.
+    ENDAT.
+  ENDLOOP.
+
+  WRITE:/ 'AT NEW'.
+  LOOP AT IT_MARA INTO WA_MARA.
+    WA_TEMP = WA_MARA.
+
+    AT NEW MATNR.
+    WRITE:/ WA_TEMP-MATNR,
+              WA_TEMP-ERSDA,
+              WA_TEMP-ERNAM,
+              WA_TEMP-MTART.
+
+   ENDAT.
+
+  ENDLOOP.
+
+
+  WRITE:/ 'AT END OF'.
+  LOOP AT IT_MARA INTO WA_MARA.
+ WA_TEMP = WA_MARA.
+
+    AT END OF MATNR.
+    WRITE:/ WA_TEMP-MATNR,
+              WA_TEMP-ERSDA,
+              WA_TEMP-ERNAM,
+              WA_TEMP-MTART.
+    ENDAT.
+  ENDLOOP.

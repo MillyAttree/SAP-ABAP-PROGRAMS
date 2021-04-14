@@ -1,0 +1,206 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_SELECTION_SCREEN
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_SELECTION_SCREEN.
+
+TABLES: VBRK, VBRP.
+
+DATA: MATNR LIKE VBRP-MATNR,
+      VKORG LIKE VBRK-VKORG,
+      WERKS LIKE VBRP-WERKS,
+      BUDAT LIKE VBRK-FKDAT.
+*      LGORT LIKE VBRP-LGORT.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+
+SELECTION-SCREEN BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-002.
+
+PARAMETERS : R_LOCAL RADIOBUTTON GROUP R1 USER-COMMAND FLG DEFAULT 'X',       " WITH STORAGE LOCATION
+             R_SERVER RADIOBUTTON GROUP R1 .              " WITHOUT STORAGE LOCATION
+
+SELECTION-SCREEN END OF BLOCK B2 .
+
+SELECTION-SCREEN BEGIN OF BLOCK B3 WITH FRAME TITLE TEXT-003.
+
+SELECTION-SCREEN BEGIN OF LINE .
+SELECTION-SCREEN COMMENT 1(5) ICON1.
+SELECTION-SCREEN COMMENT 6(18) FLD_LAB1.
+SELECT-OPTIONS : S_MATNR FOR VBRP-MATNR.
+SELECTION-SCREEN END OF LINE.
+
+SELECTION-SCREEN BEGIN OF LINE .
+SELECTION-SCREEN COMMENT 1(5) ICON2.
+SELECTION-SCREEN COMMENT 6(18) FLD_LAB2.
+SELECT-OPTIONS : S_VKORG FOR VBRK-VKORG.
+SELECTION-SCREEN END OF LINE.
+
+SELECTION-SCREEN BEGIN OF LINE .
+SELECTION-SCREEN COMMENT 1(5) ICON3.
+SELECTION-SCREEN COMMENT 6(18) FLD_LAB3.
+SELECT-OPTIONS : S_WERKS FOR VBRP-WERKS.
+SELECTION-SCREEN END OF LINE.
+
+SELECTION-SCREEN BEGIN OF LINE .
+SELECTION-SCREEN COMMENT 1(5) ICON4.
+SELECTION-SCREEN COMMENT 6(18) FLD_LAB4.
+SELECT-OPTIONS : S_BUDAT FOR VBRK-FKDAT.
+SELECTION-SCREEN END OF LINE.
+
+SELECTION-SCREEN BEGIN OF LINE .
+SELECTION-SCREEN COMMENT 1(5) ICON5.
+SELECTION-SCREEN COMMENT 6(18) FLD_LAB5.
+SELECT-OPTIONS : LGORT FOR VBRP-LGORT.
+SELECTION-SCREEN END OF LINE.
+
+PARAMETERS : RTY RADIOBUTTON GROUP R2,
+             RTU RADIOBUTTON GROUP R2.
+
+SELECTION-SCREEN END OF BLOCK B3.
+
+SELECTION-SCREEN END OF BLOCK B1.
+
+
+************************ SCREEN VALIDATION ************************************
+
+AT SELECTION-SCREEN.
+
+  IF S_MATNR IS NOT INITIAL.
+     SELECT SINGLE MATNR FROM MARA INTO S_MATNR WHERE MATNR IN S_MATNR.
+       IF SY-SUBRC NE 0.
+         MESSAGE 'PLEASE CHECK THE MATERIAL ' TYPE 'E'.
+       ENDIF.
+  ENDIF.
+
+
+  DATA: TYP TYPE MVKE-KTGRM.
+
+    SELECT SINGLE KTGRM FROM MVKE INTO TYP WHERE MATNR IN S_MATNR.
+
+      IF TYP = '68' AND RTY = 'X'.
+
+       MESSAGE 'Please Select TUBE for tube materials ...' TYPE 'E'.
+
+       ELSEIF TYP = '67' AND RTU = 'X'.
+
+       MESSAGE 'Please Select TYRE for Tyre materials ...' TYPE 'E'.
+
+       ENDIF.
+
+*  ENDIF.
+
+  IF WERKS is NOT INITIAL.
+
+    SELECT SINGLE WERKS FROM T001W INTO S_WERKS
+                        WHERE WERKS IN S_WERKS.
+
+    IF SY-SUBRC ne 0.
+
+      MESSAGE 'Please enter correct Plant ?????' TYPE 'E'.
+
+    ENDIF.
+
+  ENDIF.
+
+  IF LGORT is NOT INITIAL.
+
+    SELECT SINGLE LGORT FROM T001L INTO LGORT
+                        WHERE LGORT in LGORT.
+
+    IF SY-SUBRC ne 0.
+
+      MESSAGE 'Please enter correct Storage Location ?????' TYPE 'E'.
+
+    ENDIF.
+
+  ENDIF.
+
+  IF RTY = 'X'.
+
+    IF lgort-low = 'DG02' or lgort-low = 'DEG2'.
+
+      MESSAGE 'Please enter Tyre Sale Godown Loc ( DG01 for Domestic and DEG1 for Export ) ?????' TYPE 'E'.
+
+    ENDIF.
+
+  ENDIF.
+
+*************************************************************************
+*  AT SELECTION-SCREEN OUTPUT.
+*************************************************************************
+
+AT SELECTION-SCREEN OUTPUT.
+
+  WRITE ICON_MATERIAL AS ICON TO ICON1.
+  fld_lab1 = 'Material'.
+
+  WRITE ICON_CONFIGURATION AS ICON TO ICON2.
+  fld_lab2 = 'SALES ORG'.
+
+  WRITE ICON_PLANT AS ICON TO ICON3.
+  fld_lab3 = 'PLANT'.
+
+  WRITE ICON_DATE AS ICON TO ICON4.
+  fld_lab4 = 'DATE'.
+
+  IF R_LOCAL = 'X'.
+
+  WRITE ICON_STORE_LOCATION AS ICON TO ICON5.
+  fld_lab5 = 'STORAGE LOCATION'.
+
+  ELSEIF R_SERVER = 'X'.
+
+    CLEAR : ICON5, fld_lab5.
+
+  ENDIF.
+
+
+********************************************************************
+*  LOCAL
+
+  IF  R_LOCAL = 'X'.
+    LOOP AT SCREEN.
+     IF SCREEN-NAME = 'P_LOCAL' OR
+        SCREEN-NAME = '%_P_LOCAL_%_APP_%-TEXT'.
+        SCREEN-INVISIBLE = '0'.
+        SCREEN-INPUT = '1'.
+
+    MODIFY SCREEN.
+
+     ELSEIF SCREEN-NAME = 'P_SERVER' OR
+            SCREEN-NAME = '%_P_SERVER_%_APP_%-TEXT'.
+            SCREEN-INVISIBLE = '1'.
+            SCREEN-INPUT = '0'.
+
+     ENDIF.
+    ENDLOOP.
+
+ ELSE.
+
+   LOOP AT SCREEN.
+
+     IF SCREEN-NAME = 'P_SERVER' OR
+            SCREEN-NAME = '%_P_SERVER_%_APP_%-TEXT'.
+            SCREEN-INVISIBLE = '1'.
+            SCREEN-INPUT = '1'.
+
+      ELSEIF screen-name = 'P_LOCAL' OR
+             screen-name = '%_P_LOCAL_%_APP_%-TEXT' OR
+             screen-name = '%_LGORT_%_APP_%-TEXT' OR
+             screen-name = '%_LGORT_%_APP_%-OPTI_PUSH' OR
+             screen-name = 'LGORT-LOW' OR
+             screen-name = '%_LGORT_%_APP_%-TO_TEXT' OR
+             screen-name = 'LGORT-HIGH' OR
+             screen-name = '%_LGORT_%_APP_%-VALU_PUSH'.
+
+        screen-invisible = '1'.
+        screen-input = '0'.
+        MODIFY SCREEN.
+      ENDIF.
+
+   ENDLOOP.
+  ENDIF.

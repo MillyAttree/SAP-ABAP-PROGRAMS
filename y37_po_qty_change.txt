@@ -1,0 +1,1142 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_PO_QTY_CHNG
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_PO_QTY_CHNG NO STANDARD PAGE HEADING .
+
+TABLES : ekko,            " po document hesder
+         ekpo,            " po document item
+         ekbe,            " po history doc
+         cdhdr,           " change doc heder
+         cdpos,           " change doc item
+         dd03m,           " view
+         lfa1,            " vendor mastertable
+         t024,            " purchase group
+         t163,            " item category in purchase group
+         stxh.            " sap script text file
+
+
+types : begin of ty_ekko,
+        ebeln like ekko-ebeln,                    "PURCHASE ORDER NO.
+        aedat like ekko-aedat,                    "PURCHASE ORDER DATE.
+        ekgrp like ekko-ekgrp,                    "PURCHASING GROUP.
+        lifnr like ekko-lifnr,                    "VENDOR.
+        end of ty_ekko.
+
+types : begin of ty_ekpo,
+        ebeln like ekpo-ebeln,                    "PURCHASE ORDER NO.
+        ebelp like ekpo-ebelp,                    "PURCHASE ORDER ITEM NO.
+        loekz like ekpo-loekz,                    "DELETION INDICATIOR
+        elikz like ekpo-elikz,                     "Delivery Complete Indicator
+        matnr like ekpo-matnr,                    "PURCHASE ORDER MATERIAL
+        txz01 like ekpo-txz01,                    "MATERIAL DESCRIPTION
+        ltex1 type string,
+        menge like ekpo-menge,                    "PURCHASE ORDER QUANTITY ORDERED.
+        meins like ekpo-meins,                     "ORDERED QUANTITY UNITS
+        pen_qty like ekpo-menge,                  "PURCHASE ORDER QUANTITY Pending.
+        meins_pen like ekpo-meins,
+        rec_qty  like ekpo-menge,                 "PURCHASE ORDER QUANTITY Recieved.
+        meins_rec like ekpo-meins,
+        end of ty_ekpo.
+
+types :  begin of ty_lfa1,
+         lifnr like lfa1-lifnr,                   "VENDOR NO.
+         land1 like lfa1-land1,                   "VENDOR COUNTRY
+         name1 like lfa1-name1,                   "VENDOR NAME
+
+         end of ty_lfa1.
+
+types : begin of ty_ekbe,
+        ebeln like ekbe-ebeln,                    "PURCHASE ORDER NO.
+        ebelp like ekbe-ebelp,                    "PURCHASE ORDER ITEM NO.
+        gjahr like ekbe-gjahr,                    "YEAR
+        belnr like ekbe-belnr,                    "PURCHASE ORDER DOCUMENT NO.
+        bwart like ekbe-bwart,                    "MOVEMENT TYPE.
+        budat like ekbe-budat,                    " POSTING DATE
+        end of ty_ekbe.
+
+
+
+
+types : begin of ty_mseg,
+        mblnr like mseg-mblnr,                    " Material Document
+        mjahr like mseg-mjahr,                    "Material Document Year
+        bwart like mseg-bwart,  "10               "Movement Type (Inventory Management)
+        menge like mseg-menge,  "34               "Quantity
+        meins like mseg-meins,                    "Base Unit of Measure
+        erfmg like mseg-erfmg,                    "Quantity in Unit of Entry
+        erfme like mseg-erfme,                     "Unit of Entry
+        ebeln like mseg-ebeln,                     "pURCHASE ORDER
+        ebelp like mseg-ebelp,                      "ITEM no
+        end of ty_mseg.
+
+
+
+types : begin of ty_final,
+          ebeln(12) type c,                    "PURCHASE ORDER NO.
+          aedat like ekko-aedat,                    "PURCHASE ORDER DATE.
+          ekgrp like ekko-ekgrp,                    "PURCHASING GROUP.
+          eknam like t024-eknam,                    "NAME FOR pURCH GROUP
+          udate like cdhdr-udate,                   "LAST CHANGED DATE
+          loekz like ekpo-loekz,                    "DELETION INDICATIOR
+          elikz like ekpo-elikz,                    "Delivery Complete Indicator
+          lifnr like ekko-lifnr,                    "VENDOR DETAIL.
+          name1 like lfa1-name1,                    "VENDOR NAME.
+          land1 like lfa1-land1,                    "VENDOR ADDRESS.
+          ebelp like ekpo-ebelp,                    "PURCHASE ORDER ITEM NO.
+          matnr like ekpo-matnr,                    "PURCHASE ORDER MATERIAL
+          txz01 like ekpo-txz01,                    "MATERIAL DESCRIPTION
+          menge like ekpo-menge,                    "PURCHASE ORDER QUANTITY ORDERED.
+          meins like ekpo-meins,                     "ORDERED QUANTITY UNITS
+          ltex1 type string,
+          rec_qty  like ekpo-menge,                  "PURCHASE ORDER QUANTITY RECIEVED.
+          erfme    like mseg-erfme,                 "RECIEVED QUANTITY UNITS
+          pen_qty like ekpo-menge,                  "PENDING QUANTITY
+          erfme2    like mseg-erfme,                 "PENDING QUANTITY UNITS
+          end of ty_final.
+
+
+*************CHANGE LOG VARIABLES**************
+types : begin of ty_cdhdr,                          "CHANGE HEADER DATA
+       objectid like cdhdr-objectid,
+       changenr like cdhdr-changenr,
+       username like cdhdr-username,
+       udate like cdhdr-udate,
+       utime like cdhdr-utime,
+       tcode like cdhdr-tcode,
+       end of ty_cdhdr.
+
+types : begin of ty_objid,                                "OBJECT ID FOR CDHDR
+        objectid like cdhdr-objectid,
+        end of ty_objid.
+
+types : begin of ty_cdpos,                                "CHANGE DETAIL TABLE
+           objectid like cdpos-objectid,
+           changenr like cdpos-changenr,
+           tabkey like cdpos-tabkey,
+           fname like cdpos-fname,
+           chngind like cdpos-chngind,
+           unit_old like cdpos-unit_old,
+           unit_new like cdpos-unit_new,
+           cuky_old like cdpos-cuky_old,
+           cuky_new like cdpos-cuky_new,
+           value_new like cdpos-value_new,
+           value_old like cdpos-value_old,
+           end of ty_cdpos.
+
+types : begin of ty_final2,
+           ebeln(12) type c,                       "PURCHASE ORDER NO.
+           aedat like ekko-aedat,                    "PURCHASE ORDER DATE.
+           ekgrp like ekko-ekgrp,                    "PURCHASING GROUP.
+           eknam like t024-eknam,                    "NAME FOR pURCH GROUP
+           loekz like ekpo-loekz,                    "DELETION INDICATIOR
+           elikz like ekpo-elikz,                    "Delivery Complete Indicator
+           lifnr like ekko-lifnr,                    "VENDOR DETAIL.
+           name1 like lfa1-name1,                    "VENDOR NAME.
+           land1 like lfa1-land1,                    "VENDOR ADDRESS.
+           ebelp like ekpo-ebelp,                    "PURCHASE ORDER ITEM NO.
+           matnr like ekpo-matnr,                    "PURCHASE ORDER MATERIAL
+           txz01 like ekpo-txz01,                    "MATERIAL DESCRIPTION
+           menge like ekpo-menge,                    "PURCHASE ORDER QUANTITY ORDERED.
+           meins like ekpo-meins,                     "ORDERED QUANTITY UNITS
+           username like cdhdr-username,
+           udate like cdhdr-udate,
+           utime like cdhdr-utime,
+           tcode like cdhdr-tcode,
+           tabkey like cdpos-tabkey,
+           fname like cdpos-fname,
+           fielddesc like dd03m-ddtext,
+           chngind  like cdpos-chngind,
+           unit_old like cdpos-unit_old,
+           unit_new like cdpos-unit_new,
+           cuky_old like cdpos-cuky_old,
+           cuky_new like cdpos-cuky_new,
+           value_new like cdpos-value_new,
+           value_old  like cdpos-value_old,
+           end of ty_final2.
+
+data : it_final2 type standard table of ty_final2,             "FINAL  "2"  TABLE FOR CHANGE LOG
+        wa_final2 type ty_final2.
+data :t_ebeln like ekko-ebeln, t_ebelp like ekpo-ebelp.
+
+
+types : begin of ty_ekko_ekpo,
+             ebeln like ekko-ebeln,                    "PURCHASE ORDER NO.
+             aedat like ekko-aedat,                    "PURCHASE ORDER DATE.
+             ekgrp like ekko-ekgrp,                    "PURCHASING GROUP.
+             loekz like ekpo-loekz,                    "DELETION INDICATIOR
+             elikz like ekpo-elikz,                    "Delivery Complete Indicator
+             lifnr like ekko-lifnr,                    "VENDOR DETAIL.
+             name1 like lfa1-name1,                    "VENDOR NAME.
+             land1 like lfa1-land1,                    "VENDOR ADDRESS.
+             ebelp like ekpo-ebelp,                    "PURCHASE ORDER ITEM NO.
+             matnr like ekpo-matnr,                    "PURCHASE ORDER MATERIAL
+             txz01 like ekpo-txz01,                    "MATERIAL DESCRIPTION
+             menge like ekpo-menge,                    "PURCHASE ORDER QUANTITY ORDERED.
+             meins like ekpo-meins,                     "ORDERED QUANTITY UNITS
+             end of ty_ekko_ekpo.
+
+
+data :it_ekko_ekpo type standard table of ty_ekko_ekpo,
+        wa_ekko_ekpo type ty_ekko_ekpo.
+
+types :begin of ty_change_data,
+         objectid like cdhdr-objectid,
+         changenr like cdpos-changenr,
+         username like cdhdr-username,
+         udate like cdhdr-udate,
+         utime like cdhdr-utime,
+         tcode like cdhdr-tcode,
+         tabkey like cdpos-tabkey,
+         fname like cdpos-fname,
+         chngind like cdpos-chngind,
+        unit_old like cdpos-unit_old,
+        unit_new like cdpos-unit_new,
+        cuky_old like cdpos-cuky_old,
+        cuky_new like cdpos-cuky_new,
+        value_new like cdpos-value_new,
+        value_old like cdpos-value_old,
+       end of ty_change_data.
+
+
+data : it_change_data type standard table of ty_change_data,
+       wa_change_data type ty_change_data.
+
+
+types : begin of ty_dd03m,
+        tabname like dd03m-tabname,
+        fieldname like dd03m-fieldname,
+        ddlanguage like dd03m-ddlanguage,
+        ddtext  like dd03m-ddtext,
+        end of ty_dd03m.
+
+data : it_ddo3m type standard table of ty_dd03m,
+       wa_dd03m type  ty_dd03m.
+
+types : begin of ty_t024,
+        ekgrp like t024-ekgrp,
+        eknam like t024-eknam,
+        end of ty_t024.
+
+data : it_t024 type standard table of ty_t024,
+       wa_t024 type ty_t024.
+
+data : temp_105 type mseg-erfmg,
+      temp_106 type mseg-erfmg,
+      temp_122 type mseg-erfmg,
+      temp_123 type mseg-erfmg.
+
+data :it_cdpos type standard table of ty_cdpos,
+        wa_cdpos type ty_cdpos.
+
+data :it_objid type standard table of ty_objid,
+          wa_objid type ty_objid.
+
+data :it_cdhdr type standard table of ty_cdhdr,
+      wa_cdhdr type ty_cdhdr.
+
+data : mode(10) type c.
+*********** ITEM TEXT VARIABLE******
+types : begin of ltex,
+        temp like stxh-tdname,
+        end of ltex.
+
+data : it_ltex type standard table of ltex,
+       wa_ltex type ltex.
+
+
+
+types : begin of ty_stxh,                       "to retrieve item text
+       tdobject like stxh-tdobject,
+       tdname like stxh-tdname,
+       tdid like stxh-tdid,
+       ebeln  like ekpo-ebeln,
+       ebelp  like ekpo-ebelp,
+       text  type string,
+       end of ty_stxh.
+
+
+data : it_stxh type standard table of ty_stxh,
+       wa_stxh type ty_stxh.
+
+data :text1 type string,                      "to store item text
+      text2 type string,
+      text3 type string,
+      text4 type string,
+      text5 type string,
+      text6 type string,
+      text7 type string,
+      text8 type string.
+
+data :it_line like standard table of tline,
+      wa_line like line of it_line.
+***********end of ITEM TEXT VARIABLE******
+
+
+type-pools : slis.                                          "ALV FIELDCAT AND TYPE-POOLS
+data :  i_fieldcat type slis_t_fieldcat_alv ,
+      i_fieldcat2 type slis_t_fieldcat_alv ,
+        wa_fieldcat type slis_fieldcat_alv .
+
+data :it_lfa1 type standard table of ty_lfa1,              "INTERNAL TABLE FOR VENFOR DETAIL
+      wa_lfa1 type ty_lfa1.
+
+data : it_ekko type standard table of ty_ekko,             "HEADER DATA FOR PURCHASE ORDER INTERNAL TABLE
+       wa_ekko type ty_ekko.
+
+data : it_ekpo type standard table of ty_ekpo,             "ITEM DATA FOR PURCHASE ORDER INTERNAL TABLE
+       wa_ekpo type ty_ekpo.
+
+data : it_ekbe type standard table of ty_ekbe,             " STOCK CALCULATION INTERNAL TABLE
+       wa_ekbe type ty_ekbe.
+
+data : it_mseg type standard table of ty_mseg,             " STOCK CALCULATION INTERNAL TABLE
+       wa_mseg type ty_mseg.
+
+
+data : it_final type standard table of ty_final,             "FINAL  "1"  TABLE FOR REPORT
+       wa_final type ty_final.
+
+
+
+selection-screen : begin of block b1 with frame title text-101.
+select-options : s_ebeln  for ekko-ebeln,
+                 s_aedat for ekko-aedat.
+parameters : rb_po_dt radiobutton group r1 default 'X',
+             rb_po_cl radiobutton group r1 .
+
+selection-screen : end of block b1.
+
+******************************************************************************************
+**************************VALIDATIONS ****************************************************
+******************************************************************************************
+at selection-screen.
+  if s_ebeln is not initial.
+    select single * from ekko where ebeln in s_ebeln.
+    if sy-subrc <> 0.
+      message 'Please check your selection parameter for Purchase order no' type 'E'.
+    endif.
+
+  elseif s_ebeln is initial and s_aedat is initial.
+    message ' Enter any PO No. OR Date' type 'E'.
+  endif.
+
+  if rb_po_dt = 'X'.
+     mode = 'DETAIL'.
+  else.
+    mode = 'CHANGE_LOG'.
+  endif.
+
+
+
+start-of-selection.
+  perform fetch.
+  if mode = 'DETAIL'.
+    perform fieldcat.
+*  PERFORM ALV_HEADER.
+    perform alv.
+
+
+  elseif mode ='CHANGE_LOG'.
+    perform fieldcat_c.
+*  PERFORM ALV_HEADER.
+    perform alv_c.
+
+  endif.
+*&---------------------------------------------------------------------*
+*&      Form  FETCH
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form fetch .
+  select ebeln
+           aedat
+           ekgrp
+           lifnr  from ekko into table it_ekko
+                  where ebeln in s_ebeln and
+                        aedat in s_aedat.
+  if sy-subrc = 0.
+    sort it_ekko by aedat.
+  else.
+    message 'No Record matches your selection criteria' type 'E'.
+  endif.
+
+
+  if it_ekko is not initial.
+    select lifnr land1 name1
+      from lfa1 into table it_lfa1
+      for all entries in it_ekko
+      where lifnr = it_ekko-lifnr.
+
+    select    ekgrp eknam from t024 into table it_t024
+      for all entries in it_ekko where ekgrp = it_ekko-ekgrp.
+
+
+  endif.
+
+
+  if mode = 'CHANGE_LOG'.
+    loop at it_ekko into wa_ekko.
+      wa_objid-objectid = wa_ekko-ebeln.
+      append wa_objid to it_objid.
+    endloop.
+  endif.
+
+
+
+  if it_ekko is not initial.
+    select  ebeln
+           ebelp
+           loekz
+           elikz
+           matnr
+           txz01
+           menge
+           meins
+            from ekpo into CORRESPONDING FIELDS OF TABLE it_ekpo
+                  for all entries in it_ekko where ebeln = it_ekko-ebeln.
+
+    if sy-subrc = 0.
+      sort it_ekpo by ebeln ebelp.
+    endif.
+  endif.
+
+  if mode = 'DETAIL'.
+******************** GET ITEM TEXT *******************************
+    loop at it_ekpo into wa_ekpo.
+      concatenate wa_ekpo-ebeln wa_ekpo-ebelp into wa_ltex-temp.
+      append wa_ltex to it_ltex.
+
+      CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+        EXPORTING
+          INPUT                = wa_ekpo-meins
+*         LANGUAGE             = SY-LANGU
+       IMPORTING
+*         LONG_TEXT            =
+         OUTPUT               =  wa_ekpo-meins
+*         SHORT_TEXT           =
+*       EXCEPTIONS
+*         UNIT_NOT_FOUND       = 1
+*         OTHERS               = 2
+                .
+      IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+      ENDIF.
+      MODIFY it_ekpo FROM wa_ekpo.
+    endloop.
+
+    select tdobject
+           tdname
+           tdid from stxh
+      into table  it_stxh
+      for all entries in it_ltex where tdobject = 'EKPO'
+                    and tdname =  it_ltex-temp.
+
+    loop at it_stxh into wa_stxh.
+
+      call function 'READ_TEXT'
+        exporting
+          client                        =  sy-mandt
+          id                            =  wa_stxh-tdid
+          language                      =  sy-langu
+          name                          =  wa_stxh-tdname
+          object                        =  wa_stxh-tdobject
+*   ARCHIVE_HANDLE                = 0
+*   LOCAL_CAT                     = ' '
+* IMPORTING
+*   HEADER                        =
+        tables
+          lines                         =  it_line
+* EXCEPTIONS
+*   ID                            = 1
+*   LANGUAGE                      = 2
+*   NAME                          = 3
+*   NOT_FOUND                     = 4
+*   OBJECT                        = 5
+*   REFERENCE_CHECK               = 6
+*   WRONG_ACCESS_TO_ARCHIVE       = 7
+*   OTHERS                        = 8
+                .
+      if sy-subrc <> 0.
+* Implement suitable error handling here
+      endif.
+
+      loop at it_line into wa_line.
+
+        if sy-tabix = 1.
+          text1 =   wa_line-tdline.
+
+        elseif sy-tabix = 2.
+          text2 =   wa_line-tdline.
+
+        elseif sy-tabix = 3.
+          text3 =   wa_line-tdline.
+
+        elseif sy-tabix = 4.
+          text4 =   wa_line-tdline.
+
+        elseif sy-tabix = 5.
+          text5 =   wa_line-tdline.
+
+        elseif sy-tabix = 6.
+          text6 =   wa_line-tdline.
+
+        elseif sy-tabix = 7.
+          text7 =   wa_line-tdline.
+        endif.
+
+
+      endloop.
+      refresh it_line.
+      concatenate text1 text2 text3 text4 text5 text6 text7 into wa_stxh-text separated by space.
+      wa_stxh-ebeln = wa_stxh-tdname+0(10).
+      wa_stxh-ebelp = wa_stxh-tdname+10(5).
+      modify it_stxh from wa_stxh.
+
+
+
+    endloop.
+  endif.
+******************** END ITEM TEXT *******************************
+******************************************  ******************
+*  SELECT pstype ptext from t163 into TABLE it_t163.
+******************************************************
+
+
+  if mode = 'CHANGE_LOG'.
+****************CHANGE LOG********************************
+    select  objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            into table it_cdhdr
+            from cdhdr
+            for all entries in it_objid
+            where objectid = it_objid-objectid
+            and ( tcode =  'ME21' or   tcode =  'ME22' )
+            and objectclas = 'EINKBELEG'
+            and ( change_ind  = 'I' or change_ind = 'U')
+            and langu = 'E'.
+
+    if sy-subrc eq 0.
+      sort it_cdhdr by udate utime descending.
+    else.
+      message 'No changes have been done on this selection.' type 'E'.
+    endif.
+
+    if it_cdhdr is not initial.
+
+      select objectid
+          changenr
+          tabkey
+          fname
+          chngind
+          unit_old
+          unit_new
+          cuky_old
+          cuky_new
+          value_new
+          value_old from cdpos
+          into table it_cdpos
+          for all entries in it_cdhdr
+          where objectclas  =   'EINKBELEG'
+          and   objectid eq it_cdhdr-objectid
+         and tabname = 'EKPO'
+          and ( chngind = 'I' or chngind = 'U').
+    endif.
+
+    if sy-subrc ne 0.
+      message 'No changes have been done on this selection.' type 'E'.
+
+    else.
+      select tabname
+             fieldname
+             ddlanguage
+             ddtext
+             from dd03m into table it_ddo3m
+           for all entries in it_cdpos
+           where fieldname = it_cdpos-fname
+           and tabname = 'EKPO'
+           and ddlanguage  = 'E'.
+
+      delete adjacent duplicates from it_ddo3m comparing tabname fieldname.
+    endif.
+
+
+
+    clear  wa_cdpos.
+    loop at it_cdpos into wa_cdpos.
+      clear wa_cdhdr.
+      read table it_cdhdr into wa_cdhdr with key changenr = wa_cdpos-changenr.
+      wa_change_data-objectid  = wa_cdpos-objectid.
+      wa_change_data-changenr = wa_cdpos-changenr.
+      wa_change_data-username = wa_cdhdr-username.
+      wa_change_data-udate = wa_cdhdr-udate.
+      wa_change_data-utime = wa_cdhdr-utime.
+      wa_change_data-tcode = wa_cdhdr-tcode.
+      wa_change_data-tabkey = wa_cdpos-tabkey.
+      wa_change_data-fname = wa_cdpos-fname.
+      wa_change_data-chngind = wa_cdpos-chngind.
+      wa_change_data-unit_old = wa_cdpos-unit_old.
+      wa_change_data-unit_new = wa_cdpos-unit_new.
+      wa_change_data-cuky_old = wa_cdpos-cuky_old.
+      wa_change_data-cuky_new = wa_cdpos-cuky_new.
+      wa_change_data-value_new = wa_cdpos-value_new.
+      wa_change_data-value_old = wa_cdpos-value_old.
+
+      append wa_change_data to it_change_data.
+      clear wa_change_data.
+    endloop.
+
+
+    if it_ekpo is not initial.
+      clear  wa_ekpo.
+      loop at it_ekpo into wa_ekpo.
+
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            input  = wa_ekpo-matnr
+          IMPORTING
+            output = wa_ekpo-matnr.
+        modify it_ekpo from wa_ekpo.
+        clear :wa_ekko.
+        read table it_ekko into wa_ekko with key ebeln = wa_ekpo-ebeln.
+
+        wa_ekko_ekpo-ebeln = wa_ekpo-ebeln.
+        wa_ekko_ekpo-aedat = wa_ekko-aedat.
+        wa_ekko_ekpo-ekgrp = wa_ekko-ekgrp.
+        wa_ekko_ekpo-loekz = wa_ekpo-loekz.
+        wa_ekko_ekpo-elikz = wa_ekpo-elikz.
+        wa_ekko_ekpo-lifnr = wa_ekko-lifnr.
+        clear wa_lfa1.
+        read table it_lfa1 into wa_lfa1 with key lifnr = wa_ekko-lifnr.
+
+        wa_ekko_ekpo-name1 = wa_lfa1-name1.
+        wa_ekko_ekpo-land1 = wa_lfa1-land1.
+        wa_ekko_ekpo-ebelp = wa_ekpo-ebelp.
+        wa_ekko_ekpo-matnr = wa_ekpo-matnr.
+        wa_ekko_ekpo-txz01 = wa_ekpo-txz01.
+        wa_ekko_ekpo-menge = wa_ekpo-menge.
+        wa_ekko_ekpo-meins = wa_ekpo-meins.
+        append wa_ekko_ekpo to it_ekko_ekpo.
+
+
+      endloop.
+    endif.
+
+****************BUILD FINAL INTERNAL TABLE FOR CHANGE LOG ****************************
+    clear  wa_change_data.
+    loop at it_change_data into wa_change_data.
+
+      t_ebeln = wa_change_data-tabkey+3(10).
+      t_ebelp = wa_change_data-tabkey+13(5).
+      clear wa_ekko_ekpo.
+      read table it_ekko_ekpo into wa_ekko_ekpo with key ebeln = t_ebeln
+                                                         ebelp = t_ebelp.
+
+      wa_final2-ebeln = wa_ekko_ekpo-ebeln.
+      wa_final2-aedat = wa_ekko_ekpo-aedat.
+      wa_final2-ekgrp = wa_ekko_ekpo-ekgrp.
+      read table it_t024 into wa_t024 with key ekgrp = wa_final2-ekgrp.
+      wa_final2-eknam = wa_t024-eknam.
+      wa_final2-loekz = wa_ekko_ekpo-loekz.
+      wa_final2-elikz = wa_ekko_ekpo-elikz.
+      wa_final2-lifnr = wa_ekko_ekpo-lifnr.
+      wa_final2-name1 = wa_ekko_ekpo-name1.
+      wa_final2-land1 = wa_ekko_ekpo-land1.
+      wa_final2-ebelp = wa_ekko_ekpo-ebelp.
+      wa_final2-matnr = wa_ekko_ekpo-matnr.
+      wa_final2-txz01 = wa_ekko_ekpo-txz01.
+      wa_final2-menge = wa_ekko_ekpo-menge.
+      wa_final2-meins = wa_ekko_ekpo-meins.
+      wa_final2-username = wa_change_data-username.
+      wa_final2-udate = wa_change_data-udate.
+      wa_final2-utime = wa_change_data-utime.
+      wa_final2-tcode = wa_change_data-tcode.
+      wa_final2-tabkey = wa_change_data-tabkey.
+      wa_final2-fname = wa_change_data-fname.
+
+      read table it_ddo3m into wa_dd03m with key tabname = 'EKPO'
+                                                       fieldname = wa_final2-fname
+                                                       ddlanguage = 'E' .
+
+
+      wa_final2-fielddesc = wa_dd03m-ddtext.
+      wa_final2-chngind  = wa_change_data-chngind.
+      wa_final2-unit_old = wa_change_data-unit_old.
+      wa_final2-unit_new = wa_change_data-unit_new.
+      wa_final2-cuky_old = wa_change_data-cuky_old.
+      wa_final2-cuky_new = wa_change_data-cuky_new.
+      wa_final2-value_new = wa_change_data-value_new.
+      wa_final2-value_old  = wa_change_data-value_old.
+
+      append wa_final2 to it_final2.
+      clear wa_final2.
+    endloop.
+
+**************** end BUILD FINAL INTERNAL TABLE FOR CHANGE LOG ****************************
+
+  endif.
+
+  if mode = 'DETAIL'.
+    if it_ekpo is not initial.
+      clear wa_ekpo .
+      loop at it_ekpo into wa_ekpo.
+        wa_ekpo-pen_qty = wa_ekpo-menge.
+        clear wa_stxh.
+        read table it_stxh into wa_stxh with key ebeln = wa_ekpo-ebeln
+                                                 ebelp = wa_ekpo-ebelp.
+        wa_ekpo-ltex1 = wa_stxh-text.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            input  = wa_ekpo-matnr
+          IMPORTING
+            output = wa_ekpo-matnr.
+
+        modify it_ekpo from wa_ekpo.
+        clear wa_ekpo.
+      endloop.
+    endif.
+
+    if it_ekko is not initial.
+      select
+         ebeln
+         ebelp
+         gjahr
+         belnr
+         bwart
+        from ekbe
+        into table it_ekbe
+         for all entries in it_ekko  where ebeln = it_ekko-ebeln.
+
+      if sy-subrc eq 0.
+        select
+          mblnr
+          mjahr
+          bwart
+          menge
+          meins
+          erfmg
+          erfme
+          ebeln
+          ebelp
+          from mseg into table    it_mseg
+          for all entries in it_ekbe where mblnr = it_ekbe-belnr
+                                      and   mjahr = it_ekbe-gjahr.
+
+      endif.
+    endif.
+    clear  wa_mseg.
+    loop at it_mseg into wa_mseg.
+      clear wa_ekpo.
+
+
+        CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+        EXPORTING
+          INPUT                = wa_mseg-erfme
+*         LANGUAGE             = SY-LANGU
+       IMPORTING
+*         LONG_TEXT            =
+         OUTPUT               =  wa_mseg-erfme
+*         SHORT_TEXT           =
+*       EXCEPTIONS
+*         UNIT_NOT_FOUND       = 1
+*         OTHERS               = 2
+                .
+      IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+      ENDIF.
+
+      read table it_ekpo into wa_ekpo with key ebeln = wa_mseg-ebeln
+                                               ebelp = wa_mseg-ebelp.
+
+
+
+      if  wa_mseg-bwart = '105'
+        or
+
+          wa_mseg-bwart = '101' .
+        wa_ekpo-rec_qty = wa_ekpo-rec_qty + wa_mseg-erfmg.
+        wa_ekpo-meins_rec = wa_mseg-erfme.
+        if wa_ekpo-meins = wa_mseg-erfme.
+          wa_ekpo-pen_qty = wa_ekpo-menge -  wa_ekpo-rec_qty.
+          wa_ekpo-meins_pen = wa_mseg-erfme.
+        endif.
+
+
+
+        modify it_ekpo from wa_ekpo index sy-tabix.
+        clear  wa_ekpo.
+      endif.
+
+
+
+      if  wa_mseg-bwart = '122' or
+          wa_mseg-bwart = '106'.
+
+
+        wa_ekpo-rec_qty = wa_ekpo-rec_qty - wa_mseg-erfmg.
+        wa_ekpo-meins_rec = wa_mseg-erfme.
+        if wa_ekpo-meins = wa_mseg-erfme.
+          wa_ekpo-pen_qty = wa_ekpo-menge -  wa_ekpo-rec_qty.
+          wa_ekpo-meins_pen = wa_mseg-erfme.
+        endif.
+        modify it_ekpo from wa_ekpo  index sy-tabix.
+        clear wa_ekpo .
+      endif.
+    endloop.
+
+    clear  wa_ekpo.
+    loop at it_ekpo into  wa_ekpo.
+      clear wa_ekko.
+      read table it_ekko into wa_ekko with key ebeln = wa_ekpo-ebeln.
+
+      clear wa_cdhdr.
+      read table it_cdhdr into wa_cdhdr with key objectid = wa_ekpo-ebeln.
+
+
+      wa_final-ebeln = wa_ekko-ebeln.
+      wa_final-aedat = wa_ekko-aedat.
+      wa_final-ekgrp = wa_ekko-ekgrp.
+      read table it_t024 into wa_t024 with key ekgrp =  wa_final-ekgrp.
+      wa_final-eknam = wa_t024-eknam.
+      wa_final-udate = wa_cdhdr-udate.
+      wa_final-loekz = wa_ekpo-loekz.
+      wa_final-elikz = wa_ekpo-elikz.
+      wa_final-lifnr = wa_ekko-lifnr.
+      clear wa_lfa1.
+      read table it_lfa1 into wa_lfa1 with key lifnr = wa_ekko-lifnr.
+      wa_final-name1 = wa_lfa1-name1.
+      wa_final-land1 = wa_lfa1-land1.
+      wa_final-ebelp = wa_ekpo-ebelp.
+      wa_final-matnr = wa_ekpo-matnr.
+      wa_final-txz01 = wa_ekpo-txz01.
+      wa_final-ltex1 = wa_ekpo-ltex1.
+      wa_final-menge = wa_ekpo-menge.
+      wa_final-meins = wa_ekpo-meins.
+      wa_final-rec_qty = wa_ekpo-rec_qty.
+      wa_final-erfme  =   wa_ekpo-meins_rec.
+      wa_final-pen_qty = wa_ekpo-pen_qty.
+
+      if wa_final-meins = wa_final-erfme.
+        wa_final-erfme2  =   wa_ekpo-meins_pen.
+      else.
+
+
+
+      endif.
+
+      append wa_final to it_final.
+      clear wa_final.clear wa_lfa1.
+    endloop.
+  endif.
+endform.                    " FETCH
+*&---------------------------------------------------------------------*
+*&      Form  FIELDCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form fieldcat .
+  perform buildfields using '1' 'EBELN' 'IT_FINAL' 'PO No.'.
+  perform buildfields using '2' 'EBELP' 'IT_FINAL' 'Item no'.
+  perform buildfields using '3' 'AEDAT' 'IT_FINAL' 'Ordered Date'.
+  perform buildfields using '4' 'EKGRP' 'IT_FINAL' 'Purchasing Group'.
+  perform buildfields using '5' 'EKNAM' 'IT_FINAL' 'Purchasing Group Name'.
+  perform buildfields using '6' 'LOEKZ' 'IT_FINAL' 'Deletion Indicator'.
+  perform buildfields using '7' 'ELIKZ' 'IT_FINAL' 'PO Closed Indicator'.
+  perform buildfields using '8' 'LIFNR' 'IT_FINAL' 'Vendor'.
+  perform buildfields using '9' 'NAME1' 'IT_FINAL' 'Vendor Name '.
+  perform buildfields using '10' 'LAND1' 'IT_FINAL' 'Country'.
+  perform buildfields using '11' 'MATNR' 'IT_FINAL' 'Material No'.
+  perform buildfields using '12' 'TXZ01' 'IT_FINAL' 'Material Decription'.
+  perform buildfields using '13' 'MENGE' 'IT_FINAL' 'Qunatity Ordered'.
+  perform buildfields using '14' 'MEINS' 'IT_FINAL' 'Units Ordered'.
+  perform buildfields using '15' 'REC_QTY' 'IT_FINAL' 'Recieved Quantity'.
+  perform buildfields using '16' 'ERFME' 'IT_FINAL'   'Units Recieved'.
+  perform buildfields using '17' 'PEN_QTY' 'IT_FINAL' 'Pending Qunatity'.
+  perform buildfields using '18' 'ERFME2' 'IT_FINAL' 'Pending Units'.
+  perform buildfields using '19' 'LTEX1' 'IT_FINAL' 'Item Text'.
+
+endform.                    " FIELDCAT
+
+*&---------------------------------------------------------------------*
+*&      Form  BUILDFIELDS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->VALUE        text
+*      -->(P_COL_POS)  text
+*      -->VALUE        text
+*      -->(P_FLDNAME)  text
+*      -->VALUE        text
+*      -->(P_TABNAME)  text
+*      -->VALUE        text
+*      -->(P_REPTEXT)  text
+*----------------------------------------------------------------------*
+form buildfields  using    value(p_col_pos) like sy-cucol
+                           value(p_fldname) type slis_fieldname
+                           value(p_tabname) type slis_tabname
+                           value(p_reptext) like dd03p-reptext.
+
+
+
+  wa_fieldcat-col_pos = p_col_pos.
+  wa_fieldcat-fieldname = p_fldname.
+  wa_fieldcat-tabname = p_tabname.
+  wa_fieldcat-reptext_ddic = p_reptext.
+
+  append wa_fieldcat to i_fieldcat.
+  clear wa_fieldcat.
+
+endform.                    "BUILDFIELDS
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form alv .
+  call function 'REUSE_ALV_GRID_DISPLAY'
+   exporting
+
+       i_callback_program             =  sy-repid
+
+   i_callback_top_of_page             = 'TOP_OF_PAGE'
+
+     it_fieldcat                      =  i_fieldcat
+
+    tables
+      t_outtab                          =  it_final.
+
+
+endform.                    " ALV
+
+
+*&---------------------------------------------------------------------*
+*&      Form  top_of_page
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+form top_of_page.
+
+  data: t_header type slis_t_listheader,                   " ALV Header fields
+      wa_header type slis_listheader.
+
+
+  data: no_linec  type c length 20.                   "LINE TO DISPLAY NO OF LINES
+  data: no_line  type c length 4.                     "NO OF LINES
+  data : date1(12) type c.data : date2(12) type c.
+  data : sec_line type string.
+
+
+
+  wa_header-typ = 'S'.
+  wa_header-info = 'RALSON (INDIA) LIMITED'.
+  append wa_header to t_header.
+  clear wa_header.
+
+
+  wa_header-typ = 'H'.
+  wa_header-info = 'Purchase Order Quantity Report'.
+  append wa_header to t_header.
+  clear wa_header.
+*
+
+  write s_aedat-low to date1 dd/mm/yyyy.
+  write s_aedat-high to date2 dd/mm/yyyy.
+
+  concatenate 'From :  ' date1  'To : ' date2 into sec_line separated by space.
+
+  wa_header-typ = 'S'.
+  wa_header-info = sec_line.
+  append wa_header to t_header.
+  clear: wa_header.
+
+  describe table it_final lines no_line .
+
+  concatenate 'No of Records :' no_line into no_linec separated by space.
+  wa_header-typ = 'S'.
+  wa_header-info = no_linec.
+  append wa_header to t_header.
+  clear wa_header.
+
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = t_header.
+**            I_LOGO                   =
+**            I_END_OF_LIST_GRID       =
+**            I_ALV_FORM               =
+endform.                    "top_of_page
+
+
+                                                            " FIELDCAT2
+*&---------------------------------------------------------------------*
+*&      Form  FIELDCAT_C
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form fieldcat_c .
+  perform buildfields_c using '1' 'EBELN' 'IT_FINAL2' 'PO No.'.
+  perform buildfields_c using '2' 'AEDAT' 'IT_FINAL2' 'Creation Date'.
+  perform buildfields_c using '3' 'EKGRP' 'IT_FINAL2' 'Purchasing Group.'.
+  perform buildfields_c using '4' 'EKNAM' 'IT_FINAL2' 'Purchasing Group Name'.
+  perform buildfields_c using '4' 'LOEKZ' 'IT_FINAL2' 'Deletion Indicator.'.
+  perform buildfields_c using '5' 'ELIKZ' 'IT_FINAL2' 'Delivery Completion Indicator'.
+  perform buildfields_c using '6' 'LIFNR' 'IT_FINAL2' 'Vendor No.'.
+  perform buildfields_c using '7' 'NAME1' 'IT_FINAL2' 'Vendor Name.'.
+  perform buildfields_c using '8' 'LAND1' 'IT_FINAL2' 'Address.'.
+  perform buildfields_c using '9' 'EBELP' 'IT_FINAL2' 'Item No.'.
+  perform buildfields_c using '10' 'MATNR' 'IT_FINAL2' 'Material No.'.
+  perform buildfields_c using '11' 'TXZ01' 'IT_FINAL2' 'Mat Description'.
+  perform buildfields_c using '12' 'MENGE' 'IT_FINAL2' 'Ordered Quantity'.
+  perform buildfields_c using '13' 'MEINS' 'IT_FINAL2' 'Quantity units.'.
+  perform buildfields_c using '14' 'USERNAME' 'IT_FINAL2' 'User Name.'.
+  perform buildfields_c using '15' 'UDATE' 'IT_FINAL2' 'Change Date'.
+  perform buildfields_c using '16' 'UTIME' 'IT_FINAL2' 'Change Time'.
+  perform buildfields_c using '17' 'TCODE' 'IT_FINAL2' 'TCODE'.
+*  PERFORM buildfields_c USING '18' 'TABKEY' 'IT_FINAL2' 'Table Key'.
+  perform buildfields_c using '18' 'FNAME' 'IT_FINAL2' 'Field Changed'.
+  perform buildfields_c using '19' 'FIELDDESC' 'IT_FINAL2' 'Field Description'.
+  perform buildfields_c using '20' 'CHNGIND' 'IT_FINAL2' 'Change Indicator.'.
+  perform buildfields_c using '21' 'UNIT_OLD' 'IT_FINAL2' 'Old Units'.
+  perform buildfields_c using '22' 'UNIT_NEW' 'IT_FINAL2' 'New Units'.
+  perform buildfields_c using '23' 'CUKY_OLD' 'IT_FINAL2' 'Old Currency'.
+  perform buildfields_c using '24' 'CUKY_NEW' 'IT_FINAL2' 'New Currency'.
+  perform buildfields_c using '25' 'VALUE_OLD' 'IT_FINAL2' 'Old Value.'.
+  perform buildfields_c using '26' 'VALUE_NEW' 'IT_FINAL2' 'New Value'.
+
+
+
+
+
+endform.                    " FIELDCAT_C
+*&---------------------------------------------------------------------*
+*&      Form  BUILDFIELDS_C
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_1329   text
+*      -->P_1330   text
+*      -->P_1331   text
+*      -->P_1332   text
+*----------------------------------------------------------------------*
+
+
+form buildfields_c  using    value(p_col_pos) like sy-cucol
+                           value(p_fldname) type slis_fieldname
+                           value(p_tabname) type slis_tabname
+                           value(p_reptext) like dd03p-reptext.
+
+
+
+  wa_fieldcat-col_pos = p_col_pos.
+  wa_fieldcat-fieldname = p_fldname.
+  wa_fieldcat-tabname = p_tabname.
+  wa_fieldcat-reptext_ddic = p_reptext.
+
+  append wa_fieldcat to i_fieldcat2.
+  clear wa_fieldcat.
+
+endform.                    " BUILDFIELDS_C
+*&---------------------------------------------------------------------*
+*&      Form  ALV_C
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form alv_c .
+  call function 'REUSE_ALV_GRID_DISPLAY'
+     exporting
+
+         i_callback_program             =  sy-repid
+
+     i_callback_top_of_page             = 'TOP_OF_PAGE2'
+
+       it_fieldcat                      =  i_fieldcat2
+
+      tables
+        t_outtab                          =  it_final2.
+
+
+endform.                    " ALV
+
+
+*&---------------------------------------------------------------------*
+*&      Form  top_of_page2
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+form top_of_page2.
+
+  data: t_header2 type slis_t_listheader,                   " ALV Header fields
+      wa_header2 type slis_listheader.
+
+
+  data: no_linec_c  type c length 30.                   "LINE TO DISPLAY NO OF LINES
+  data: no_line_c  type c length 6.                     "NO OF LINES
+  data : date1_c(12) type c.data : date2_c(12) type c.
+  data : sec_line_c type string.
+
+
+
+  wa_header2-typ = 'S'.
+  wa_header2-info = 'RALSON (INDIA) LIMITED'.
+  append wa_header2 to t_header2.
+  clear wa_header2.
+
+
+  wa_header2-typ = 'H'.
+  wa_header2-info = 'Purchase Order Changes Detail'.
+  append wa_header2 to t_header2.
+  clear wa_header2.
+
+*
+
+  write s_aedat-low to date1_c dd/mm/yyyy.
+  write s_aedat-high to date2_c dd/mm/yyyy.
+
+  concatenate 'From :  ' date1_c  'To : ' date2_c into sec_line_c separated by space.
+
+  wa_header2-typ = 'S'.
+  wa_header2-info = sec_line_c.
+  append wa_header2 to t_header2.
+  clear: wa_header2.
+
+  describe table it_final2 lines no_line_c .
+
+  concatenate 'No of Records :' no_line_c into no_linec_c separated by space.
+  wa_header2-typ = 'S'.
+  wa_header2-info = no_linec_c.
+  append wa_header2 to t_header2.
+  clear wa_header2.
+
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = t_header2.
+**            I_LOGO                   =
+**            I_END_OF_LIST_GRID       =
+**            I_ALV_FORM               =
+endform.                    " ALV_C

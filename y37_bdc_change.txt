@@ -1,0 +1,145 @@
+report Y37_BDC_CHANGE
+       no standard page heading line-size 255.
+
+TYPE-POOLS : TRUXS.
+
+DATA: IT_RAW TYPE TRUXS_T_TEXT_DATA.
+
+
+TYPES: BEGIN OF TY_MARA,
+       MATNR TYPE MATNR,
+       BRGEW TYPE BRGEW,
+       NTGEW TYPE NTGEW,
+       END OF TY_MARA.
+
+DATA: IT_MARA TYPE STANDARD TABLE OF TY_MARA,
+      WA_MARA TYPE TY_MARA.
+
+DATA: IT_BDCDATA TYPE TABLE OF BDCDATA,
+      WA_BDCDATA TYPE BDCDATA,
+      IT_ERR_MSG TYPE TABLE OF BDCMSGCOLL.
+
+DATA: FILE TYPE STRING.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: P_FILE TYPE RLGRAP-FILENAME.
+SELECTION-SCREEN END OF BLOCK B1.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR P_FILE.
+
+CALL FUNCTION 'F4_FILENAME'
+ EXPORTING
+   PROGRAM_NAME        = SYST-CPROG
+   DYNPRO_NUMBER       = SYST-DYNNR
+   FIELD_NAME          = 'P_FILE'
+ IMPORTING
+   FILE_NAME           = P_FILE
+          .
+
+
+CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+  EXPORTING
+*   I_FIELD_SEPERATOR          =
+*   I_LINE_HEADER              =
+    I_TAB_RAW_DATA             = IT_RAW
+    I_FILENAME                 = P_FILE
+  TABLES
+    I_TAB_CONVERTED_DATA       = IT_MARA[]
+ EXCEPTIONS
+   CONVERSION_FAILED          = 1
+   OTHERS                     = 2
+          .
+IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+
+MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+
+
+ENDIF.
+
+
+START-OF-SELECTION.
+
+LOOP AT IT_MARA INTO WA_MARA.
+
+
+
+
+*include bdcrecx1.
+*
+*start-of-selection.
+
+*perform open_group.
+
+perform bdc_dynpro      using 'SAPLMGMM' '0060'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'RMMG1-MATNR'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=ENTR'.
+perform bdc_field       using 'RMMG1-MATNR'
+                               WA_MARA-MATNR .                      " '80356'.
+perform bdc_dynpro      using 'SAPLMGMM' '0070'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'MSICHTAUSW-DYTXT(02)'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=SCHL'.
+perform bdc_field       using 'MSICHTAUSW-KZSEL(01)'
+                              'X'.
+perform bdc_field       using 'MSICHTAUSW-KZSEL(02)'
+                              'X'.
+perform bdc_dynpro      using 'SAPLMGMM' '4004'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=BU'.
+*perform bdc_field       using 'MAKT-MAKTX'
+*                              'RALSON TY 7 STAR CYCLE (NYLON) R2119'.
+*perform bdc_field       using 'MARA-MEINS'
+*                              'PC'.
+*perform bdc_field       using 'MARA-MATKL'
+*                              '1004'.
+*perform bdc_field       using 'MARA-MTPOS_MARA'
+*                              'NORM'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'MARA-NTGEW'.
+perform bdc_field       using 'MARA-BRGEW'
+                              WA_MARA-BRGEW  .                        "'0.700'.
+*perform bdc_field       using 'MARA-GEWEI'
+*                              'KG'.
+perform bdc_field       using 'MARA-NTGEW'
+                               WA_MARA-NTGEW .                       " '0.700'.
+*perform bdc_field       using 'MARA-MAGRV'
+*                              'BNDL'.
+*perform bdc_transaction using 'MM02'.
+*
+*perform close_group.
+
+
+
+CALL TRANSACTION 'MMO2' USING IT_BDCDATA
+                                 MODE 'A'
+                                  UPDATE 'A'.
+
+
+ENDLOOP.
+
+
+
+
+
+FORM BDC_DYNPRO USING PROGRAM DYNPRO.
+  CLEAR WA_BDCDATA.
+  WA_BDCDATA-PROGRAM = PROGRAM.
+  WA_BDCDATA-DYNPRO = DYNPRO.
+  WA_BDCDATA-DYNBEGIN = 'X'.
+  APPEND WA_BDCDATA TO IT_BDCDATA.
+ENDFORM.
+
+
+
+FORM BDC_FIELD USING FNAM FVAL.
+  IF FVAL <> SPACE.
+  CLEAR WA_BDCDATA.
+WA_BDCDATA-FNAM = FNAM.
+WA_BDCDATA-FVAL = FVAL.
+APPEND WA_BDCDATA TO IT_BDCDATA.
+ENDIF.
+ENDFORM.

@@ -1,0 +1,797 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_TOP_10_CUST_REPORT
+*&*
+*&---------------------------------------------------------------------*
+************************************************************************
+*    AUTHOR     : MILLY SHARMA
+*    DEPT       : EDP
+*    DATE       : 05/12/2015
+*    VERSION    : 6.0
+*    REASON     : To get the detail of top 10 customers year wise
+*    REPORT FOR : MD sir
+***********************************************************************
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_TOP_10_CUST_REPORT NO STANDARD PAGE HEADING.
+
+TYPE-POOLS:SLIS.
+
+DATA: IT_FCAT TYPE SLIS_T_FIELDCAT_ALV,
+      WA_FCAT LIKE LINE OF IT_FCAT,
+      LAYOUT TYPE SLIS_LAYOUT_ALV,
+      GT_SORT TYPE SLIS_T_SORTINFO_ALV.
+
+TABLES : VBRK, VBRP, KNA1.
+
+************************* BEGIN OF STRUCTURE ********************************
+
+
+TYPES: BEGIN OF TY_VBRK,
+       VBELN LIKE VBRK-VBELN,
+       FKDAT LIKE VBRK-FKDAT,
+       FKART LIKE VBRK-FKART,
+       KUNAG LIKE VBRK-KUNAG,
+       END OF TY_VBRK.
+
+DATA: IT_VBRK TYPE STANDARD TABLE OF TY_VBRK,
+      WA_VBRK TYPE TY_VBRK.
+
+TYPES: BEGIN OF TY_VBRP,
+       VBELN LIKE VBRP-VBELN,
+       POSNR LIKE VBRP-POSNR,
+       WERKS LIKE VBRP-WERKS,
+       KONDM LIKE VBRP-KONDM,
+       FKLMG LIKE VBRP-FKLMG,
+       NETWR LIKE VBRP-NETWR,
+       UMVKZ LIKE VBRP-UMVKZ,
+       END OF TY_VBRP.
+
+DATA: IT_VBRP TYPE STANDARD TABLE OF TY_VBRP,
+      WA_VBRP TYPE TY_VBRP.
+
+
+TYPES: BEGIN OF TY_FIN,
+      VBELN LIKE VBRK-VBELN,
+      FKDAT LIKE VBRK-FKDAT,
+      FKART LIKE VBRK-FKART,
+      KUNAG LIKE VBRK-KUNAG,
+      POSNR LIKE VBRP-POSNR,
+      WERKS LIKE VBRP-WERKS,
+      KONDM LIKE VBRP-KONDM,
+      FKLMG LIKE VBRP-FKLMG,
+      NETWR LIKE VBRP-NETWR,
+      UMVKZ LIKE VBRP-UMVKZ,
+      YEAR TYPE C LENGTH 4,
+      END OF TY_FIN.
+
+DATA: IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+DATA: BEGIN OF ITAB OCCURS 0,
+      SRNO TYPE SY-TABIX,
+      YEAR TYPE C LENGTH 4,
+      NAME1 LIKE KNA1-NAME1,
+      KUNAG LIKE VBRK-KUNAG,
+      TYRE TYPE P DECIMALS 0,
+      TUBE TYPE P DECIMALS 0,
+      TY_AMOUNT TYPE P DECIMALS 2,
+      TU_AMOUNT LIKE VBRP-NETWR,
+      NET_QT TYPE P DECIMALS 0,
+      NET_VL LIKE VBRP-NETWR,
+      END OF ITAB.
+
+DATA: BEGIN OF ITAB1 OCCURS 0,
+      SRNO TYPE SY-TABIX,
+      YEAR TYPE C LENGTH 4,
+      NAME1 LIKE KNA1-NAME1,
+      KUNAG LIKE VBRK-KUNAG,
+      TYRE TYPE P DECIMALS 0,
+      TUBE TYPE P DECIMALS 0,
+      TY_AMOUNT TYPE P DECIMALS 2,
+      TU_AMOUNT LIKE VBRP-NETWR,
+      NET_QT TYPE P DECIMALS 0,
+      NET_VL LIKE VBRP-NETWR,
+      END OF ITAB1.
+
+DATA: TY TYPE P DECIMALS 0,
+      TU TYPE P DECIMALS 0.
+
+
+DATA: TY1 TYPE P DECIMALS 0,
+      TU1 TYPE P DECIMALS 0.
+
+DATA: TY_AMT TYPE P DECIMALS 2,
+      TU_AMT LIKE VBRP-NETWR.
+
+DATA: TY_AMT1 TYPE P DECIMALS 2,
+      TU_AMT1 LIKE VBRP-NETWR.
+
+DATA: TY_AMOUNT TYPE P DECIMALS 2,
+      TU_AMOUNT LIKE VBRP-NETWR.
+
+DATA: NET_QT TYPE P DECIMALS 0,
+      NET_VL LIKE VBRP-NETWR.
+
+DATA: tyre TYPE P DECIMALS 0,
+      TUBE TYPE P DECIMALS 0.
+
+DATA: YEAR TYPE C LENGTH 4,
+      V1 LIKE YEAR,
+      V2 LIKE YEAR,
+      V3 LIKE YEAR,
+      V4 LIKE YEAR,
+      V5 LIKE YEAR,
+      v6 LIKE year,
+      v7 LIKE year,
+      v8 LIKE year,
+      v9 LIKE year,
+      v10 LIKE year,
+      v11 LIKE year,
+      v12 LIKE year,
+      v13 LIKE year,
+      v14 LIKE year,
+      v15 LIKE year,
+      v16 LIKE year,
+      v17 LIKE year,
+      v18 LIKE year,
+      v19 LIKE year,
+      v20 LIKE year.
+
+DATA: SRNO TYPE SY-TABIX.
+
+********************* START OF SELECTION SCREEN **************************************
+
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+PARAMETERS : P_WERKS LIKE VBRP-WERKS.
+SELECT-OPTIONS : S_FKDAT  FOR VBRK-FKDAT.
+SELECTION-SCREEN END OF BLOCK B1.
+
+INITIALIZATION.
+
+
+START-OF-SELECTION.
+  PERFORM DATA.
+
+  PERFORM DISP.
+
+  PERFORM ALV.
+
+*&---------------------------------------------------------------------*
+*&      Form  DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DATA.
+
+************************************************************************
+* TO FETCH THE DIFFRENT DIFFRENT YEAR FROM INPUT DATE
+************************************************************************
+
+LOOP AT s_fkdat.
+
+
+ v1 = s_fkdat-low .            " 2010
+ v2 = s_fkdat-high.            " 2013
+
+
+ENDLOOP.
+
+
+v3 =  v1 + 1.
+if v2 GE v3.
+v4 = v3 .                  " 2011
+endif.
+
+v5 =  v1 + 2.
+if v2 GE V5.
+v6 = v5 .                  " 2012
+endif.
+
+v9 =  v1 + 3.
+if v2 GE v9.
+v10 = v9 .                 " 2013
+endif.
+
+v11 =  v1 + 4.
+if v2 GE v11.
+v12 = v11 .                " 2014
+endif.
+
+v7 =  v1 + 5.
+if v2 GE v7.
+v8 = v7 .                   " 2015
+endif.
+
+v13 =  v1 + 6.
+if v2 GE v13.
+v14 = v13.                   " 2016
+endif.
+
+v15 = v1 + 7.
+if v2 GE v14.
+ v16 = v15.                 " 2017
+ENDIF.
+
+v17 = v1 + 8.
+if v2 GE v17.
+v18 = v17.
+ENDIF.                    " 2018
+
+v19 = v1 + 9.
+if v2 GE v19.
+v20 = v19.
+ENDIF.                    " 2018
+
+*************************************************************************
+* SELECTING THE REQUIRED FIELDS FROM BILLING TABLES : VBRK , VBRP
+*************************************************************************
+
+  SELECT   VBELN
+           FKDAT
+           FKART
+           KUNAG
+    FROM VBRK INTO TABLE IT_VBRK WHERE FKDAT IN S_FKDAT
+                                 AND FKART <> 'G2'
+                                 AND FKART <> 'S1'
+                                 AND FKART <> 'S2'
+                                 AND FKART <> 'ZF3'
+                                 AND FKART <> 'L2'.
+
+  IF SY-SUBRC EQ 0.
+    SORT IT_VBRK BY VBELN FKDAT.
+  ENDIF.
+
+  IF IT_VBRK IS NOT INITIAL.
+    SELECT  VBELN
+            POSNR
+            WERKS
+            KONDM
+            FKLMG
+            NETWR
+            UMVKZ
+     FROM VBRP INTO TABLE IT_VBRP FOR ALL ENTRIES IN IT_VBRK
+                                 WHERE VBELN = IT_VBRK-VBELN
+                                   AND WERKS = P_WERKS..
+  ENDIF.
+
+
+
+  LOOP AT IT_VBRP INTO WA_VBRP.
+
+    WA_FIN-VBELN = WA_VBRP-VBELN.
+    WA_FIN-POSNR = WA_VBRP-POSNR.
+    WA_FIN-KONDM = WA_VBRP-KONDM.
+    WA_FIN-FKLMG = WA_VBRP-FKLMG.
+    WA_FIN-NETWR = WA_VBRP-NETWR.
+    WA_FIN-UMVKZ = WA_VBRP-UMVKZ.
+
+    CLEAR WA_VBRK.
+    READ TABLE IT_VBRK INTO WA_VBRK WITH KEY VBELN = WA_VBRP-VBELN.
+    IF SY-SUBRC EQ 0.
+      WA_FIN-FKDAT = WA_VBRK-FKDAT.
+      WA_FIN-FKART = WA_VBRK-FKART.
+      WA_FIN-KUNAG = WA_VBRK-KUNAG.
+    ENDIF.
+
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+
+  ENDLOOP.
+
+*****************************************************************************
+* LOOP AT FINAL TABLE TO GET THE REQUIRED OUTPUT FIELDS
+*****************************************************************************
+
+  LOOP AT IT_FIN INTO WA_FIN.
+
+
+    TY = 0.
+    TU = 0.
+    TY_AMT = 0.
+    TU_AMT = 0.
+    TY_AMT1 = 0.
+    TU_AMT1 = 0.
+    TY1 = 0.
+    TU1 = 0.
+    tyre = 0.
+    TUBE = 0.
+    TY_AMOUNT = 0.
+    TU_AMOUNT = 0.
+
+    READ TABLE It_fin INTO wa_fin INDEX SY-TABIX.
+
+    SELECT SINGLE * FROM KNA1 WHERE KUNNR = wa_fin-KUNAG.
+
+IF WA_FIN-FKART = 'RE'.
+
+    IF WA_FIN-KONDM = 'TY'.
+      TY1 = TY1 +  WA_FIN-FkLMG .
+      TY_AMT1 = TY_AMT + WA_FIN-NETWR.
+
+
+    ELSEIF WA_FIN-KONDM = 'TU'.
+      TU1 = TU1 +  WA_FIN-FkLMG  .
+      TU_AMT1 = TU_AMT + WA_FIN-NETWR.
+
+    ENDIF.
+
+
+else.
+
+    IF WA_FIN-KONDM = 'TY'.
+
+      ty = ty + wa_fin-fklmg.
+      TY_AMT = TY_AMT + WA_FIN-NETWR.
+
+
+    ELSEIF WA_FIN-KONDM = 'TU'.
+
+      tu = tu + wa_fin-fKLMG.
+      TU_AMT = TU_AMT + WA_FIN-NETWR.
+
+    ENDIF.
+ENDIF.
+
+      tyre = ty - ty1.
+      TUBE = TU - TU1.
+      TY_AMOUNT = TY_AMT - TY_AMT1.
+      TU_AMOUNT = TU_AMT - TU_AMT1.
+      YEAR   = WA_FIN-FKDAT+0(4).
+
+    NET_QT = 0.
+    NET_VL = 0.
+
+    READ TABLE IT_FIN INTO WA_FIN INDEX SY-TABIX.
+    NET_QT = TY + TU.
+    NET_VL = TY_AMT + TU_AMT.
+
+
+    MOVE: YEAR TO ITAB-YEAR,
+          WA_FIN-KUNAG TO ITAB-KUNAG,
+          KNA1-NAME1 TO ITAB-NAME1,
+          TYRE TO ITAB-TYRE,
+          TUBE TO ITAB-TUBE,
+          TY_AMOUNT TO ITAB-TY_AMOUNT,
+          TU_AMOUNT TO ITAB-TU_AMOUNT,
+          NET_QT TO ITAB-NET_QT,
+          NET_VL TO ITAB-NET_VL.
+
+
+    COLLECT ITAB.
+
+    CLEAR ITAB.
+
+
+ENDLOOP.
+
+SORT ITAB BY year TYRE DESCENDING.
+
+
+data:cnt type i.
+cnt  = 1.
+
+loop at itab.
+
+move cnt to itab-srno .
+
+modify itab.
+cnt = cnt + 1.
+
+endloop.
+
+sort itab by year srno ."ASCENDING.
+
+
+
+
+
+
+loop at itab where year = v1.  "     '2013' .
+if itab-srno le '10'.
+move-corresponding itab to itab1.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = v1.    "'2013'.
+endloop.
+
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+loop at itab where year = v4.      "'2014' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+
+loop at itab.
+delete itab where year = V4.   " '2014'.
+endloop.
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+
+loop at itab where year = V6.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = V6.        "'V2'.   " '2014'.
+endloop.
+
+
+
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+
+loop at itab where year = V10.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = V10.   " '2014'.
+endloop.
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+loop at itab where year = V12.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+loop at itab.
+delete itab where year = V12.   " '2014'.
+endloop.
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+loop at itab where year = V8.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+loop at itab.
+delete itab where year = V8.   " '2014'.
+endloop.
+
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+
+loop at itab where year = V14.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = V14.   " '2014'.
+endloop.
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+
+loop at itab where year = V16.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+loop at itab.
+delete itab where year = V16.   " '2014'.
+endloop.
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+loop at itab where year = V18.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = V18.   " '2014'.
+endloop.
+
+
+
+
+sort itab by year TYRE DESCENDING.
+
+
+
+
+loop at itab where year = V20.      "  '2015' .
+move-corresponding itab to itab1.
+IF SY-TABIX LE 10.
+append itab1.
+endif.
+endloop.
+
+
+loop at itab.
+delete itab where year = V20.   " '2014'.
+endloop.
+
+
+
+
+sort itab1 BY TYRE DESCENDING.
+
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'YEAR'.
+  WA_FCAT-SELTEXT_L = 'YEAR'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 4.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NAME1'.
+  WA_FCAT-SELTEXT_L = 'COMPANY NAME'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 35.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TYRE'.
+  WA_FCAT-SELTEXT_L = 'TYRE QTY'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TUBE'.
+  WA_FCAT-SELTEXT_L = 'TUBE QTY'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TY_AMOUNT'.
+  WA_FCAT-SELTEXT_L = 'TYRE AMT'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'TU_AMOUNT'.
+  WA_FCAT-SELTEXT_L = 'TUBE AMT'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NET_QT'.
+  WA_FCAT-SELTEXT_L = 'TOTAL'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  CLEAR WA_FCAT.
+  WA_FCAT-FIELDNAME = 'NET_VL'.
+  WA_FCAT-SELTEXT_L = 'TOTAL AMOUNT'.
+  WA_FCAT-TABNAME = 'ITAB1'.
+  WA_FCAT-EMPHASIZE  ='X'.
+  WA_FCAT-OUTPUTLEN = 15.
+  APPEND WA_FCAT TO IT_FCAT.
+
+  DATA: GS_SORT TYPE SLIS_SORTINFO_ALV.
+  CLEAR GS_SORT.
+  GS_SORT-FIELDNAME = 'YEAR'.
+  GS_SORT-SPOS = 1.
+  GS_SORT-UP = 'X'.
+  APPEND GS_SORT TO GT_SORT.
+  CLEAR GS_SORT..
+
+ENDFORM.                    "DISP
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM ALV.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*       I_INTERFACE_CHECK                 = ' '
+*       I_BYPASSING_BUFFER                = ' '
+*       I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*       I_CALLBACK_PF_STATUS_SET          = ' '
+*       I_CALLBACK_USER_COMMAND           = ' '
+       I_CALLBACK_TOP_OF_PAGE            = 'TOP_OF_PAGE'
+*       I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*       I_CALLBACK_HTML_END_OF_LIST       = ' '
+*       I_STRUCTURE_NAME                  =
+*       I_BACKGROUND_ID                   = ' '
+*       I_GRID_TITLE                      =
+*       I_GRID_SETTINGS                   =
+       IS_LAYOUT                         = LAYOUT
+     IT_FIELDCAT                       = IT_FCAT[]
+*       IT_EXCLUDING                      =
+*       IT_SPECIAL_GROUPS                 =
+       IT_SORT                           = GT_SORT[]
+*       IT_FILTER                         =
+*       IS_SEL_HIDE                       =
+*       I_DEFAULT                         = 'X'
+*       I_SAVE                            = ' '
+*       IS_VARIANT                        =
+*       IT_EVENTS                         =
+*       IT_EVENT_EXIT                     =
+*       IS_PRINT                          =
+*       IS_REPREP_ID                      =
+*       I_SCREEN_START_COLUMN             = 0
+*       I_SCREEN_START_LINE               = 0
+*       I_SCREEN_END_COLUMN               = 0
+*       I_SCREEN_END_LINE                 = 0
+*       I_HTML_HEIGHT_TOP                 = 0
+*       I_HTML_HEIGHT_END                 = 0
+*       IT_ALV_GRAPHICS                   =
+*       IT_HYPERLINK                      =
+*       IT_ADD_FIELDCAT                   =
+*       IT_EXCEPT_QINFO                   =
+*       IR_SALV_FULLSCREEN_ADAPTER        =
+*     IMPORTING
+*       E_EXIT_CAUSED_BY_CALLER           =
+*       ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      T_OUTTAB                          = ITAB1[]
+*     EXCEPTIONS
+*       PROGRAM_ERROR                     = 1
+*       OTHERS                            = 2
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.                    "ALV
+
+
+*&---------------------------------------------------------------------*
+*&      Form  TOP_OF_PAGE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM TOP_OF_PAGE.
+
+  DATA:  IT_HEADER TYPE SLIS_T_LISTHEADER,
+         WA_HEADER TYPE SLIS_LISTHEADER.
+
+  WA_HEADER-TYP = 'H'.
+  WA_HEADER-INFO = 'TOP 10 CUSTOMER YEAR WISE'.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+
+  DATA: NO_LINEC_C  TYPE C LENGTH 20.                   "LINE TO DISPLAY NO OF LINES
+  DATA: NO_LINE_C  TYPE C LENGTH 4.
+  DATA: DATE(12) TYPE C.
+
+  DATA : DATE1_C(12) TYPE C.
+  DATA : DATE2_C(12) TYPE C.
+  DATA : SEC_LINE_C TYPE STRING.
+
+  DESCRIBE TABLE ITAB1 LINES NO_LINE_C .
+
+  CONCATENATE 'No of Records :' NO_LINE_C INTO NO_LINEC_C SEPARATED BY SPACE.
+  WA_HEADER-TYP = 'S'.
+  WA_HEADER-INFO = NO_LINEC_C.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+  WRITE S_FKDAT-LOW TO DATE1_C DD/MM/YYYY.
+  WRITE S_FKDAT-HIGH TO DATE2_C DD/MM/YYYY.
+
+  CONCATENATE 'From :  ' DATE1_C  'To: ' DATE2_C INTO SEC_LINE_C SEPARATED BY SPACE.
+
+  WA_HEADER-TYP  = 'S'.
+  WA_HEADER-INFO = SEC_LINE_C.
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR WA_HEADER.
+
+
+  WRITE: SY-DATUM TO DATE DD/MM/YYYY.
+
+  WA_HEADER-TYP  = 'S'.
+
+  CONCATENATE  'Date :  ' DATE  INTO WA_HEADER-INFO SEPARATED BY SPACE.   "todays date
+  APPEND WA_HEADER TO IT_HEADER.
+  CLEAR: WA_HEADER.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = IT_HEADER
+      I_LOGO             = 'RALSONLOGO1'
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+ENDFORM.                    "top-of-page

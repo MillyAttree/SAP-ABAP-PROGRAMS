@@ -1,0 +1,397 @@
+*&---------------------------------------------------------------------*
+*& Report  Y37_FORM_1
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  Y37_FORM_1.
+
+TABLES : VBRK, VBRP, KNA1, KONV.
+
+TYPES: BEGIN OF TY_VBRK,
+       VBELN LIKE VBRK-VBELN,
+       VKORG LIKE VBRK-VKORG,
+       VTWEG LIKE VBRK-VTWEG,
+       SPART LIKE VBRK-SPART,
+       FKDAT LIKE VBRK-FKDAT,
+       KNUMV LIKE VBRK-KNUMV,
+       KUNAG LIKE VBRK-KUNAG,
+       END OF TY_VBRK.
+
+TYPES: BEGIN OF TY_VBRP,
+       VBELN LIKE VBRK-VBELN,
+       POSNR LIKE VBRP-POSNR,
+       MATNR LIKE VBRP-MATNR,
+       ARKTX LIKE VBRP-ARKTX,
+       FKIMG LIKE VBRP-FKIMG,
+       NETWR LIKE VBRP-NETWR,
+       END OF TY_VBRP.
+
+TYPES: BEGIN OF TY_KNA1,
+       KUNNR LIKE KNA1-KUNNR,
+       NAME1 LIKE KNA1-NAME1,
+       ORT01 LIKE KNA1-ORT01,
+       LAND1 LIKE KNA1-LAND1,
+       PSTLZ LIKE KNA1-PSTLZ,
+       END OF TY_KNA1.
+
+DATA: BEGIN OF IT_PRICE OCCURS 0,
+      KWERT LIKE KONV-KWERT,
+      KSCHL LIKE KONV-KSCHL,
+*      KBETR LIKE KONV-KBETR,
+     END OF IT_PRICE.
+
+TYPES: BEGIN OF TY_FIN,
+       VBELN LIKE VBRK-VBELN,
+       VKORG LIKE VBRK-VKORG,
+       VTWEG LIKE VBRK-VTWEG,
+       SPART LIKE VBRK-SPART,
+       FKDAT LIKE VBRK-FKDAT,
+       KNUMV LIKE VBRK-KNUMV,
+       POSNR LIKE VBRP-POSNR,
+       MATNR LIKE VBRP-MATNR,
+       ARKTX LIKE VBRP-ARKTX,
+       FKIMG LIKE VBRP-FKIMG,
+       NETWR LIKE VBRP-NETWR,
+       KUNNR LIKE KNA1-KUNNR,
+       NAME1 LIKE KNA1-NAME1,
+       ORT01 LIKE KNA1-ORT01,
+       LAND1 LIKE KNA1-LAND1,
+       PSTLZ LIKE KNA1-PSTLZ,
+       BASIC LIKE KONV-KWERT,
+       CST LIKE KONV-KWERT,
+       EXI LIKE KONV-KWERT,
+       FREIGHT LIKE KONV-KWERT,
+       LST     LIKE KONV-KWERT,
+       CST_SUR LIKE KONV-KWERT,
+       LST_SUR LIKE KONV-KWERT,
+
+       END OF TY_FIN.
+
+DATA: IT_VBRK TYPE STANDARD TABLE OF TY_VBRK,
+      WA_VBRK TYPE TY_VBRK,
+      IT_VBRP TYPE STANDARD TABLE OF TY_VBRP,
+      WA_VBRP TYPE TY_VBRP,
+      IT_KNA1 TYPE STANDARD TABLE OF TY_KNA1,
+      WA_KNA1 TYPE TY_KNA1,
+      IT_FIN TYPE STANDARD TABLE OF TY_FIN,
+      WA_FIN TYPE TY_FIN.
+
+data:  bas like KONV-KWERT,
+       CST1 LIKE KONV-KWERT,
+       EXI1 LIKE KONV-KWERT,
+       FREIGHT1 LIKE KONV-KWERT,
+       LST1     LIKE KONV-KWERT,
+       CST_SUR1 LIKE KONV-KWERT,
+       LST_SUR1 LIKE KONV-KWERT.
+
+data:  BASIC LIKE KONV-KWERT,
+       CST LIKE KONV-KWERT,
+       EXI LIKE KONV-KWERT,
+       FREIGHT LIKE KONV-KWERT,
+       LST     LIKE KONV-KWERT,
+       CST_SUR LIKE KONV-KWERT,
+       LST_SUR LIKE KONV-KWERT.
+
+SELECTION-SCREEN : BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+PARAMETERS: P_KUNNR LIKE KNA1-KUNNR OBLIGATORY,
+            P_VBELN LIKE VBRK-VBELN OBLIGATORY.
+SELECTION-SCREEN END OF BLOCK B1 .
+
+DATA : FM_NAME TYPE RS38L_FNAM.
+
+
+START-OF-SELECTION.
+
+  PERFORM DATA.
+  PERFORM DISP.
+
+*&---------------------------------------------------------------------*
+*&      Form  DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DATA.
+  SELECT  KUNNR
+          NAME1
+          ORT01
+          LAND1
+          PSTLZ
+
+    FROM KNA1 INTO TABLE IT_KNA1 WHERE KUNNR EQ P_KUNNR.
+
+  IF IT_KNA1 IS NOT INITIAL.
+    SELECT VBELN
+           VKORG
+           VTWEG
+           SPART
+           FKDAT
+           KNUMV
+           KUNAG
+          FROM VBRK INTO TABLE IT_VBRK FOR ALL ENTRIES IN IT_KNA1 WHERE KUNAG = IT_KNA1-KUNNR AND
+          VBELN EQ P_VBELN.
+  ENDIF.
+
+  IF IT_VBRK IS NOT INITIAL.
+    SELECT   VBELN
+             POSNR
+             MATNR
+             ARKTX
+             FKIMG
+             NETWR
+       FROM VBRP INTO TABLE IT_VBRP FOR ALL ENTRIES IN IT_VBRK WHERE VBELN = IT_VBRK-VBELN.
+    IF SY-SUBRC EQ 0.
+      SORT IT_VBRP BY VBELN POSNR.
+    ENDIF.
+
+  ENDIF.
+
+
+
+  LOOP AT IT_VBRP INTO WA_VBRP.
+    WA_FIN-VBELN = WA_VBRP-VBELN.
+    WA_FIN-POSNR = WA_VBRP-POSNR.
+    WA_FIN-MATNR = WA_VBRP-MATNR.
+    WA_FIN-ARKTX = WA_VBRP-ARKTX.
+    WA_FIN-FKIMG = WA_VBRP-FKIMG.
+    WA_FIN-NETWR = WA_VBRP-NETWR.
+
+    CLEAR WA_VBRK.
+    READ  TABLE IT_VBRK INTO WA_VBRK WITH KEY VBELN = WA_VBRP-VBELN.
+    WA_FIN-VKORG = WA_VBRK-VKORG.
+    WA_FIN-VTWEG = WA_VBRK-VTWEG.
+    WA_FIN-SPART = WA_VBRK-SPART.
+    WA_FIN-FKDAT = WA_VBRK-FKDAT.
+    WA_FIN-KNUMV = WA_VBRK-KNUMV.
+
+    CLEAR WA_KNA1.
+    READ TABLE IT_KNA1 INTO WA_KNA1 WITH KEY KUNNR = WA_VBRK-KUNAG.
+    WA_FIN-KUNNR = WA_KNA1-KUNNR.
+    WA_FIN-NAME1 = WA_KNA1-NAME1.
+    WA_FIN-ORT01 = WA_KNA1-ORT01.
+    WA_FIN-LAND1 = WA_KNA1-LAND1.
+    WA_FIN-PSTLZ = WA_KNA1-PSTLZ.
+
+    APPEND WA_FIN TO IT_FIN.
+    CLEAR WA_FIN.
+  ENDLOOP.
+
+  LOOP AT IT_FIN INTO WA_FIN.
+
+    SELECT * FROM KONV WHERE KNUMV = WA_FIN-KNUMV AND KPOSN = WA_FIN-POSNR.
+
+*      BASIC = 0.
+*      EXI = 0.
+*      CST = 0.
+*      LST = 0.
+*      LST_SUR = 0.
+*      CST_SUR = 0.
+*      FREIGHT = 0.
+
+      IF KONV-KSCHL = 'ZPR0'.
+        BAS = konv-KWERT.
+      ENDIF.
+      BASIC = BASIC + BAS.
+      CLEAR BAS.
+
+      IF KONV-KSCHL = 'JIN1'.
+        EXI1 = konv-KWERT.
+      ENDIF.
+      EXI = EXI + EXI1.
+      CLEAR EXI1.
+
+      IF KONV-KSCHL = 'JEX2'.
+        CST1 = konv-KWERT.
+      ENDIF.
+      CST = CST + CST1.
+      CLEAR CST1.
+
+      IF IT_PRICE-KSCHL = 'JIN2'.
+        LST1 = IT_PRICE-KWERT.
+      ENDIF.
+      LST = LST + LST1.
+      CLEAR LST1.
+
+
+      IF IT_PRICE-KSCHL = 'JIN4'.
+        CST_SUR1 = IT_PRICE-KWERT.
+      ENDIF.
+      CST_SUR = CST_SUR + CST_SUR1.
+      CLEAR CST_SUR1.
+
+      IF IT_PRICE-KSCHL = 'ZVTS'.
+        LST_SUR1 = IT_PRICE-KWERT.
+      ENDIF.
+      LST_SUR = LST_SUR + LST_SUR1.
+      CLEAR LST_SUR1.
+
+      IF IT_PRICE-KSCHL = 'ZHD0'.
+        FREIGHT1 = IT_PRICE-KWERT.
+      ENDIF.
+      FREIGHT = FREIGHT + FREIGHT1.
+      CLEAR FREIGHT1.
+
+
+      MOVE : BASIC TO WA_FIN-BASIC,
+             EXI TO WA_FIN-EXI,
+             CST TO WA_FIN-CST,
+             LST TO WA_FIN-LST,
+             CST_SUR TO WA_FIN-CST_SUR,
+             LST_SUR TO WA_FIN-LST_SUR,
+             FREIGHT TO WA_FIN-FREIGHT.
+
+      MODIFY IT_FIN FROM WA_FIN.
+*  CLEAR WA_FIN.
+    ENDSELECT.
+  ENDLOOP.
+  SORT IT_FIN.
+
+ENDFORM.                    "DATA
+
+*&---------------------------------------------------------------------*
+*&      Form  DISP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM DISP.
+
+  DATA:W_CPARAM TYPE SSFCTRLOP,
+        W_OUTOPTIONS TYPE SSFCOMPOP,
+        CONTROL TYPE SSFCTRLOP,
+        T_OTF_FROM_FM TYPE SSFCRESCL,
+        T_OTF TYPE ITCOO OCCURS 0 WITH HEADER LINE,
+        T_OTF1 TYPE ITCOO OCCURS 0 WITH HEADER LINE,
+        W_BIN_FILESIZE TYPE I,
+        T_PDF_TAB LIKE TLINE OCCURS 0 WITH HEADER LINE,
+*       FORMNAME TYPE RS38L_FNAM ,
+        L_CONTROL TYPE SSFCTRLOP ,
+        T_OTF2 TYPE SSFCRESCL.
+
+  L_CONTROL-GETOTF    = 'X'.
+  L_CONTROL-NO_OPEN   = 'X'.
+  L_CONTROL-NO_CLOSE  = 'X'.
+  L_CONTROL-PREVIEW   = 'X'.
+  L_CONTROL-NO_DIALOG = 'X'.
+
+  CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+    EXPORTING
+      FORMNAME           = 'Y37_FORM_1'
+*     VARIANT            = ' '
+*     DIRECT_CALL        = ' '
+    IMPORTING
+      FM_NAME            = FM_NAME
+    EXCEPTIONS
+      NO_FORM            = 1
+      NO_FUNCTION_MODULE = 2
+      OTHERS             = 3.
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+  CALL FUNCTION 'SSF_OPEN'
+    EXPORTING
+*     ARCHIVE_PARAMETERS =
+*     USER_SETTINGS      = 'X'
+*     MAIL_SENDER        =
+*     MAIL_RECIPIENT     =
+*     MAIL_APPL_OBJ      =
+*     OUTPUT_OPTIONS     =
+      CONTROL_PARAMETERS = L_CONTROL
+* IMPORTING
+*     JOB_OUTPUT_OPTIONS =
+    EXCEPTIONS
+      FORMATTING_ERROR   = 1
+      INTERNAL_ERROR     = 2
+      SEND_ERROR         = 3
+      USER_CANCELED      = 4
+      OTHERS             = 5.
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+  CALL FUNCTION FM_NAME   " '/1BCDWB/SF00000174'
+    EXPORTING
+*   ARCHIVE_INDEX              =
+*   ARCHIVE_INDEX_TAB          =
+*   ARCHIVE_PARAMETERS         =
+     CONTROL_PARAMETERS         = L_CONTROL
+*   MAIL_APPL_OBJ              =
+*   MAIL_RECIPIENT             =
+*   MAIL_SENDER                =
+     OUTPUT_OPTIONS             = W_OUTOPTIONS
+     USER_SETTINGS              = 'X'
+      P_VBELN                    = P_VBELN
+      P_KUNNR                    = P_KUNNR
+   IMPORTING
+*   DOCUMENT_OUTPUT_INFO       =
+     JOB_OUTPUT_INFO            = T_OTF_FROM_FM
+*   JOB_OUTPUT_OPTIONS         =
+    TABLES
+      IT_FIN                     = IT_FIN[]
+* EXCEPTIONS
+*   FORMATTING_ERROR           = 1
+*   INTERNAL_ERROR             = 2
+*   SEND_ERROR                 = 3
+*   USER_CANCELED              = 4
+*   OTHERS                     = 5
+            .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+*CALL FUNCTION FM_NAME    " '/1BCDWB/SF00000174'
+*  EXPORTING
+**   ARCHIVE_INDEX              =
+**   ARCHIVE_INDEX_TAB          =
+**   ARCHIVE_PARAMETERS         =
+*   CONTROL_PARAMETERS         = L_CONTROL
+**   MAIL_APPL_OBJ              =
+**   MAIL_RECIPIENT             =
+**   MAIL_SENDER                =
+*   OUTPUT_OPTIONS             = W_OUTOPTIONS
+*   USER_SETTINGS              = 'X'
+*    P_VBELN                    = P_VBELN
+*    P_KUNNR                    = P_KUNNR
+* IMPORTING
+**   DOCUMENT_OUTPUT_INFO       =
+*   JOB_OUTPUT_INFO            = T_OTF_FROM_FM
+**   JOB_OUTPUT_OPTIONS         =
+*  TABLES
+*    IT_FIN                     = IT_FIN[]
+** EXCEPTIONS
+**   FORMATTING_ERROR           = 1
+**   INTERNAL_ERROR             = 2
+**   SEND_ERROR                 = 3
+**   USER_CANCELED              = 4
+**   OTHERS                     = 5
+*          .
+*IF SY-SUBRC <> 0.
+** Implement suitable error handling here
+*ENDIF.
+  SORT IT_FIN.
+
+  CALL FUNCTION 'SSF_CLOSE'
+    IMPORTING
+      JOB_OUTPUT_INFO  = T_OTF2
+    EXCEPTIONS
+      FORMATTING_ERROR = 1
+      INTERNAL_ERROR   = 2
+      SEND_ERROR       = 3
+      OTHERS           = 4.
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+  CALL FUNCTION 'HR_IT_DISPLAY_WITH_PDF'
+    TABLES
+      OTF_TABLE = T_OTF2-OTFDATA.
+
+
+  SORT IT_FIN.
+
+
+ENDFORM.                    "DISP
