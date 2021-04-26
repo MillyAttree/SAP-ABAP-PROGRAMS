@@ -1,0 +1,277 @@
+report ZHR_IT08
+       no standard page heading line-size 255.
+
+*include bdcrecx1.
+*
+*parameters: dataset(132) lower case.
+***    DO NOT CHANGE - the generated data section - DO NOT CHANGE    ***
+*
+*   If it is nessesary to change the data section use the rules:
+*   1.) Each definition of a field exists of two lines
+*   2.) The first line shows exactly the comment
+*       '* data element: ' followed with the data element
+*       which describes the field.
+*       If you don't have a data element use the
+*       comment without a data element name
+*   3.) The second line shows the fieldname of the
+*       structure, the fieldname must consist of
+*       a fieldname and optional the character '_' and
+*       three numbers and the field length in brackets
+*   4.) Each field must be type C.
+*
+*** Generated data section with specific formatting - DO NOT CHANGE  ***
+data: begin of record OCCURS 0,
+* data element: PERNR_D
+        PERNR_001(038),
+* data element: TIMRE
+*        TIMR6_002(001),
+** data element: CHOIC
+*        CHOIC_003(035),
+** data element: PERNR_D
+*        PERNR_004(038),
+** data element: TIMRE
+*        TIMR6_005(001),
+** data element: CHOIC
+*        CHOIC_006(035),
+** data element: BEGDA
+        BEGDA_007(010),
+* data element: ENDDA
+        ENDDA_008(010),
+** data element: TRFAR
+*        TRFAR_009(002),
+** data element: BSGRD
+*        BSGRD_010(006),
+** data element: TRFGB
+*        TRFGB_011(002),
+** data element: DIVGV
+*        DIVGV_012(006),
+** data element: TRFGR
+*        TRFGR_013(008),
+** data element: TRFST
+*        TRFST_014(002),
+** data element: ANCUR
+*        ANCUR_015(005),
+** data element: IBBEG
+*        IBBEG_016(010),
+** data element: WAERS
+*        WAERS_017(005),
+* data element: BEGDA
+*        BEGDA_018(010),
+** data element: ENDDA
+*        ENDDA_019(010),
+** data element: TRFAR
+*        TRFAR_020(002),
+** data element: BSGRD
+*        BSGRD_021(006),
+** data element: TRFGB
+*        TRFGB_022(002),
+* data element: DIVGV
+*        DIVGV_023(006),
+** data element: TRFGR
+*        TRFGR_024(008),
+** data element: TRFST
+*        TRFST_025(002),
+** data element: ANCUR
+*        ANCUR_026(005),
+** data element: IBBEG
+*        IBBEG_027(010),
+** data element: WAERS
+*        WAERS_028(005),
+      end of record.
+
+*** End generated data section ***
+
+*start-of-selection.
+*
+*perform open_dataset using dataset.
+*perform open_group.
+*
+*do.
+*
+*read dataset dataset into record.
+*if sy-subrc <> 0. exit. endif.
+
+
+DATA: v_filename TYPE string.
+DATA: it_bdcdata TYPE STANDARD TABLE OF bdcdata,
+      wa_bdcdata TYPE bdcdata.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+
+PARAMETERS : v_file TYPE rlgrap-filename OBLIGATORY.
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR v_file.
+
+  CALL FUNCTION 'F4_FILENAME'
+   EXPORTING
+     program_name        = syst-cprog
+     dynpro_number       = syst-dynnr
+*   FIELD_NAME          = ' '
+   IMPORTING
+    file_name           = v_file.
+
+
+START-OF-SELECTION.
+
+  v_filename = v_file.
+
+  CALL FUNCTION 'GUI_UPLOAD'
+    EXPORTING
+      filename                      = v_filename
+     filetype                      = 'ASC'
+     has_field_separator           = 'X'
+*   HEADER_LENGTH                 = 0
+*   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+    TABLES
+      data_tab                      = record
+* EXCEPTIONS
+*   FILE_OPEN_ERROR               = 1
+*   FILE_READ_ERROR               = 2
+*   NO_BATCH                      = 3
+*   GUI_REFUSE_FILETRANSFER       = 4
+*   INVALID_TYPE                  = 5
+*   NO_AUTHORITY                  = 6
+*   UNKNOWN_ERROR                 = 7
+*   BAD_DATA_FORMAT               = 8
+*   HEADER_NOT_ALLOWED            = 9
+*   SEPARATOR_NOT_ALLOWED         = 10
+*   HEADER_TOO_LONG               = 11
+*   UNKNOWN_DP_ERROR              = 12
+*   ACCESS_DENIED                 = 13
+*   DP_OUT_OF_MEMORY              = 14
+*   DISK_FULL                     = 15
+*   DP_TIMEOUT                    = 16
+*   OTHERS                        = 17
+            .
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+loop at record.
+
+perform bdc_dynpro      using 'SAPMP50A' '1000'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '/00'.
+perform bdc_field       using 'RP50G-PERNR'
+                              record-PERNR_001.
+*perform bdc_field       using 'RP50G-TIMR6'
+*                              record-TIMR6_002.
+perform bdc_field       using 'BDC_CURSOR'
+                              'RP50G-CHOIC'.
+perform bdc_field       using 'RP50G-CHOIC'
+                              '0008'."record-CHOIC_003.
+perform bdc_dynpro      using 'SAPMP50A' '1000'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'RP50G-PERNR'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=COP'.
+*perform bdc_field       using 'RP50G-PERNR'
+*                              record-PERNR_004.
+*perform bdc_field       using 'RP50G-TIMR6'
+*                              record-TIMR6_005.
+*perform bdc_field       using 'RP50G-CHOIC'
+*                              record-CHOIC_006.
+perform bdc_dynpro      using 'MP000800' '2040'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'P0008-DIVGV'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '/00'.
+perform bdc_field       using 'P0008-BEGDA'
+                              record-BEGDA_007.
+perform bdc_field       using 'P0008-ENDDA'
+                              record-ENDDA_008.
+*perform bdc_field       using 'P0008-TRFAR'
+*                              record-TRFAR_009.
+*perform bdc_field       using 'P0008-BSGRD'
+*                              record-BSGRD_010.
+*perform bdc_field       using 'P0008-TRFGB'
+*                              record-TRFGB_011.
+perform bdc_field       using 'P0008-DIVGV'
+                             '240'." record-DIVGV_012."240
+*perform bdc_field       using 'P0008-TRFGR'
+*                              record-TRFGR_013.
+*perform bdc_field       using 'P0008-TRFST'
+*                              record-TRFST_014.
+*perform bdc_field       using 'P0008-ANCUR'
+*                              record-ANCUR_015.
+*perform bdc_field       using 'Q0008-IBBEG'
+*                              record-IBBEG_016.
+*perform bdc_field       using 'P0008-WAERS'
+*                              record-WAERS_017.
+perform bdc_dynpro      using 'MP000800' '2040'.
+perform bdc_field       using 'BDC_CURSOR'
+                              'P0008-BEGDA'.
+perform bdc_field       using 'BDC_OKCODE'
+                              '=UPD'.
+*perform bdc_field       using 'P0008-BEGDA'
+*                              record-BEGDA_018.
+*perform bdc_field       using 'P0008-ENDDA'
+*                              record-ENDDA_019.
+*perform bdc_field       using 'P0008-TRFAR'
+*                              record-TRFAR_020.
+*perform bdc_field       using 'P0008-BSGRD'
+*                              record-BSGRD_021.
+*perform bdc_field       using 'P0008-TRFGB'
+*                              record-TRFGB_022.
+*perform bdc_field       using 'P0008-DIVGV'
+*                              record-DIVGV_023.
+*perform bdc_field       using 'P0008-TRFGR'
+*                              record-TRFGR_024.
+*perform bdc_field       using 'P0008-TRFST'
+*                              record-TRFST_025.
+*perform bdc_field       using 'P0008-ANCUR'
+*                              record-ANCUR_026.
+*perform bdc_field       using 'Q0008-IBBEG'
+*                              record-IBBEG_027.
+*perform bdc_field       using 'P0008-WAERS'
+*                              record-WAERS_028.
+*perform bdc_transaction using 'PA30'.
+*
+*enddo.
+*
+*perform close_group.
+*perform close_dataset using dataset.
+CALL TRANSACTION 'PA30' USING it_bdcdata MODE 'A'.
+
+    REFRESH it_bdcdata.
+    CLEAR wa_bdcdata.
+  ENDLOOP.
+
+
+*----------------------------------------------------------------------*
+*        Start new screen                                              *
+*----------------------------------------------------------------------*
+FORM bdc_dynpro USING program dynpro.
+  CLEAR wa_bdcdata.
+  wa_bdcdata-program  = program.
+  wa_bdcdata-dynpro   = dynpro.
+  wa_bdcdata-dynbegin = 'X'.
+  APPEND wa_bdcdata TO it_bdcdata.
+ENDFORM.                    "BDC_DYNPRO
+
+*----------------------------------------------------------------------*
+*        Insert field                                                  *
+*----------------------------------------------------------------------*
+FORM bdc_field USING fnam fval.
+
+  CLEAR wa_bdcdata.
+  wa_bdcdata-fnam = fnam.
+  wa_bdcdata-fval = fval.
+  APPEND wa_bdcdata TO it_bdcdata.
+
+ENDFORM.                    "BDC_FIELD
+*pernr    begda      endda
+*100014 01.09.2011  30.09.2011
