@@ -1,0 +1,2077 @@
+*&---------------------------------------------------------------------*
+*& REPORT  ZHRPAYROLL
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  zhrpayroll.
+
+
+TYPE-POOLS : slis.
+TABLES : pernr.", PYORGSCREEN, PYTIMESCREEN.
+
+*NODES: PAYROLL TYPE PAY99_RESULT.
+
+INFOTYPES : 0001.
+
+DATA : hra1     TYPE prbetrg,   "Add By Pawan Kumar
+       hra2     TYPE prbetrg,
+       spl1     TYPE prbetrg,
+       spl2     TYPE prbetrg,
+       ca_9220  TYPE prbetrg,    "Add By Pawan Kumar 05.11.2019
+       ca_9car  TYPE prbetrg,
+       ca1_m260 TYPE prbetrg,
+       ca1_9ear TYPE prbetrg,
+       da_9260  TYPE prbetrg,
+       da_9dar  TYPE prbetrg,
+       fa_9221  TYPE prbetrg,
+       fa_9far  TYPE prbetrg,
+       wa_9wal  TYPE prbetrg,
+       wa_9war  TYPE prbetrg,
+       sa_1spl  TYPE prbetrg,
+       sa_1sar  TYPE prbetrg.
+
+DATA : v_tea TYPE prbetrg.
+DATA : lv_seqnr   TYPE pc261-seqnr.
+
+DATA : itab TYPE TABLE OF pc261,
+       wa   TYPE pc261.
+
+DATA : it_payroll TYPE payin_result OCCURS 0 WITH HEADER LINE,
+       wa_payroll TYPE payin_result,
+       wa_pay     TYPE pc207.
+
+DATA : wpbp TYPE hrpay99_wpbp WITH HEADER LINE.
+DATA : epf TYPE hrpayin_epf WITH HEADER LINE.
+DATA : esi TYPE hrpayin_esi WITH HEADER LINE.
+DATA : it_pa2001 TYPE TABLE OF pa2001.
+DATA : wa_pa2001 TYPE pa2001.
+DATA : gt_pa2001 TYPE pa2001.
+DATA : wa_pa0587 TYPE pa0587.    "Added By Pawan Kumar 2.07.2019
+
+
+DATA wa_t549q TYPE t549q.
+DATA wa_t549q_off TYPE t549q.
+
+DATA  wa_pa0001 TYPE  pa0001 .
+*DATA : WA_PA2001 TYPE PA2001.
+
+DATA : v1_leave TYPE pa2001-kaltg.
+DATA : v2_lop TYPE pa2001-kaltg.
+
+DATA : v1_leave_a TYPE pa2001-kaltg.
+DATA : v2_lop_a TYPE pa2001-kaltg.
+
+
+DATA :v_half TYPE pa2001-kaltg.
+DATA :v_half_a TYPE pa2001-kaltg.
+*DATA : V1_LEAVE_D TYPE PA2001-KALTG.
+*DATA : V2_LOP_D TYPE PA2001-KALTG.
+
+DATA : v1_leave_k TYPE pa2001-kaltg.
+DATA : v2_lop_k TYPE pa2001-kaltg.
+DATA : v1_leave_d TYPE pa2001-kaltg.
+DATA : v2_lop_d TYPE pa2001-kaltg.
+
+DATA : v_tlday TYPE pa2001-kaltg.
+
+DATA : i_fcat  TYPE slis_t_fieldcat_alv, " FIELD CATALOG INTERNAL TABLE
+       i_ltab  TYPE slis_layout_alv, " LAYOUT INTERNAL TABLE
+       w_fcat  TYPE slis_fieldcat_alv, " FIELD CATALOG WORK AREA
+       it_etab TYPE slis_t_event WITH HEADER LINE. " EVENT INTERNAL TABLE
+*       LAYOUT TYPE SLIS_LAYOUT_ALV.
+*       W_FCAT-COLWIDTH_OPTIMIZE TYPE SLIS_LAYOUT_ALV_SPEC1.
+
+
+
+DATA :m1        TYPE sy-datum, "ZTMM_REPORT-REPDT,
+      y1        TYPE sy-datum, "ZTMM_REPORT-REPDT,
+      d1        TYPE sy-datum, " ZTMM_REPORT-REPDT,
+      d2        TYPE sy-datum,
+
+      d2_v(2)   TYPE c,
+      d1_v(2)   TYPE c,
+      no_of_day TYPE char10.
+DATA : v_d1 TYPE pa2001-abwtg.
+
+DATA : t_header TYPE slis_t_listheader.
+
+DATA : v_1bar TYPE prbetrg,
+       v_1arr TYPE prbetrg,
+       v_1esa TYPE prbetrg,
+       v_1pfa TYPE prbetrg,
+       v_1lid TYPE prbetrg,
+       v_1lwf TYPE prbetrg,
+       v_1epf TYPE prbetrg,
+       v_1pfp TYPE prbetrg,
+       v_1lep TYPE prbetrg,
+       v_2lid TYPE prbetrg.
+
+
+TYPES : BEGIN OF ty_final,
+          pernr            TYPE persno,
+          ename            TYPE emnam,
+          egroup           TYPE persg,
+          tlday            TYPE pa2001-kaltg,
+          wkday            TYPE pa2001-kaltg,
+          ac_wkday         TYPE pa2001-kaltg,
+          holiday          TYPE pa2001-kaltg,
+          lop              TYPE pa2001-kaltg,
+          leave            TYPE pa2001-kaltg,
+          sl               TYPE pa2001-kaltg,
+          cl               TYPE pa2001-kaltg,
+          el               TYPE pa2001-kaltg,
+          ml               TYPE pa2001-kaltg,
+          pl               TYPE pa2001-kaltg,
+          month(10)        TYPE c,
+          year(4)          TYPE c,
+          pfn(20)          TYPE c,
+          esi_no           TYPE pin_esino,
+          basic            TYPE prbetrg,
+          hra              TYPE prbetrg,
+          pi               TYPE prbetrg,
+          ua               TYPE prbetrg,
+          wa               TYPE prbetrg,
+          ea               TYPE prbetrg,
+          ca               TYPE prbetrg,
+          ca1              TYPE prbetrg,
+          total            TYPE prbetrg,
+          net_pay_ded      TYPE prbetrg,
+          eesi             TYPE prbetrg,
+          eresi            TYPE prbetrg,
+          sa               TYPE prbetrg,
+          sa1              TYPE prbetrg,
+          eepf             TYPE prbetrg,
+          erpf             TYPE prbetrg,
+          efpf             TYPE prbetrg,
+          tds              TYPE prbetrg,
+          ptax             TYPE prbetrg,
+          ee_lwf           TYPE prbetrg,
+          er_lwf           TYPE prbetrg,
+          loan             TYPE prbetrg,
+          loan_ins         TYPE prbetrg,
+          loan_int         TYPE  prbetrg,
+          developmnt_alwnc TYPE  prbetrg,
+          arrears          TYPE prbetrg,
+          pf_arrears       TYPE prbetrg,
+          food_alwnc       TYPE prbetrg,
+          othr_ded         TYPE prbetrg,
+          amt_3wi          TYPE prbetrg,
+
+          sal_advance      TYPE prbetrg,
+          othr_advance     TYPE prbetrg,
+          tea_deduct       TYPE prbetrg,
+          tea_deduct1      TYPE prbetrg,
+          claims           TYPE prbetrg,
+          tot_deduct       TYPE prbetrg,
+          net_amt          TYPE prbetrg,
+          edli_cont        TYPE prbetrg,
+          edli_admin       TYPE prbetrg,
+          pf_admin         TYPE  prbetrg,
+          ed_cess          TYPE  prbetrg,
+          hig_cess         TYPE prbetrg,
+          l_a              TYPE  prbetrg,
+          arr_wtesic       TYPE prbetrg, "ARR WITH ESIC DEDUCTION
+          arr_woesic       TYPE prbetrg, "  ARR WITHOUT ESIC DEDUCTION
+          arr_wtpf         TYPE prbetrg, "ARR WITH PF DEDUCTION
+          arr_wopf         TYPE prbetrg, "ARR WITHOUT PF DEDUCTION
+          arr_pfesi        TYPE prbetrg, "ARR WITH ESIC + PF DEDUCTION
+          lwf              TYPE prbetrg,
+          amt_rof          TYPE prbetrg,
+          amt_ror          TYPE prbetrg,
+          amt_roa          TYPE  prbetrg,
+          net_rtpayroll    TYPE  prbetrg,
+          bonus            TYPE  prbetrg,
+          lww              TYPE  prbetrg,
+          1arr             TYPE  prbetrg, "Basic Arrear 16.6.2020
+*     TAX TYPE  PRBETRG,
+
+        END OF ty_final.
+
+DATA : it_final TYPE ty_final OCCURS 0 WITH HEADER LINE.
+***********DECLERATION FOR HOLIDAY****************
+DATA : t_pernr_tab  LIKE TABLE OF pdpnr WITH HEADER LINE.
+DATA : t_psp  LIKE TABLE OF pdpsp WITH HEADER LINE.
+DATA : wa_tsp TYPE pdpsp.
+DATA : t_psp1  LIKE TABLE OF pdpsp WITH HEADER LINE.
+DATA : wa_tsp1 TYPE pdpsp.
+
+DATA : t_psp2  LIKE TABLE OF pdpsp WITH HEADER LINE.
+DATA : wa_tsp2 TYPE pdpsp.
+
+DATA : t_psp3  LIKE TABLE OF pdpsp WITH HEADER LINE.
+DATA : wa_tsp3 TYPE pdpsp.
+
+DATA : t_psp4  LIKE TABLE OF pdpsp WITH HEADER LINE.
+DATA : wa_tsp4 TYPE pdpsp.
+
+DATA : t_day_psp    LIKE TABLE OF pdsppsp WITH HEADER LINE.
+
+DATA : lv_saunday TYPE  p DECIMALS 3 LENGTH 4.
+DATA : lv_cal_holi TYPE  p DECIMALS 3 LENGTH 4.
+DATA : lv_cal_holi_p TYPE  p DECIMALS 3 LENGTH 4.
+DATA : lv_cal_holi_lwp TYPE  p DECIMALS 3 LENGTH 4.
+DATA : lv_sun_holi_lwp TYPE  p DECIMALS 3 LENGTH 4.
+DATA : v_sunday TYPE p DECIMALS 3 LENGTH 4.
+DATA : p_holiday TYPE p DECIMALS 3 LENGTH 4.
+
+
+DATA : v_begda TYPE pa0001-begda.
+DATA : v_endda TYPE pa0001-endda.
+
+DATA : v_hlwp TYPE pa2001-kaltg.
+DATA : v_lwp TYPE pa2001-kaltg.
+DATA : v_ernlv TYPE pa2001-kaltg.
+
+DATA : v_amount TYPE j_1itaxvar-j_1itaxam1.
+DATA : e_amount LIKE  j_1itaxvar-j_1itaxam1.
+
+DATA : v_amount_tds TYPE j_1itaxvar-j_1itaxam1.
+DATA : e_amount_tds LIKE  j_1itaxvar-j_1itaxam1.
+
+
+DATA : v_amount_netamnt TYPE j_1itaxvar-j_1itaxam1.
+DATA : e_amount_netamnt LIKE  j_1itaxvar-j_1itaxam1.
+
+DATA : e_amount_total LIKE  j_1itaxvar-j_1itaxam1.
+
+DATA : rt_amnt TYPE j_1itaxvar-j_1itaxam1.
+
+******************************************************
+***GDP 7.1.2020
+DATA : flag(1).
+IMPORT flag FROM MEMORY ID 'CF'."GDP 28.1.20
+** end gdp7.1.2020
+
+*GDP 15.3.2021 leave
+DATA :v_sl TYPE pa2001-kaltg,
+      v_cl TYPE pa2001-kaltg,
+      v_el TYPE pa2001-kaltg,
+      v_ml TYPE pa2001-kaltg,
+      v_pl TYPE pa2001-kaltg.
+** end gdp 15.3.2021
+*BREAK-POINT.
+
+START-OF-SELECTION.
+
+*----------------------------------------------------------------------*
+*    SELECTION-SCREEN                                                  *
+*----------------------------------------------------------------------*
+  SELECTION-SCREEN: BEGIN OF BLOCK block1 WITH FRAME TITLE text-001.
+  PARAMETERS : s_group TYPE pa0001-persg ."OBLIGATORY.
+
+  SELECTION-SCREEN: END OF BLOCK block1.
+******************************************************
+
+  SELECT SINGLE * FROM t549q INTO wa_t549q_off WHERE permo = '67' AND pabrj = pn-pabrj AND pabrp = pn-pabrp .
+
+  GET pernr.
+
+
+  PERFORM get_data.
+
+*GET PAYROLL.
+END-OF-SELECTION.
+  PERFORM group_wise.
+  IF flag  NE 'X'. "GDP 7.1.2020/28.1.2020
+    PERFORM field_cat.
+*  PERFORM LOGO.
+    PERFORM alv_display.
+  ENDIF."GDP 7.1.2010
+
+
+*&---------------------------------------------------------------------*
+*&      FORM  GET_DATA
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM get_data .
+  CLEAR :   lv_cal_holi,lv_saunday,v_begda,d1,d2,no_of_day,d1_v,d2_v.
+  CLEAR:    t_pernr_tab[],t_psp[],t_day_psp[],v2_lop_k,v2_lop_d,v2_lop_a,v_half_a,v_half.
+  CLEAR :  v_ernlv ,it_pa2001[],gt_pa2001,v_amount,e_amount ,v_amount_tds,e_amount_tds,v_amount_netamnt,e_amount_netamnt,
+           e_amount_total, v_amount_netamnt.
+
+  y1 = pn-endda+0(4).
+  m1 =  pn-endda+4(2).
+  d1 =  pn-endda+6(2).
+  d1_v = d1.
+*  NO_OF_DAY = D1.
+*    V_D1 =  D1.
+***************************************************
+*******      CALCULATION FOR HOLIDAY/SUNDAY********
+***************************************************
+  t_pernr_tab-pernr = pernr-pernr.
+  APPEND t_pernr_tab.
+
+
+
+  CALL FUNCTION 'HR_PERSON_READ_WORK_SCHEDULE'
+    EXPORTING
+      begin_date = wa_t549q_off-begda
+      end_date   = wa_t549q_off-endda
+    TABLES
+      pernr_tab  = t_pernr_tab
+      psp        = t_psp
+      day_psp    = t_day_psp.
+
+
+  t_psp1[] = t_psp[].
+  t_psp2[] = t_psp[].
+  t_psp3[] = t_psp[].
+  t_psp4[] = t_psp[].
+
+
+**********************************************************
+
+  READ TABLE t_psp INTO wa_tsp WITH KEY activ = 'X'.
+  v_begda = wa_tsp-datum.
+
+  d2 =  v_begda+6(2).
+  d2_v = d2.
+
+  CLEAR : t_psp,t_psp-tpkla,t_psp-activ.
+**********FOR SUNDAY CALCULATION*************************************
+
+  LOOP AT t_psp.
+    IF t_psp-tpkla NE '0' OR t_psp-activ NE 'X'.
+      DELETE t_psp WHERE tpkla NE '0' OR activ NE 'X'.
+    ENDIF.
+
+  ENDLOOP.
+  DESCRIBE TABLE t_psp LINES lv_saunday.
+
+
+*********************************************************************
+  CLEAR : t_psp1,t_psp1-tagty,t_psp1-activ.
+**********************FOR HOLDAY CALAENDER **************************
+  LOOP AT t_psp1.
+    IF t_psp1-tagty NE '1' OR t_psp1-activ NE 'X'.
+      DELETE t_psp1 WHERE tagty NE '1' OR activ NE 'X'.
+      DELETE t_psp1 WHERE tprog = 'OFF'.
+    ENDIF.
+  ENDLOOP.
+
+  DESCRIBE TABLE t_psp1 LINES lv_cal_holi.
+*********************************************************************
+*DELETE T_PSP2 WHERE AWTYP = 'A' AND TPKLA = '1' AND TPKLA = '0'.
+* DESCRIBE TABLE T_PSP2 LINES LV_CAL_HOLI_P.
+  CLEAR : t_psp2,t_psp2-awtyp,t_psp2-tpkla.
+  LOOP AT t_psp2 .
+    IF t_psp2-tpkla NE '0' OR t_psp2-awtyp NE 'A'..
+*      IF  T_PSP2-AWTYP NE 'A'.
+      DELETE t_psp2 WHERE tpkla NE '0' OR awtyp NE 'A'.
+*      ENDIF.
+    ENDIF.
+  ENDLOOP.
+  DESCRIBE TABLE t_psp2 LINES lv_cal_holi_p.
+*****************************************************************
+************************************************
+***    FOR LWP ON PUBLIC HOLIDAY
+************************************************
+  CLEAR : t_psp3,t_psp3-tagty,t_psp3-awart.
+*  LOOP AT T_PSP3 .
+*
+*    IF T_PSP3-TAGTY = '0' AND T_PSP3-AWART NE 'LWP'.
+**      IF  T_PSP2-AWTYP NE 'A'.
+*      DELETE T_PSP3 WHERE TAGTY NE '1' AND AWART NE 'LWP'.
+**      ENDIF.
+*    ENDIF.
+*  ENDLOOP.
+  LOOP AT t_psp3 INTO wa_tsp3.
+    IF  wa_tsp3-tagty = '1' AND wa_tsp3-awart = 'LWP'.
+    ELSE.
+      DELETE TABLE t_psp3 FROM wa_tsp3.
+      DELETE t_psp3 WHERE tprog = 'OFF'.           "Add By Pawan Kumar 06.11.2019
+    ENDIF.
+  ENDLOOP.
+*  DELETE T_PSP3 WHERE TAGTY = '0' AND AWART NE 'LWP'."
+  DESCRIBE TABLE t_psp3 LINES lv_cal_holi_lwp.
+
+************************************************
+***    FOR LWP ON SUNDAY HOLIDAY
+************************************************
+
+  CLEAR : t_psp4,t_psp4-tpkla,t_psp4-awart.
+
+  LOOP AT t_psp4 INTO wa_tsp4.
+    IF  wa_tsp4-tpkla = '0' AND wa_tsp4-awart = 'LWP'.
+    ELSE.
+      DELETE TABLE t_psp4 FROM wa_tsp4.
+    ENDIF.
+
+  ENDLOOP.
+
+*  LOOP AT T_PSP4 .
+*
+*    IF T_PSP4-TPKLA NE '0' AND T_PSP4-AWART NE 'LWP'.
+**      IF  T_PSP2-AWTYP NE 'A'.
+*      DELETE T_PSP4 WHERE TPKLA  NE '0' AND AWART NE 'LWP'."
+**      ENDIF.
+*    ENDIF.
+*  ENDLOOP.
+  DESCRIBE TABLE t_psp4 LINES  lv_sun_holi_lwp.
+
+
+*****************************************************************
+  CALL FUNCTION 'CU_READ_RGDIR'
+    EXPORTING
+      persnr          = pernr-pernr
+    TABLES
+      in_rgdir        = itab
+    EXCEPTIONS
+      no_record_found = 1
+      OTHERS          = 2.
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+
+  CLEAR:wa-seqnr,lv_seqnr,t_psp[],t_psp1[],t_pernr_tab[],t_pernr_tab-error.
+
+
+  IF d2  = '01'.
+    READ TABLE itab INTO wa WITH  KEY fpbeg = wa_t549q_off-begda   fpend = wa_t549q_off-endda ."WA INDEX 1. WA_T549Q-BEGDA WA_T549Q-ENDDA
+    IF sy-subrc IS INITIAL.
+      lv_seqnr  = wa-seqnr.
+      no_of_day = d1_v.
+      CONDENSE no_of_day .
+    ENDIF.
+
+
+  ELSE.
+
+    READ TABLE itab INTO wa WITH  KEY fpbeg = v_begda  fpend = wa_t549q_off-endda ."WA INDEX 1. WA_T549Q-BEGDA WA_T549Q-ENDDA
+    IF sy-subrc IS INITIAL.
+      lv_seqnr  = wa-seqnr.
+      no_of_day = ( d1_v - d2_v ) + 1.
+      CONDENSE no_of_day .
+    ENDIF.
+
+  ENDIF.
+
+  SHIFT pnppersg LEFT DELETING LEADING 'IEQ'.
+
+  SELECT SINGLE * FROM t549q INTO wa_t549q WHERE permo = '67' AND pabrj = pn-pabrj AND pabrp = pn-pabrp.
+
+  SELECT SINGLE *  FROM pa0001 INTO  wa_pa0001 WHERE pernr =  pernr-pernr
+                                                   AND begda <= pn-endda
+                                                   AND endda >= pn-begda
+*                                                   AND ENDDA = '99991231'
+  AND persg IN pnppersg .
+
+
+
+  SELECT * FROM pa2001 INTO CORRESPONDING FIELDS OF TABLE it_pa2001  WHERE pernr = pernr-pernr
+                                     AND begda <= pn-endda
+                                     AND endda >= pn-begda
+*                                     AND ENDDA = '99991231'
+  .
+
+  CLEAR gt_pa2001.
+  LOOP AT it_pa2001 INTO gt_pa2001.
+    IF gt_pa2001-kaltg GE gt_pa2001-abwtg .
+      gt_pa2001-abwtg = gt_pa2001-kaltg.
+    ENDIF.
+    MODIFY it_pa2001 FROM gt_pa2001 TRANSPORTING abwtg.
+  ENDLOOP.
+
+
+  CLEAR : gt_pa2001,v_hlwp, v_lwp,v_ernlv, v2_lop,v1_leave.
+  CLEAR :v_sl,v_cl,v_el,v_ml,v_pl. "Pic 15.3.2021
+  LOOP AT it_pa2001 INTO gt_pa2001.
+    IF gt_pa2001-subty = 'HLWP'.
+      v_hlwp = v_hlwp +  gt_pa2001-abwtg / 2.
+    ELSEIF  gt_pa2001-subty = 'LWP'.
+      v_lwp = v_lwp + gt_pa2001-abwtg.
+    ELSE.
+      v_ernlv = v_ernlv + gt_pa2001-abwtg.
+
+    ENDIF.
+
+** Leave bifurcation : Pic 15.3.2021
+    CASE gt_pa2001-subty.
+      WHEN 'SL'.
+        v_sl = v_sl + gt_pa2001-abwtg.
+      WHEN 'CL'.
+        v_cl = v_cl + gt_pa2001-abwtg.
+      WHEN 'EL'.
+        v_el = v_el + gt_pa2001-abwtg.
+      WHEN 'ML'.
+        v_ml = v_ml + gt_pa2001-abwtg.
+      WHEN 'PL'.
+        v_pl = v_pl + gt_pa2001-abwtg.
+    ENDCASE.
+***  End Changes for Leave Bifurcation Pic 15.3.21
+  ENDLOOP.
+
+  v2_lop = v_hlwp + v_lwp.
+  v1_leave  = v_ernlv.
+
+************************************************************
+*Get Uan No. Add By Pawan kumar. Date: 2.07.2019
+  SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND endda = '99991231'.    "endda Add By Pawan Kumar 19.07.2019
+
+************************************************************
+
+  CALL FUNCTION 'PYXX_READ_PAYROLL_RESULT'
+    EXPORTING
+      clusterid                    = 'IN'
+      employeenumber               = pernr-pernr
+      sequencenumber               = lv_seqnr
+    CHANGING
+      payroll_result               = it_payroll
+    EXCEPTIONS
+      illegal_isocode_or_clusterid = 1
+      error_generating_import      = 2
+      import_mismatch_error        = 3
+      subpool_dir_full             = 4
+      no_read_authority            = 5
+      no_record_found              = 6
+      versions_do_not_match        = 7
+      error_reading_archive        = 8
+      error_reading_relid          = 9
+      OTHERS                       = 10.
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+  wpbp[] = it_payroll-inter-wpbp[].
+  READ TABLE wpbp INDEX 1.
+
+*   BT[] = IT_PAYROLL-INTER-BT[].
+*    READ TABLE BT INDEX 1.
+  epf[] = it_payroll-nat-epf[].
+  READ TABLE epf INDEX 1.
+  esi[] = it_payroll-nat-esi[].
+  READ TABLE esi INDEX 1.
+
+*  BREAK-POINT.
+*LOOP AT IT_PAYROLL-INTER-RT INTO WA_PAY.
+*
+*WRITE:/ WA_PAY-LGART,' ' ,WA_PAY-BETRG,'   '.
+*ENDLOOP .
+
+
+
+
+**********************************************************
+*******PAYROLL REGISTER DISPLAY & CALCULATION*************
+**********************************************************
+
+  LOOP AT it_payroll-inter-rt INTO wa_pay .
+
+    it_final-pernr = wa_pa0001-pernr.
+    it_final-ename = wa_pa0001-ename.
+    it_final-egroup = wa_pa0001-persg.
+*****************************************************
+    "Added By Pawan Kumar 3.07.2019
+*    IF wa_pa0587-eepfn IS NOT INITIAL.
+*      it_final-pfn   = wa_pa0587-eepfn.
+*      ELSE.
+    it_final-pfn   = wa_pa0587-eepfm.    ""Change by Pawan Kumar 18.07.2019
+*    ENDIF.
+******************************************************
+
+************** OUTDATED LOGIC****************************** "COMMENTED BY BABU
+
+*    IT_FINAL-LOP   =  V2_LOP.
+*    V_TLDAY = WPBP-KSOLL.
+*
+*    IT_FINAL-TLDAY = NO_OF_DAY - V2_LOP. "WPBP-KSOLL.
+*
+*    IT_FINAL-LEAVE = V1_LEAVE.
+*
+*    IT_FINAL-HOLIDAY = ( LV_SAUNDAY + LV_CAL_HOLI ) - LV_CAL_HOLI_P .
+*
+*    IF  IT_FINAL-LOP =  NO_OF_DAY.
+*      IT_FINAL-WKDAY = '0.00'.
+*    ELSE.
+*      IT_FINAL-WKDAY = NO_OF_DAY - ( ( V1_LEAVE ) +  ( V2_LOP ) + ( IT_FINAL-HOLIDAY ) ).
+*    ENDIF.
+
+**************************************************************
+
+
+**********************NEW LOGIC TO PRINT TIME DATA************"BABU
+
+***************************************************
+** WHEN LOP = CALENDAR DAYS
+***************************************************
+
+    IF v2_lop = wpbp-ksoll.
+      lv_cal_holi = 0.
+      lv_saunday = 0.
+      lv_cal_holi_p = 0.
+      it_final-tlday = 0.
+
+      v_sunday =  lv_saunday - lv_sun_holi_lwp.
+      p_holiday = lv_cal_holi - lv_cal_holi_lwp.
+
+      it_final-holiday = 0."SDAY
+      it_final-wkday  = 0. "W DAYS
+      it_final-leave = 0."LEAVE
+      it_final-lop   =  v2_lop."LOP
+      it_final-tlday = 0."TDAY
+    ENDIF.
+
+
+****************************************************
+** WHEN LOP >= 0 AND PAID LEAVE >=0
+****************************************************
+    IF v2_lop >= '0.00'AND v_ernlv GE '0.00' .
+
+
+      v_sunday =  lv_saunday - lv_sun_holi_lwp.
+      p_holiday = lv_cal_holi - lv_cal_holi_lwp.
+
+      IF v2_lop NE wpbp-ksoll.
+        it_final-holiday = ( v_sunday + p_holiday ) ."SDAY
+      ENDIF.
+      IF v2_lop NE wpbp-ksoll.
+        it_final-wkday  = wpbp-ksoll - ( it_final-holiday + v2_lop + v1_leave )."W DAYS
+      ENDIF.
+      it_final-leave = v1_leave."LEAVE
+      it_final-lop   =  v2_lop."LOP
+      it_final-tlday = wpbp-ksoll - ( it_final-lop ). "T DAY
+    ENDIF.
+
+**
+    it_final-sl = v_sl.
+    it_final-cl = v_cl.
+    it_final-el = v_el.
+    it_final-ml = v_ml.
+    it_final-pl = v_pl.
+
+************TO PRINT ESI AND PF NOS.*****************************
+
+
+*    IT_FINAL-PFN = EPF-EEPFN.      "Commented By Pawan Kumar 2.07.2019
+    it_final-esi_no =  esi-esinm.
+
+***************PAYROLL CALCULATION AND DISPLAY********************
+
+    CLEAR : v_1bar,v_1arr.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1BAR' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1bar = wa_pay-betrg.
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1ARR' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1arr = wa_pay-betrg.
+      it_final-1arr = v_1arr.
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1BAS' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-basic = wa_pay-betrg + v_1bar + v_1arr.
+    ELSE.
+      it_final-basic = v_1bar + v_1arr.
+
+    ENDIF.
+    CLEAR : v_1bar ,v_1arr.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1HRA' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-hra = wa_pay-betrg.
+      "ADDED AFTER NEW WT CONFIG
+    ELSE.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9HRA' INTO wa_pay.
+      IF sy-subrc = 0.
+        hra1 = wa_pay-betrg.
+        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9HAR' INTO wa_pay.
+        IF sy-subrc EQ 0.
+          hra2 = wa_pay-betrg.
+        ENDIF.
+      ENDIF.
+      it_final-hra = hra1 + hra2.
+    ENDIF.
+    CLEAR : hra1 , hra2.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '2PIN' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-pi = wa_pay-betrg.
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1UAL' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-ua = wa_pay-betrg.
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1WAL' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-wa = wa_pay-betrg.
+      "ADDED AFTER NEW WT CONFIG
+    ELSE.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9WAL' INTO wa_pay.
+      IF sy-subrc = 0.
+        wa_9wal = wa_pay-betrg.
+        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9WAR' INTO wa_pay.       "Add By Pawan Kumar 05.11.2019
+        IF sy-subrc = 0.
+          wa_9war = wa_pay-betrg.
+        ENDIF.
+      ENDIF.
+      it_final-wa = wa_9wal + wa_9war.
+    ENDIF.
+    CLEAR : wa_9wal, wa_9war.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SPL' INTO wa_pay.
+    IF sy-subrc = 0.
+      sa_1spl = wa_pay-betrg.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SAR' INTO wa_pay.        "Add By Pawan Kumar 05.11.2019
+      IF sy-subrc = 0.
+        sa_1sar = wa_pay-betrg.
+      ENDIF.
+    ENDIF.
+    it_final-sa = sa_1spl + sa_1sar.
+    CLEAR : sa_1spl , sa_1sar.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '9SPL' INTO wa_pay.
+    IF sy-subrc = 0.
+      spl1 = wa_pay-betrg.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9SAR' INTO wa_pay.
+      IF sy-subrc = 0.
+        spl2 = wa_pay-betrg.
+      ENDIF.
+      it_final-sa1 = spl1 + spl2.
+    ENDIF.
+    CLEAR : spl1, spl2.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1EAL' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-ea = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1CON' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-ca = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1COR' INTO wa_pay.
+    IF sy-subrc = 0.
+*      IT_FINAL-CA1 = WA_PAY-BETRG.
+      it_final-ca = wa_pay-betrg.
+
+    ENDIF.
+
+
+    "NEW WT
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = 'M220' INTO wa_pay.
+    IF sy-subrc = 0."CONVEYANCE ALLOWANCE - NEW
+      it_final-ca = wa_pay-betrg.
+    ELSE.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9220' INTO wa_pay.
+      IF sy-subrc = 0."CONVEYANCE ALLOWANCE
+        ca_9220 = wa_pay-betrg.
+        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9CAR' INTO wa_pay.      "Add By Pawan Kumar 5.11.2019
+        IF sy-subrc = 0..
+          ca_9car = wa_pay-betrg.
+        ENDIF.
+      ENDIF.
+      it_final-ca = ca_9220 + ca_9car.
+    ENDIF.
+    CLEAR : ca_9220 , ca_9car.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = 'M260' INTO wa_pay.
+    IF sy-subrc = 0."CHILDREN EDUCATION
+      ca1_m260 = wa_pay-betrg.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9EAR' INTO wa_pay.        "Add By Pawan Kumar 5.11.2019
+      IF sy-subrc = 0.
+        ca1_9ear = wa_pay-betrg.
+      ENDIF.
+    ENDIF.
+    it_final-ca1 = ca1_m260 + ca1_9ear.
+    CLEAR : ca1_m260 , ca1_9ear.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '9260' INTO wa_pay.
+    IF sy-subrc = 0."DEVELOPMENT ALLOWANCE
+      da_9260 = wa_pay-betrg.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9DAR' INTO wa_pay.         "Add By Pawan Kumar 5.11.2019
+      IF sy-subrc = 0.
+        da_9dar = wa_pay-betrg.
+      ENDIF.
+    ENDIF.
+    it_final-developmnt_alwnc = da_9260 + da_9dar.
+    CLEAR : da_9260 , da_9dar.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '9221' INTO wa_pay.
+    IF sy-subrc = 0."FOOD ALLOWANCE
+      fa_9221 = wa_pay-betrg.
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9FAR' INTO wa_pay.          "Add By Pawan Kumar 5.11.2019
+      IF sy-subrc = 0..
+        fa_9far = wa_pay-betrg.
+      ENDIF.
+    ENDIF.
+    it_final-food_alwnc = fa_9221 + fa_9far.
+    CLEAR : fa_9221 , fa_9far.
+
+****Leave with wages*****Add by  Pawan Kumar 29.02.2020
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1LEV' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-lww = wa_pay-betrg.
+    ENDIF.
+
+***********************************************************
+*       ADD WAGE TYPE FOR ARREARS ********REMOVED********** "11.02.2012
+************************************************************
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8WES' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ARR_WTESIC = WA_PAY-BETRG.
+*    ENDIF.
+*
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8OES' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ARR_WOESIC = WA_PAY-BETRG.
+*    ENDIF.
+*
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8WPF' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ARR_WTPF = WA_PAY-BETRG.
+*    ENDIF.
+*
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8OPF' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ARR_WOPF = WA_PAY-BETRG.
+*    ENDIF.
+*
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8ARR' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ARR_PFESI = WA_PAY-BETRG.
+*    ENDIF.
+
+************************************************************
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/101' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-TOTAL = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+****************NEW LOGIC FOR TOTAL AMOUNT**************************
+
+*    IT_FINAL-TOTAL = IT_FINAL-BASIC + IT_FINAL-HRA + IT_FINAL-CA
+*                    + IT_FINAL-PI + IT_FINAL-UA + IT_FINAL-WA + IT_FINAL-ARR_WTESIC + IT_FINAL-ARR_WOESIC
+*                     + IT_FINAL-ARR_WTPF + IT_FINAL-ARR_WOPF + IT_FINAL-ARR_PFESI.
+
+********************************************************************
+
+****************NEW LOGIC FOR TOTAL AMOUNT**********
+    it_final-total = it_final-basic + it_final-hra + it_final-ca
+                    + it_final-pi + it_final-ua + it_final-wa +
+                    "START
+                    it_final-sa + it_final-sa1 + it_final-ea +
+                    it_final-ca1 + it_final-developmnt_alwnc +
+                    it_final-food_alwnc + it_final-lww .
+    " ADDED NEW WTS FOR TOTAL
+**************************************************** 07.11.2017 MILLY
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1ESA' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1esa = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3E1' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-eesi = wa_pay-betrg + v_1esa.
+    ELSE. "IF WA_PAY IS INITIAL.
+      it_final-eesi = v_1esa.
+    ENDIF.
+
+    CLEAR : v_1esa.
+************************************************************************
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/3E1' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-EESI = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3E2' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-eresi = wa_pay-betrg.
+
+    ENDIF.
+
+*******************NEW LOGIC******************************* "11.02.2012
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1PFA' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1pfa = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/ZF5' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-pf_arrears = wa_pay-betrg.
+
+    ENDIF.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3F1' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-eepf = wa_pay-betrg + v_1pfa + it_final-pf_arrears .
+    ELSE. " IF WA_PAY IS INITIAL.
+      it_final-eepf =  v_1pfa.
+
+    ENDIF.
+
+    CLEAR : v_1pfa.
+
+****************************************************************
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/3F1' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-EEPF = WA_PAY-BETRG.
+*
+*    ENDIF.
+*****************************************************************
+
+***********************NEW LOGIC********************************* "11.02.2012
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1EPF' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1epf = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3F3' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-erpf = wa_pay-betrg + v_1epf.
+    ELSE." WA_PAY IS INITIAL.
+      it_final-erpf = v_1epf.
+
+    ENDIF.
+    CLEAR : v_1epf.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1PFP' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1pfp = wa_pay-betrg.
+
+    ENDIF.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3F4' INTO wa_pay."PENSION
+    IF sy-subrc = 0.
+      it_final-efpf = wa_pay-betrg + v_1pfp.
+    ELSE.
+      it_final-efpf = v_1pfp.
+
+
+    ENDIF.
+
+    CLEAR : v_1pfp.
+
+
+****************************************************************************
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/3F3' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-ERPF = WA_PAY-BETRG.
+*
+*    ENDIF.
+*
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/3F4' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-EFPF = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+*****************************************************************************
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/460' INTO wa_pay. "'/460'/4MT
+    IF sy-subrc = 0.
+      IF wa_pay-betrg = '0.01'.
+        it_final-tds = '0.00'.
+      ELSE.
+        it_final-tds = wa_pay-betrg.
+      ENDIF.
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/462' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-ptax = wa_pay-betrg.
+    ENDIF.
+
+
+**********************NEW LOGIC************************************** "11.02.2012
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1LWF' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1lwf = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3W1' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-ee_lwf = wa_pay-betrg + v_1lwf.
+    ELSE.
+      it_final-ee_lwf = v_1lwf.
+
+    ENDIF.
+
+    CLEAR : v_1lwf.
+
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/3W1' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-EE_LWF = WA_PAY-BETRG.
+*
+*    ENDIF.
+***************************************************************************
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3W2' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-er_lwf = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/LTE' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-loan = wa_pay-betrg.
+
+    ENDIF.
+
+
+***************************NEW LOGIC************************************** "11.02.2012
+
+    LOOP AT it_payroll-inter-rt INTO wa_pay WHERE lgart = '/LEP'.
+      v_1lep  = v_1lep + wa_pay-betrg.
+    ENDLOOP.
+
+    LOOP AT it_payroll-inter-rt INTO wa_pay WHERE lgart = '/LRP'.
+      it_final-loan_ins = it_final-loan_ins + wa_pay-betrg +  v_1lep .
+    ENDLOOP.
+    CLEAR :  v_1lep.
+
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/LRP' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-LOAN_INS = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+***************************************************************************
+
+*************************NEW LOGIC****************************************"11.02.2012
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '2LID' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_2lid = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1LID' INTO wa_pay.
+    IF sy-subrc = 0.
+      v_1lid = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+
+
+    LOOP AT it_payroll-inter-rt INTO wa_pay WHERE lgart = '/LID'.
+      it_final-loan_int = it_final-loan_int + wa_pay-betrg + v_2lid + v_1lid.
+    ENDLOOP.
+
+    IF it_final-loan_int = 0.
+      it_final-loan_int = v_2lid + v_1lid.
+    ENDIF.
+
+    CLEAR : v_1lid,v_2lid.
+
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/LID' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-LOAN_INT = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+**************************************************************************************
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/552' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-arrears = wa_pay-betrg.
+
+    ENDIF.
+
+
+*    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/ZF5' INTO WA_PAY.
+*    IF SY-SUBRC = 0.
+*      IT_FINAL-PF_ARREARS = WA_PAY-BETRG.
+*
+*    ENDIF.
+
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SRE' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-sal_advance = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+*************************************************************************
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1BON' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-bonus = wa_pay-betrg.
+
+    ENDIF.
+
+************************************************************************
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1ODD' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-othr_ded = wa_pay-betrg * ( -1 ).
+
+    ENDIF.
+
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1REC' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-othr_advance = wa_pay-betrg.
+
+    ENDIF.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1TEA' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-tea_deduct = wa_pay-betrg .
+      it_final-tea_deduct1 = ( it_final-tea_deduct ) * ( -1 ).
+    ENDIF.
+
+    CLEAR: wa_pay-betrg.
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/563' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-claims = wa_pay-betrg .
+*      IT_FINAL-TEA_DEDUCT1 = ( IT_FINAL-TEA_DEDUCT ) * ( -1 ).
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/110' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-net_pay_ded =  ( wa_pay-betrg ) * ( - 1 ).
+
+    ENDIF.
+
+    it_final-tot_deduct =    ( it_final-sal_advance )  + ( it_final-othr_advance ) + ( it_final-othr_ded )
+                             + ( it_final-loan_ins ) + ( it_final-loan_int )
+                             + ( it_final-tea_deduct1 )  + ( it_final-tds ) + ( it_final-ptax )
+                             +  ( it_final-ee_lwf ) + + ( it_final-eesi ) + ( it_final-eepf ) ."
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/560' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-net_amt  = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '13F7' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-edli_cont  = wa_pay-betrg.
+
+    ENDIF.
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '13F8' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-edli_admin  = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '13F9' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-pf_admin  = wa_pay-betrg.
+
+    ENDIF.
+
+**********************NEW VALUE ********************************************
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/3WI' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-amt_3wi  = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/ROA' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-amt_roa  = wa_pay-betrg.
+
+    ENDIF.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '1TEA' INTO wa_pay.
+    IF sy-subrc = 0.
+
+      IF wa_pay-betrg <= 0.
+
+        v_tea  = wa_pay-betrg * ( -1 ).
+
+      ELSE .
+        v_tea = wa_pay-betrg.
+
+      ENDIF.
+    ENDIF.
+
+
+    it_final-l_a = it_final-sal_advance + it_final-loan_ins + it_final-loan_int + v_tea .
+
+
+*********************EDUCATION CESS**************************************************** MILLY
+********    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/4ME' INTO WA_PAY. "'/449'
+********    IF SY-SUBRC = 0.
+********      IT_FINAL-ED_CESS  = WA_PAY-BETRG.
+********
+********    ENDIF.
+********    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '/4MH' INTO WA_PAY. " '/447'
+********    IF SY-SUBRC = 0.
+********      IT_FINAL-HIG_CESS  = WA_PAY-BETRG.
+********
+********    ENDIF.
+******************************************************************************** ADD
+*
+*    IT_FINAL-TOT_DEDUCT =    ( IT_FINAL-SAL_ADVANCE )  + ( IT_FINAL-OTHR_ADVANCE )
+*                                +  ( IT_FINAL-LOAN_INS )  +  ( IT_FINAL-LOAN_INT ) + ( IT_FINAL-TEA_DEDUCT1 ) + ( IT_FINAL-CLAIMS )
+*                                + ( IT_FINAL-TDS ) + ( IT_FINAL-EESI ) + ( IT_FINAL-EEPF ) + ( IT_FINAL-EE_LWF ).
+
+***********    E_AMOUNT_TOTAL = IT_FINAL-TOTAL -  IT_FINAL-TOT_DEDUCT.
+***********
+*****************************************************************
+**********************ROUND OFF AMOUNT************************
+****************************************************************
+    v_amount_netamnt =  e_amount_total.
+
+
+    CALL FUNCTION 'J_1I6_ROUND_TO_NEAREST_AMT'
+      EXPORTING
+        i_amount = v_amount_netamnt
+*       I_AMOUNT1                =
+*       I_AMOUNT2                =
+*       I_AMOUNT3                =
+*       I_AMOUNT4                =
+*       I_AMOUNT5                =
+*       I_EXADDTAX1_AMOUNT       =
+*       I_EXADDTAX2_AMOUNT       =
+*       I_EXADDTAX3_AMOUNT       =
+      IMPORTING
+        e_amount = e_amount_netamnt
+*       E_AMOUNT1                =
+*       E_AMOUNT2                =
+*       E_AMOUNT3                =
+*       E_AMOUNT4                =
+*       E_AMOUNT5                =
+*       E_EXADDTAX1_AMOUNT       =
+*       E_EXADDTAX2_AMOUNT       =
+*       E_EXADDTAX3_AMOUNT       =
+      .
+
+
+**************************************************
+
+    it_final-net_amt = e_amount_netamnt.
+
+****************************************************************
+
+
+    CLEAR : rt_amnt.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/560' INTO wa_pay.
+    IF sy-subrc = 0.
+      rt_amnt = wa_pay-betrg - it_final-bonus  - it_final-arrears .
+
+*      IT_FINAL-NET_RTPAYROLL  = WA_PAY-BETRG - IT_FINAL-BONUS ." - IT_FINAL-SAL_ADVANCE  - IT_FINAL-ARREARS
+      CALL FUNCTION 'J_1I6_ROUND_TO_NEAREST_AMT'
+        EXPORTING
+          i_amount = rt_amnt
+*         I_AMOUNT1                =
+*         I_AMOUNT2                =
+*         I_AMOUNT3                =
+*         I_AMOUNT4                =
+*         I_AMOUNT5                =
+*         I_EXADDTAX1_AMOUNT       =
+*         I_EXADDTAX2_AMOUNT       =
+*         I_EXADDTAX3_AMOUNT       =
+        IMPORTING
+          e_amount = rt_amnt
+*         E_AMOUNT1                =
+*         E_AMOUNT2                =
+*         E_AMOUNT3                =
+*         E_AMOUNT4                =
+*         E_AMOUNT5                =
+*         E_EXADDTAX1_AMOUNT       =
+*         E_EXADDTAX2_AMOUNT       =
+*         E_EXADDTAX3_AMOUNT       =
+        .
+
+      it_final-net_rtpayroll = rt_amnt.
+
+
+    ENDIF.
+***********
+***********    APPEND IT_FINAL.
+***********
+************    MODIFY TABLE IT_FINAL FROM IT_FINAL TRANSPORTING HOLIDAY  .
+***********    DELETE ADJACENT DUPLICATES FROM IT_FINAL.
+***********
+***********  ENDLOOP.
+***********
+***********  CLEAR IT_FINAL.
+
+    APPEND it_final.
+
+    DELETE ADJACENT DUPLICATES FROM it_final.
+
+  ENDLOOP.
+  SORT it_final BY egroup pernr.
+  CLEAR it_final.
+
+
+ENDFORM.  " GET_DATA
+*&---------------------------------------------------------------------*
+*&      FORM  GROUP_WISE
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM group_wise .
+
+
+
+  SHIFT s_group LEFT DELETING LEADING 'IEQ'.
+
+  LOOP AT it_final.
+
+    IF s_group = 'M'.
+      DELETE it_final WHERE  egroup <> 'M'.
+      SORT it_final BY pernr.
+    ELSEIF
+   s_group = 'W'.
+      DELETE it_final WHERE  egroup <> 'W'.
+      SORT it_final BY pernr.
+    ELSEIF
+       s_group = 'S'.
+      DELETE it_final WHERE  egroup <> 'S'.
+      SORT it_final BY pernr.
+    ENDIF.
+  ENDLOOP.
+** GDP 7.1.2020/28.1.2020
+  IF flag EQ 'X'.
+    PERFORM freeze_saldata.
+  ENDIF.
+** End GDP 7.1.2020
+ENDFORM.                    " GROUP_WISE
+
+*&---------------------------------------------------------------------*
+*&      FORM  FIELD_CAT
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM field_cat .
+  DATA: pos TYPE i VALUE 1.
+
+  i_ltab-zebra = 'X'.
+
+
+  CLEAR w_fcat.
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'PERNR'.
+*  W_FCAT-COLWIDTH_OPTIMIZE = 'X'.
+*  "W_FCAT-TABNAME = 'ITAB_RT-INTER'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'PERSONNEL NO.'.
+*  W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+*
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ENAME'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EMPLOYEE NAME'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 17.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+*
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EGROUP'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EMPLOYEE GROUP'.
+*  W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'WKDAY'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'WORKING DAYS'.
+*  W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TLDAY'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'TOTAL DAYS'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LEAVE'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'LEAVE'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOP'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'LEAVE WITHOUT PAY'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'HOLIDAY'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'SUNDAY/HOLIDAY'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'PFN'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'UAN NO.'.   "Change PF NO to UAN NO By Pawan Kumar 2.07.2019
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ESI_NO'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ESI NO.'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+************************************************
+
+**********************************************
+**********EARNINGS COMPONENTS*****************
+**********************************************
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'BASIC'.
+  "W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'BASIC SALARY'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 10.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'HRA'.
+  "W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'HRA.'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'PI'.
+  "W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'PRODUCTION INCENTIVE.'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'UA'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'UNIFORM ALLOWANCE'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'WA'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'WA'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'SA'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'SA'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'SA1'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'SA1'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EA'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EMERGENCY ALLOWANCE'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'CA'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'CONVEYANC ALLOWANCE - CYC'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'CA1'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'CA1'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'DEVELOPMNT_ALWNC'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'DA'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'FOOD_ALWNC'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'FA'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LWW'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'LWW'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TOTAL'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'TOTAL'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+*****************************************************
+************DEDUCTION COMPONENTS**********************
+******************************************************
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EESI'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EEESI'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EEPF'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EEPF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TDS'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'TDS'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-DO_SUM     = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ptax'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ptax'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-DO_SUM     = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EE_LWF'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EE-LWF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOAN_INS'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'LOAN INSTALLMENT'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOAN_INT'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'LOAN INTEREST'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'SAL_ADVANCE'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'SALARY ADV RECOVERY'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TEA_DEDUCT1'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'TEA DEDUCTION'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'CLAIMS'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'CLAIMS'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'OTHR_DED'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'OTHER DEDUCTION '.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+*********************************************************************************
+*****************TOTAL DEDUCTIONS************************************************
+*********************************************************************************
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TOT_DEDUCT'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'TOTAL DEDUCTION '.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+**********************************************************************
+**********************NET PAY*****************************************
+**********************************************************************
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'NET_RTPAYROLL'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'NET AMOUNT'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 30.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+**********************************************************************
+*******************ROUNDING OFF***************************************
+**********************************************************************
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'AMT_ROF'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ROUNDING OFF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 40.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+**********************************************************************
+************** ADDITION OF EMPLOYER RELATED WAGE COMPONENTS***********
+**********************************************************************
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ERESI'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ERESI'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ERPF'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ERPF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EFPF'.
+*  W_FCAT-TABNAME = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EFPF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EDLI_CONT'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EDLI CONTRIBUTION'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'EDLI_ADMIN'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'EDLI ADMIN CHARGE'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'PF_ADMIN'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'PF ADMIN CHARGE'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ER_LWF'.
+  w_fcat-tabname = 'IT_FINAL'.
+  w_fcat-seltext_m = 'ER_LWF'.
+*  W_FCAT-DO_SUM     = 'X'.
+*   W_FCAT-EMPHASIZE = 'X'.
+*  W_FCAT-OUTPUTLEN = 15.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+
+
+ENDFORM.                    " FIELD_CAT
+*&---------------------------------------------------------------------*
+*&      FORM  ALV_DISPLAY
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+FORM alv_display .
+  i_ltab-colwidth_optimize = 'X'.
+
+*  SORT IT_FINAL  ASCENDING BY EGROUP  .
+  IF s_group = ' '.
+    SORT it_final BY egroup pernr  .
+  ENDIF.
+
+  CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK        = ' '
+*     I_BYPASSING_BUFFER       =
+*     I_BUFFER_ACTIVE          = ' '
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'PF_STATUS'
+*     I_CALLBACK_USER_COMMAND  = ' '
+*     I_STRUCTURE_NAME         =
+      is_layout                = i_ltab
+      it_fieldcat              = i_fcat
+*     IT_EXCLUDING             =
+*     IT_SPECIAL_GROUPS        =
+*     IT_SORT                  =
+*     IT_FILTER                =
+*     IS_SEL_HIDE              =
+      i_default                = 'X'
+      i_save                   = 'A '
+*     IS_VARIANT               =
+*     IT_EVENTS                =
+*     IT_EVENT_EXIT            =
+*     IS_PRINT                 =
+*     IS_REPREP_ID             =
+*     I_SCREEN_START_COLUMN    = 0
+*     I_SCREEN_START_LINE      = 0
+*     I_SCREEN_END_COLUMN      = 0
+*     I_SCREEN_END_LINE        = 0
+*     IR_SALV_LIST_ADAPTER     =
+*     IT_EXCEPT_QINFO          =
+*     I_SUPPRESS_EMPTY_DATA    = ABAP_FALSE
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER  =
+*     ES_EXIT_CAUSED_BY_USER   =
+    TABLES
+      t_outtab                 = it_final[]
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+
+
+ENDFORM.                    " ALV_DISPLAY
+*&---------------------------------------------------------------------*
+*&      FORM  LOGO
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+*  -->  P1        TEXT
+*  <--  P2        TEXT
+*----------------------------------------------------------------------*
+*FORM LOGO .
+*
+** CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+**   EXPORTING
+**     IT_LIST_COMMENTARY       = T_HEADER
+**     I_LOGO                   = 'AVON_LOGO2'
+***    I_END_OF_LIST_GRID       =
+***    I_ALV_FORM               =
+**           .
+*
+*
+*ENDFORM.                    " LOGO
+
+FORM pf_status USING rt_extag TYPE slis_t_extab.
+  SET PF-STATUS 'ZSTANDARD_PAYROLL'.
+
+
+ENDFORM.                    "PF_STATUS
+
+FORM freeze_saldata."
+* 28.1.2020
+* pn-endda
+  TYPES :
+    BEGIN OF ty_fr.
+          INCLUDE STRUCTURE zhr_ctch.
+  TYPES : flag(1),
+  END OF ty_fr.
+  DATA : fl TYPE STANDARD TABLE OF ty_fr WITH HEADER LINE.
+  DATA : rm TYPE zhr_ctch.
+
+  LOOP AT it_final.
+    fl-pernr  = it_final-pernr.
+    fl-endda  = pn-endda.
+    fl-act_workdays	= it_final-wkday.
+    fl-act_totaldays  = it_final-tlday.
+    fl-act_leave  = it_final-leave.
+    fl-act_lwp  = it_final-lop.
+    fl-act_woff_holiday	= it_final-holiday.
+    fl-sl = it_final-sl.
+    fl-cl = it_final-cl.
+    fl-el = it_final-el.
+    fl-ml = it_final-ml.
+    fl-pl = it_final-pl.
+    fl-act_basic  = it_final-basic.
+    fl-act_basarr  = it_final-1arr.
+
+    fl-act_hra  = it_final-hra.
+    fl-act_pi	= it_final-pi.
+    fl-act_uniform  = it_final-ua.
+    fl-act_wash	= it_final-wa.
+    fl-act_spl  = it_final-sa.
+    fl-act_spl1	= it_final-sa1.
+    fl-act_emergency  = it_final-ea.
+    fl-act_convcycle  = it_final-ca.
+    fl-act_conv1  = it_final-ca1.
+    fl-act_development  = it_final-developmnt_alwnc.
+    fl-act_food	= it_final-food_alwnc.
+    fl-act_total  = it_final-total.
+    fl-ded_esi  = it_final-eesi.
+    fl-ded_pf	= it_final-eepf.
+    fl-ded_tds  = it_final-tds.
+    fl-ded_ptax	= it_final-ptax.
+    fl-ded_lwf  = it_final-ee_lwf.
+    fl-ded_loaninstall  = it_final-loan_ins.
+    fl-ded_loanintt	= it_final-loan_int.
+    fl-ded_saladv	= it_final-sal_advance.
+    fl-ded_tea  = it_final-tea_deduct1.
+    fl-ded_claims	= it_final-claims.
+    fl-ded_total  = it_final-tot_deduct.
+    fl-net_payable  = it_final-net_rtpayroll.
+
+    APPEND fl.CLEAR fl.
+    INSERT zhr_ctch FROM TABLE fl ACCEPTING DUPLICATE KEYS.
+    IF sy-subrc EQ 0.
+      COMMIT WORK.
+      MESSAGE 'Freeze activity of actual salary is completed....' TYPE 'I'.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.
