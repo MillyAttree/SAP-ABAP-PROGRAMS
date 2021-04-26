@@ -1,0 +1,187 @@
+REPORT zhr_bdc_it007_plannedwork
+       NO STANDARD PAGE HEADING LINE-SIZE 255.
+
+*include bdcrecx1.
+*
+*parameters: dataset(132) lower case.
+***    DO NOT CHANGE - the generated data section - DO NOT CHANGE    ***
+*
+*   If it is nessesary to change the data section use the rules:
+*   1.) Each definition of a field exists of two lines
+*   2.) The first line shows exactly the comment
+*       '* data element: ' followed with the data element
+*       which describes the field.
+*       If you don't have a data element use the
+*       comment without a data element name
+*   3.) The second line shows the fieldname of the
+*       structure, the fieldname must consist of
+*       a fieldname and optional the character '_' and
+*       three numbers and the field length in brackets
+*   4.) Each field must be type C.
+*
+*** Generated data section with specific formatting - DO NOT CHANGE  ***
+DATA: BEGIN OF RECORD OCCURS 0,
+* data element: PERNR_D
+        pernr_001(038),
+** data element: TIMRE
+*        timr6_002(001),
+** data element: CHOIC
+*        choic_003(035),
+* data element: BEGDA
+        begda_004(010),
+* data element: ENDDA
+        endda_005(010),
+* data element: SCHKN
+        schkz_006(008),
+* data element: EMPCT
+*        empct_007(008),
+      END OF record.
+
+*** End generated data section ***
+
+DATA: v_filename TYPE string.
+DATA: it_bdcdata TYPE STANDARD TABLE OF bdcdata,
+      wa_bdcdata TYPE bdcdata.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+
+PARAMETERS : v_file TYPE rlgrap-filename OBLIGATORY.
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR v_file.
+
+  CALL FUNCTION 'F4_FILENAME'
+   EXPORTING
+     program_name        = syst-cprog
+     dynpro_number       = syst-dynnr
+*   FIELD_NAME          = ' '
+   IMPORTING
+    file_name           = v_file.
+
+
+START-OF-SELECTION.
+
+  v_filename = v_file.
+
+  CALL FUNCTION 'GUI_UPLOAD'
+    EXPORTING
+      filename                      = v_filename
+     filetype                      = 'ASC'
+     has_field_separator           = 'X'
+*   HEADER_LENGTH                 = 0
+*   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+    TABLES
+      data_tab                      = record
+* EXCEPTIONS
+*   FILE_OPEN_ERROR               = 1
+*   FILE_READ_ERROR               = 2
+*   NO_BATCH                      = 3
+*   GUI_REFUSE_FILETRANSFER       = 4
+*   INVALID_TYPE                  = 5
+*   NO_AUTHORITY                  = 6
+*   UNKNOWN_ERROR                 = 7
+*   BAD_DATA_FORMAT               = 8
+*   HEADER_NOT_ALLOWED            = 9
+*   SEPARATOR_NOT_ALLOWED         = 10
+*   HEADER_TOO_LONG               = 11
+*   UNKNOWN_DP_ERROR              = 12
+*   ACCESS_DENIED                 = 13
+*   DP_OUT_OF_MEMORY              = 14
+*   DISK_FULL                     = 15
+*   DP_TIMEOUT                    = 16
+*   OTHERS                        = 17
+            .
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+*start-of-selection.
+*
+*perform open_dataset using dataset.
+*perform open_group.
+*
+*do.
+*
+*read dataset dataset into record.
+*if sy-subrc <> 0. exit. endif.
+
+  LOOP AT record.
+
+    PERFORM bdc_dynpro      USING 'SAPMP50A' '1000'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=INS'.
+    PERFORM bdc_field       USING 'RP50G-PERNR'
+                                  record-pernr_001.
+*    PERFORM bdc_field       USING 'RP50G-TIMR6'
+*                                  record-timr6_002.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'RP50G-CHOIC'.
+    PERFORM bdc_field       USING 'RP50G-CHOIC'
+                                 '0007'. "record-choic_003.
+    PERFORM bdc_dynpro      USING 'MP000700' '2000'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'P0007-ZTERF'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  'UPD'.
+    PERFORM bdc_field       USING 'P0007-BEGDA'
+                                  record-begda_004.
+    PERFORM bdc_field       USING 'P0007-ENDDA'
+                                  record-endda_005.
+    PERFORM bdc_field       USING 'P0007-SCHKZ'
+                                  record-schkz_006.
+      PERFORM bdc_field       USING 'P0007-ZTERF'
+                                  '0'."record-ZTERF_006.
+*    PERFORM bdc_field       USING 'P0007-EMPCT'
+*                                  record-empct_007.
+*perform bdc_transaction using 'PA30'.
+*
+*enddo.
+*
+*perform close_group.
+*perform close_dataset using dataset.
+
+    CALL TRANSACTION 'PA30' USING it_bdcdata MODE 'A'.
+
+    REFRESH it_bdcdata.
+    CLEAR wa_bdcdata.
+  ENDLOOP.
+
+*----------------------------------------------------------------------*
+*        Start new screen                                              *
+*----------------------------------------------------------------------*
+FORM bdc_dynpro USING program dynpro.
+  CLEAR wa_bdcdata.
+  wa_bdcdata-program  = program.
+  wa_bdcdata-dynpro   = dynpro.
+  wa_bdcdata-dynbegin = 'X'.
+  APPEND wa_bdcdata TO it_bdcdata.
+ENDFORM.                    "BDC_DYNPRO
+
+*----------------------------------------------------------------------*
+*        Insert field                                                  *
+*----------------------------------------------------------------------*
+FORM bdc_field USING fnam fval.
+
+  CLEAR wa_bdcdata.
+  wa_bdcdata-fnam = fnam.
+  wa_bdcdata-fval = fval.
+  APPEND wa_bdcdata TO it_bdcdata.
+
+ENDFORM.                    "BDC_FIELD
+
+*10   0007  01.11.2011  31.12.9999  AWSR
+*27   0007  01.11.2011  31.12.9999  AWSR
+*28   0007  01.11.2011  31.12.9999  AWSR
+*30   0007  01.11.2011  31.12.9999  AWSR
