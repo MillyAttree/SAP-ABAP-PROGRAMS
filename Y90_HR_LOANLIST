@@ -1,0 +1,597 @@
+*&---------------------------------------------------------------------*
+*& Report  ZHR_LOANLIST
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZHR_LOANLIST.
+
+TYPE-POOLS : slis.
+
+TABLES : pernr.
+
+
+
+
+
+DATA : d_repid TYPE sy-repid.
+d_repid = sy-repid.
+
+*TYPES : BEGIN OF ty_pa0040
+
+DATA : i_fcat TYPE slis_t_fieldcat_alv,
+      i_ltab TYPE slis_layout_alv,
+      w_fcat TYPE slis_fieldcat_alv.
+
+DATA  WA_PA0001 TYPE  PA0001 .
+DATA  WA_PA0040 TYPE  PA0040 .
+
+
+
+TYPES : BEGIN OF TY_FINAL,
+        pernr TYPE pernr-pernr,
+        ENAME TYPE Pa0001-ENAME,
+        loan_taken type  prbetrg,
+        loan_install type  prbetrg,
+        loan_amnt_bal type  prbetrg,
+        text1(72) type C,
+        text2(72) type C,
+        END OF TY_FINAL.
+DATA : it_final TYPE ty_final OCCURS 0 WITH HEADER LINE.
+
+
+DATA:  wa_t549q TYPE t549q.
+DATA :v_m TYPE t549q-pabrp .
+DATA :IT_T247 TYPE  T247.
+DATA: P_MONTH(9) TYPE C.
+DATA :P_YEAR(4) TYPE C.
+DATA :P_BDATE(10) TYPE C.
+DATA :P_EDATE(10) TYPE C.
+
+**************************DECLERATION FOR PAYROLL FOUNCTION MODULE**********
+DATA : lv_seqnr   TYPE pc261-seqnr.
+
+DATA : it_payroll  TYPE payin_result OCCURS 0 WITH HEADER LINE ,
+      wa_payroll   TYPE payin_result,
+      wa_pay    TYPE pc207.
+
+DATA : itab   TYPE TABLE OF pc261,
+      wa     TYPE pc261.
+DATA : V1_LEAVE TYPE PA2001-ABWTG.
+DATA : V2_LOP TYPE PA2001-ABWTG.
+
+data  :it_TEXT  TYPE  IT_NOTES WITH HEADER LINE.
+data : KEY1 LIKE  PSKEY.
+
+SELECTION-SCREEN begin of BLOCK a1.
+PARAMETERS: P_BEGDA LIKE QPPNP-BEGDA.
+*            FOR TABLE PERNR MODIF ID XDA.
+*SELECTION-SCREEN COMMENT 52(05) TEXT-BIS
+*            FOR FIELD PNPENDDA MODIF ID XDA.
+*SELECTION-SCREEN POSITION 58 FOR TABLE PERNR.
+PARAMETERS: P_ENDDA LIKE QPPNP-ENDDA.
+*            FOR TABLE PERNR MODIF ID XDA.
+SELECTION-SCREEN end of BLOCK a1.
+
+START-OF-SELECTION.
+
+GET pernr.
+
+PERFORM get_data.
+END-OF-SELECTION.
+PERFORM feild_cat.
+PERFORM ALV.
+
+
+
+
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM GET_DATA .
+
+SELECT SINGLE * FROM t549q INTO wa_t549q WHERE permo = '67' AND pabrj = pn-pabrj AND pabrp = pn-pabrp AND BEGDA = P_BEGDA and endda = P_ENDDA.
+
+SELECT SINGLE *  FROM PA0001 INTO  WA_PA0001 WHERE PERNR =  PERNR-PERNR
+AND BEGDA <= PN-endda
+AND ENDDA >= PN-BEGDA .
+
+
+SELECT sUM( ABWTG ) FROM PA2001 INTO V1_LEAVE  WHERE PERNR = PERNR-PERNR
+                                              AND ( SUBTY =     '1000' OR SUBTY = '1001' )
+                                                 AND BEGDA <= PN-ENDDA
+                                                 AND ENDDA >= PN-BEGDA .
+
+SELECT sUM( ABWTG ) FROM PA2001 INTO V2_LOP WHERE PERNR = PERNR-PERNR
+                                   AND  ( SUBTY =  '1010' OR SUBTY =  '1020' OR SUBTY =  '1030')
+                                   AND BEGDA <= PN-ENDDA
+                                   AND ENDDA >= PN-BEGDA .
+***********************for text **********************************************************
+
+
+ SELECT SINGLE *  FROM PA0040 INTO  WA_PA0040 WHERE PERNR =  PERNR-PERNR
+AND BEGDA <= PN-endda
+AND ENDDA >= PN-BEGDA.
+.
+
+   MOVE-CORRESPONDING  WA_PA0040 to key1.
+
+   key1-infty = '0040'.
+
+  if  WA_PA0040-itxex  = 'X'.
+
+    CALL FUNCTION 'HR_READ_INFTY_NOTE'
+      EXPORTING
+        key                  = key1
+*       TCLAS                = 'A'
+     TABLES
+       TEXT                 = it_TEXT
+     EXCEPTIONS
+       NOT_FOUND            = 1
+       NOT_AUTHORIZED       = 2
+       OTHERS               = 3
+              .
+    IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ENDIF.
+  endif.
+
+
+
+********************************************************************************************
+  CALL FUNCTION 'CU_READ_RGDIR'
+  EXPORTING
+    persnr          = pernr-pernr
+  TABLES
+    in_rgdir        = itab
+  EXCEPTIONS
+    no_record_found = 1
+    OTHERS          = 2.
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+  READ TABLE itab INTO wa WITH  KEY fpbeg = wa_t549q-begda  fpend = wa_t549q-endda."WA INDEX 1.
+  IF sy-subrc IS INITIAL.
+    lv_seqnr  = wa-seqnr.
+  ENDIF.
+
+
+  IF wa_t549q-pabrp <= 9.
+
+    v_m = wa_t549q-pabrp + 03 .
+ELSEIF wa_t549q-pabrp > 9 AND   wa_t549q-pabrp <= 12.
+    v_m = wa_t549q-pabrp - 09 .
+
+  ENDIF.
+
+
+  CALL FUNCTION 'IDWT_READ_MONTH_TEXT'
+  EXPORTING
+    langu         = SY-LANGU
+    month         = V_M"wa_t549q-pabrp
+  IMPORTING
+    T247          = IT_T247
+    .
+
+  P_MONTH = IT_T247-LTX.
+  P_YEAR = pn-pabrj.
+  P_bdate = pn-begda.
+  P_edate = pn-endda.
+
+
+  IF lv_seqnr IS NOT INITIAL.
+    CALL FUNCTION 'PYXX_READ_PAYROLL_RESULT'
+    EXPORTING
+      clusterid                    = 'IN'
+      employeenumber               = pernr-pernr
+      sequencenumber               = lv_seqnr
+    CHANGING
+      payroll_result               = it_payroll
+    EXCEPTIONS
+      illegal_isocode_or_clusterid = 1
+      error_generating_import      = 2
+      import_mismatch_error        = 3
+      subpool_dir_full             = 4
+      no_read_authority            = 5
+      no_record_found              = 6
+      versions_do_not_match        = 7
+      error_reading_archive        = 8
+      error_reading_relid          = 9
+      OTHERS                       = 10.
+    IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ENDIF.
+  ENDIF.
+
+  CLEAR IT_FINAL.
+  LOOP AT it_payroll-inter-rt INTO wa_pay.
+
+    it_final-pernr = wa_pa0001-pernr.
+    it_final-ename = wa_pa0001-ename.
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/LOE' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-loan_taken = wa_pay-betrg .
+
+    ENDIF.
+
+
+    READ TABLE it_payroll-inter-rt WITH KEY lgart = '/LRP' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-loan_install = wa_pay-betrg .
+
+    ENDIF.
+
+
+   READ TABLE it_payroll-inter-rt WITH KEY lgart = '/LLB' INTO wa_pay.
+    IF sy-subrc = 0.
+      it_final-loan_amnt_bal = wa_pay-betrg .
+
+    ENDIF.
+
+*  if it_text[] is NOT INITIAL.
+
+  READ TABLE it_text index 1.
+  if sy-subrc = 0.
+    it_final-text1 = 'Yes'.
+    endif.
+
+      READ TABLE it_text index 2.
+  if sy-subrc = 0.
+    it_final-text2 = 'Yes'.
+    endif.
+
+* endif.
+
+ APPEND it_final.
+
+ENDLOOP.
+
+
+  DELETE ADJACENT DUPLICATES FROM it_final.
+  DELETE IT_FINAL where loan_taken = '0.00'.
+
+
+
+
+
+ENDFORM.                    " GET_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FEILD_CAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form FEILD_CAT .
+
+  DATA: pos TYPE i VALUE 1.
+
+I_LTAB-ZEBRA = 'X'.
+
+
+  CLEAR w_fcat.
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'PERNR'.
+*  w_fcat-colwidth_optimize = 'X'.
+*  "w_fcat-tabname = 'itab_rt-inter'.
+    w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'Personnel No.'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+*
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'ENAME'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'Employee Name'.
+*   w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 17.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+*
+  pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOAN_TAKEN'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'loan taken'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+      pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOAN_INSTALL'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'loan installment'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+       pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'LOAN_AMNT_BAL'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'Loan amnt bal'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+         pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TEXT1'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'BNS'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+    pos = pos + 1.
+  w_fcat-col_pos       =  pos.
+  w_fcat-fieldname = 'TEXT2'.
+  w_fcat-tabname = 'it_final'.
+  w_fcat-seltext_m = 'LWW'.
+*  w_fcat-emphasize = 'X'.
+*  w_fcat-outputlen = 8.
+  APPEND w_fcat TO i_fcat.
+  CLEAR w_fcat.
+
+
+endform.                    " FEILD_CAT
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+form ALV .
+  I_LTAB-COLWIDTH_OPTIMIZE = 'X'.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+   I_CALLBACK_PROGRAM                = SY-REPID
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+   I_CALLBACK_TOP_OF_PAGE            = 'HEADING'
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = 'HTML_TOP_OF_PAGE '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+   I_BACKGROUND_ID                   = 'ALV_BACKGROUND '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+   IS_LAYOUT                         = I_LTAB
+   IT_FIELDCAT                       = I_FCAT
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+   I_DEFAULT                         = 'X'
+   I_SAVE                            = 'A'
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =  it_etab[]
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = IT_FINAL[]
+* EXCEPTIONS
+*   PROGRAM_ERROR                     = 1
+*   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+ENDIF.
+
+
+
+endform.                    " ALV
+
+*&---------------------------------------------------------------------*
+*&      Form  HTML_TOP_OF_PAGE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+*FORM HTML_TOP_OF_PAGE USING DOCUMENT TYPE REF TO CL_DD_DOCUMENT.
+*
+*  DATA:M1 TYPE sy-datum,"ztmm_report-repdt,
+*        Y1 TYPE sy-datum,"ztmm_report-repdt,
+*        D1 TYPE sy-datum," ztmm_report-repdt,
+*        dt_repdt1 TYPE CHAR10.
+*
+*
+*  DATA: TEXT TYPE SDYDO_TEXT_ELEMENT.
+*
+*
+*  TEXT = 'Avon Ispat And Power Limited ( Ludhiana ) '.
+*
+*
+*
+*
+*  CALL METHOD DOCUMENT->ADD_GAP
+*  EXPORTING
+*    WIDTH = 50.
+*  TEXT =  TEXT.
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'HEADING'.
+* CALL METHOD DOCUMENT->NEW_LINE.
+*
+*  CALL METHOD DOCUMENT->NEW_LINE.
+*  CALL METHOD DOCUMENT->NEW_LINE.
+*
+*  CALL METHOD DOCUMENT->ADD_GAP
+*  EXPORTING
+*    WIDTH = 0.
+*
+**  TEXT =  'Period:'.
+*TEXT =  'loan Register for:'.
+*
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'Strong'.
+*
+*  CALL METHOD DOCUMENT->ADD_GAP
+*  EXPORTING
+*    WIDTH = 5.
+*
+**  Y1 =  dt_repdt-LOW+0(4).
+**  M1 =  dt_repdt-LOW+4(2).
+**  D1 =  dt_repdt-LOW+6(2).
+**
+**  CONCATENATE D1 M1 Y1 INTO dt_repdt1 SEPARATED BY '.'.
+*  TEXT = P_MONTH.
+**
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'Strong'.
+*
+*  CALL METHOD DOCUMENT->ADD_GAP
+*  EXPORTING
+*    WIDTH = 5.
+*
+**  Y2 = dt_repdt-HIGH+0(4).
+**  M2 =  dt_repdt-HIGH+4(2).
+**  D2 =  dt_repdt-HIGH+6(2).
+**
+**  CONCATENATE D2 M2 Y2 INTO dt_repdt2 SEPARATED BY '.'.
+**  TEXT = dt_repdt2.
+*  TEXT = P_YEAR.
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'Strong'.
+*
+*  CALL METHOD DOCUMENT->ADD_GAP
+*  EXPORTING
+*    WIDTH = 150.
+*
+*
+*    text = 'Run Date =>'.
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'Strong'.
+*
+*  Y1 = sy-datum+0(4).
+*  M1 =  sy-datum+4(2).
+*  D1 =  sy-datum+6(2).
+**
+*  CONCATENATE D1 M1 Y1 INTO dt_repdt1 SEPARATED BY '/'.
+*
+*  TEXT = dt_repdt1.
+**  TEXT = sy-datum.
+*  CALL METHOD DOCUMENT->ADD_TEXT
+*  EXPORTING
+*    TEXT      = TEXT
+*    SAP_STYLE = 'Strong'.
+*
+*ENDFORM.                    "html_top_of_page
+
+
+FORM heading.
+
+  DATA : v_text(25) TYPE C.
+
+  DATA : htab TYPE slis_t_listheader WITH HEADER LINE.
+  DATA : strng1(25), strng2(25).
+
+
+
+
+  htab-typ = 'H'.
+  htab-info = 'Avon Ispat And Power Limited ( Ludhiana ) '.
+  APPEND htab.
+  CLEAR htab.
+
+
+
+
+  IF P_MONTH IS NOT INITIAL.
+*    CONCATENATE p_month  p_year INTO v_text SEPARATED BY ' - '.
+     CONCATENATE p_month  PN-BEGDA+0(4) INTO v_text SEPARATED BY ' - '.
+
+    htab-typ = 'S'.
+    htab-KEY = 'Loan Register for:'.
+
+*    WRITE v_text  USING EDIT MASK '____________' TO strng1.
+*    htab-info = strng1.
+    WRITE v_text .
+    htab-info = v_text.
+    APPEND htab.
+
+    CLEAR htab.
+    CLEAR strng1.
+    CLEAR strng2.
+
+  ENDIF.
+
+
+
+*
+
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+  EXPORTING
+    it_list_commentary       = htab[]
+*   I_LOGO                   =
+*   I_END_OF_LIST_GRID       =
+*   I_ALV_FORM               =
+    .
+
+
+
+ENDFORM.                    "html_top_of_page
