@@ -1,0 +1,544 @@
+*&---------------------------------------------------------------------*
+*& Report  ZHR_CON_REMUNERATION
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  zhr_con_remuneration.
+
+
+TYPE-POOLS : slis.
+
+INFOTYPES:0014,0583.
+
+
+TABLES : pa0583,t511p.
+
+DATA: BEGIN OF it_tab OCCURS 0,
+      pernr LIKE pa0583-pernr,
+      begda(10) TYPE c," LIKE pa0583-begda,
+      endda(10) TYPE c," LIKE pa0583-endda,
+      days(3) TYPE c,
+      END OF it_tab.
+
+DATA :wa LIKE it_tab.
+
+
+TYPES :BEGIN OF ty_pa0583,
+       pernr TYPE pa0583-pernr,
+       conty TYPE pa0583-conty," Conveyance type
+       END OF ty_pa0583.
+
+DATA: it_pa0583 TYPE STANDARD TABLE OF ty_pa0583.
+DATA: wa_pa0583 TYPE ty_pa0583.
+
+
+TYPES :BEGIN OF ty_t511p,
+       konst TYPE t511p-konst,
+       betrg TYPE t511p-betrg,
+       BEGDA TYPE t511p-BEGDA,
+      ENDDA TYPE t511p-ENDDA,
+       END OF ty_t511p.
+
+DATA: it_t511p TYPE STANDARD TABLE OF ty_t511p.
+DATA: wa_t511p TYPE ty_t511p.
+
+TYPES :BEGIN OF ty_check,
+       pernr TYPE pa0583-pernr,
+       conty TYPE pa0583-conty," Conveyance type
+       konst TYPE t511p-konst,
+       betrg_f TYPE t511p-betrg,
+
+      END OF ty_check.
+
+DATA : it_check TYPE STANDARD TABLE OF ty_check,
+       wa_check TYPE ty_check.
+
+TYPES : BEGIN OF ty_final,
+        pernr TYPE pa0583-pernr,
+        begda TYPE pa0583-begda,"(10) TYPE c,"
+        endda TYPE pa0583-endda,"(10) TYPE c,"
+        days(3) TYPE c,
+        conty TYPE pa0583-conty,
+        konst TYPE t511p-konst,
+        betrg TYPE t511p-betrg,
+       END OF ty_final.
+
+DATA : it_final TYPE STANDARD TABLE OF ty_final,
+        wa_final TYPE ty_final.
+**************Decleration For Alv**************
+TYPES : BEGIN OF ty_alv,
+        pernr TYPE pa0583-pernr,
+        begda(10) TYPE c," TYPE pa0583-begda,"(10) TYPE c,"
+        endda(10) TYPE c," TYPE pa0583-endda,"(10) TYPE c,"
+        days(3) TYPE c,
+        conty TYPE pa0583-conty,
+        konst TYPE t511p-konst,
+        betrg TYPE t511p-betrg,
+        message(100) TYPE c,
+       END OF ty_alv.
+
+DATA : it_alv TYPE STANDARD TABLE OF ty_alv,
+        wa_alv TYPE ty_alv.
+
+
+DATA:w_fcat TYPE slis_fieldcat_alv,
+     i_fcat TYPE slis_t_fieldcat_alv,
+     layout TYPE slis_layout_alv.
+
+**********************************************
+
+DATA: return     TYPE   bapireturn1.
+DATA: key        TYPE   bapipakey.
+
+DATA : record14 TYPE p0014.
+
+DATA : validityend TYPE pa0001-endda,
+       validitybegin TYPE pa0001-begda.
+DATA :       v_day(2),
+             v_mon(2),
+             v_year(4),
+             v_begda(8),
+            v_endda(8),
+            v_begda_alv(10),
+            v_endda_alv(10).
+
+DATA : v_message(100) TYPE c.
+
+
+PARAMETERS: filename TYPE rlgrap-filename OBLIGATORY.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR filename.
+  PERFORM get_file_des.
+
+START-OF-SELECTION.
+  PERFORM upload.
+  PERFORM data_check.
+  PERFORM final_data.
+  PERFORM data_upload_0014.
+  PERFORM field_cat.
+  PERFORM alv_display.
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_FILE_DES
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_file_des .
+
+  DATA:
+    ls_file TYPE file_table,"* Access selected file
+    lt_filetable TYPE filetable,
+    lf_rc        TYPE i.
+
+  CALL METHOD cl_gui_frontend_services=>file_open_dialog
+    EXPORTING
+      multiselection = abap_false
+    CHANGING
+      file_table     = lt_filetable
+      rc             = lf_rc.
+
+* Number of selected filed must be equal to one.
+  CHECK lf_rc = 1.
+
+  READ TABLE lt_filetable INTO ls_file INDEX 1.
+  CHECK sy-subrc = 0.
+
+  filename = ls_file-filename.
+
+ENDFORM.                    " GET_FILE_DES
+*&---------------------------------------------------------------------*
+*&      Form  UPLOAD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM upload .
+  DATA: BEGIN OF iexcel OCCURS 0.
+          INCLUDE STRUCTURE alsmex_tabline.
+  DATA: END OF iexcel.
+  FIELD-SYMBOLS <fs> LIKE iexcel.
+
+  CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    EXPORTING
+      filename    = filename
+      i_begin_col = 1
+      i_begin_row = 2
+      i_end_col   = 25
+      i_end_row   = 9998
+    TABLES
+      intern      = iexcel
+    EXCEPTIONS
+      OTHERS      = 3.
+
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+  SORT iexcel BY row col ASCENDING.
+
+  LOOP AT iexcel ASSIGNING <fs>.
+    AT NEW row.
+      CLEAR wa.
+    ENDAT.
+
+    CASE <fs>-col.
+      WHEN 01.
+        wa-pernr = <fs>-value.
+      WHEN 02.
+        REPLACE ALL OCCURRENCES OF '.' IN  <fs>-value WITH ''.
+        wa-begda = <fs>-value.
+      WHEN 03.
+        REPLACE ALL OCCURRENCES OF '.' IN  <fs>-value WITH ''.
+        wa-endda = <fs>-value.
+      WHEN 04.
+        wa-days = <fs>-value.
+    ENDCASE.
+
+    AT END OF row.
+      APPEND wa TO it_tab.
+      CLEAR: wa.
+    ENDAT.
+  ENDLOOP.
+
+
+
+
+ENDFORM.                    " UPLOAD
+*&---------------------------------------------------------------------*
+*&      Form  DATA_CHECK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM data_check .
+
+  IF it_tab[] IS NOT INITIAL.
+    SELECT pernr conty INTO CORRESPONDING FIELDS OF TABLE it_pa0583 FROM pa0583
+      FOR ALL ENTRIES IN  it_tab
+       WHERE pernr = it_tab-pernr.
+
+  ENDIF.
+
+
+
+  IF it_pa0583[] IS NOT INITIAL.
+    SELECT konst betrg begda Endda INTO CORRESPONDING FIELDS OF TABLE it_t511p FROM t511p
+                                                   WHERE molga = '40'
+                                                    AND konst IN ('CBIKE', 'CMCAR', 'CMOPD', 'CMSPL','CSCOO' )
+*                                                 and begda eq '20120401'  " Hard Coded Date it would be change when rate will be change again.
+                                                 and begda eq '20120801'
+                                                 and endda eq '99990331'.   " Code done by Sumit Saini
+
+
+  ENDIF.
+
+
+  LOOP AT it_pa0583 INTO wa_pa0583.
+
+    wa_check-pernr = wa_pa0583-pernr.
+    wa_check-conty = wa_pa0583-conty.
+
+    IF wa_check-conty = 'B'."Bike
+      READ TABLE it_t511p INTO wa_t511p WITH KEY konst = 'CBIKE'.
+      IF sy-subrc = 0.
+        wa_check-betrg_f = wa_t511p-betrg.
+        wa_check-konst = wa_t511p-konst.
+      ENDIF.
+
+    ELSEIF wa_check-conty = 'C'."CAR
+      READ TABLE it_t511p INTO wa_t511p WITH KEY konst = 'CMCAR'.
+      IF sy-subrc = 0.
+        wa_check-betrg_f = wa_t511p-betrg.
+        wa_check-konst = wa_t511p-konst.
+      ENDIF.
+
+    ELSEIF wa_check-conty = 'M'."Moped
+      READ TABLE it_t511p INTO wa_t511p WITH KEY konst = 'CMOPD'.
+      IF sy-subrc = 0.
+        wa_check-betrg_f = wa_t511p-betrg.
+        wa_check-konst = wa_t511p-konst.
+      ENDIF.
+
+    ELSEIF wa_check-conty = 'S' ."SCOOTER
+      READ TABLE it_t511p INTO wa_t511p WITH KEY konst = 'CSCOO'.
+      IF sy-subrc = 0.
+        wa_check-betrg_f = wa_t511p-betrg.
+        wa_check-konst = wa_t511p-konst.
+      ENDIF.
+
+    ELSEIF wa_check-conty = 'S' ."SPECIAL
+      READ TABLE it_t511p INTO wa_t511p WITH KEY konst = 'CMSPL'.
+      IF sy-subrc = 0.
+        wa_check-betrg_f = wa_t511p-betrg.
+        wa_check-konst = wa_t511p-konst.
+      ENDIF.
+
+    ENDIF.
+
+
+
+    APPEND wa_check TO  it_check.
+
+    CLEAR :wa_check.
+  ENDLOOP.
+
+
+
+ENDFORM.                    " DATA_CHECK
+*&---------------------------------------------------------------------*
+*&      Form  FINAL_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM final_data .
+  LOOP AT it_tab INTO wa.
+    wa_final-pernr = wa-pernr.
+*  REPLACE ALL OCCURRENCES OF '.' IN wa-begda WITH ''.
+    wa_final-begda = wa-begda.
+
+*REPLACE ALL OCCURRENCES OF '.' IN wa-endda WITH ''.
+    wa_final-endda = wa-endda.
+    wa_final-days =  wa-days.
+
+    READ TABLE it_check INTO wa_check WITH KEY pernr = wa_final-pernr.
+    IF sy-subrc = 0.
+      wa_final-conty = wa_check-conty.
+      wa_final-konst = wa_check-konst.
+      wa_final-betrg = ( wa_final-days ) * ( wa_check-betrg_f ) .
+    ENDIF.
+
+    APPEND wa_final TO it_final.
+    CLEAR : wa_final.
+
+  ENDLOOP.
+
+
+ENDFORM.                    " FINAL_DATA
+*&---------------------------------------------------------------------*
+*&      Form  DATA_UPLOAD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM data_upload_0014 .
+
+  LOOP AT it_final INTO wa_final.
+
+    CLEAR : v_begda, v_endda.
+    record14-pernr = wa_final-pernr.
+    v_day = wa_final-begda+0(2).
+    v_mon = wa_final-begda+2(2).
+    v_year = wa_final-begda+4(4).
+    CONCATENATE v_year v_mon v_day  INTO v_begda.
+    validitybegin = v_begda.
+    record14-begda =  validitybegin."wa_final-begda.
+
+    CLEAR:v_year, v_mon, v_day.
+
+    v_day = wa_final-endda+0(2).
+    v_mon = wa_final-endda+2(2).
+    v_year = wa_final-endda+4(4).
+    CONCATENATE v_year v_mon v_day  INTO v_endda.
+    validityend = v_endda.
+    record14-endda = validityend."wa_final-endda.
+    CLEAR:v_year, v_mon, v_day.
+
+    record14-lgart = '1COR'.
+    record14-opken = 'A'.
+    record14-betrg = wa_final-betrg.
+    record14-waers = 'INR'.
+
+
+    CALL FUNCTION 'BAPI_EMPLOYEE_ENQUEUE'
+      EXPORTING
+        number = wa_final-pernr.
+*    IMPORTING
+*      return = return.
+
+
+
+    CALL FUNCTION 'HR_INFOTYPE_OPERATION'
+      EXPORTING
+        infty                  ='0014'
+
+       subtype                 = '1COR'
+       number                  =  record14-pernr
+*         OBJECTID               =
+*         LOCKINDICATOR          =
+       validityend             =  validityend " record14-endda
+       validitybegin           = validitybegin "record14-begda
+*         RECORDNUMBER           =
+        record                 =  record14
+        operation              = 'INS'
+*         TCLAS                  = 'A'
+       dialog_mode             = '0'
+*       nocommit                =''
+*         VIEW_IDENTIFIER        =
+*         SECONDARY_RECORD       =
+     IMPORTING
+       return                 = return
+       key                    =  key
+              .
+
+
+    CALL FUNCTION 'BAPI_EMPLOYEE_DEQUEUE'
+       EXPORTING
+        number        = wa_final-pernr
+*   IMPORTING
+*    RETURN        =
+                                    .
+*************************************************
+***                For alv Display            **
+*************************************************
+    wa_alv-pernr = record14-pernr.
+
+    v_day = wa_final-begda+0(2).
+    v_mon = wa_final-begda+2(2).
+    v_year = wa_final-begda+4(4).
+    CONCATENATE   v_day v_mon v_year  INTO v_begda_alv SEPARATED BY '.'.
+    wa_alv-begda = v_begda_alv.
+    CLEAR:v_year, v_mon, v_day,v_begda_alv.
+
+
+    v_day = wa_final-endda+0(2).
+    v_mon = wa_final-endda+2(2).
+    v_year = wa_final-endda+4(4).
+    CONCATENATE   v_day v_mon v_year  INTO v_endda_alv SEPARATED BY '.'.
+
+    wa_alv-endda = v_endda_alv.
+    CLEAR:v_year, v_mon, v_day,v_endda_alv.
+
+    wa_alv-days = wa_final-days.
+    wa_alv-conty = wa_final-conty .
+
+    IF wa_final-konst = 'CBIKE'.
+      wa_alv-konst = 'BIKE'.
+    ELSEIF wa_final-konst = 'CMCAR'.
+      wa_alv-konst = 'CAR'.
+    ELSEIF wa_final-konst = 'CMOPD'.
+      wa_alv-konst = 'MOPED'.
+
+    ELSEIF wa_final-konst = 'CSCOO'.
+      wa_alv-konst = 'SCOOTER'.
+    ELSEIF wa_final-konst = 'CMSPL'.
+      wa_alv-konst = 'SPECIAL'.
+    ENDIF.
+    wa_alv-betrg = wa_final-betrg.
+***********************************************
+***********************************************
+    IF return IS NOT INITIAL.
+      CONCATENATE return-id return-type return-number INTO v_message SEPARATED BY','.
+*      MESSAGE ID return-id TYPE return-type NUMBER return-number.
+      wa_alv-message = v_message.
+
+      CLEAR :  return,v_message.
+    ELSE.
+      wa_alv-message = 'Record Created'.
+*      MESSAGE s022(zhr).
+    ENDIF.
+
+    APPEND wa_alv TO it_alv.
+    CLEAR :wa_alv.
+
+
+  ENDLOOP.
+ENDFORM.                    " DATA_UPLOAD
+*&---------------------------------------------------------------------*
+*&      Form  FIELD_CAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM field_cat .
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'PERNR'.
+  w_fcat-seltext_m = 'EMPLOYEE CODE'.
+  APPEND w_fcat TO i_fcat.
+
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'BEGDA'.
+  w_fcat-seltext_m = 'Start Date'.
+  APPEND w_fcat TO i_fcat.
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'ENDDA'.
+  w_fcat-seltext_m = 'End Date'.
+  APPEND w_fcat TO i_fcat.
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'DAYS'.
+  w_fcat-seltext_m = 'No.Of Days'.
+  APPEND w_fcat TO i_fcat.
+
+*  CLEAR:w_fcat.
+*  w_fcat-fieldname = 'CONTY'.
+*  w_fcat-seltext_m = 'Codes for Conveyance type'.
+*  APPEND w_fcat TO i_fcat.
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'KONST'.
+  w_fcat-seltext_m = 'Conveyance type'.
+  APPEND w_fcat TO i_fcat.
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'BETRG'.
+  w_fcat-seltext_m = 'Amount'.
+  APPEND w_fcat TO i_fcat.
+
+
+  CLEAR:w_fcat.
+  w_fcat-fieldname = 'MESSAGE'.
+  w_fcat-seltext_m = 'Message'.
+  APPEND w_fcat TO i_fcat.
+
+
+ENDFORM.                    " FIELD_CAT
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM alv_display .
+
+  layout-zebra = 'X'.
+  layout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      i_grid_title       = 'Upload Result'
+      is_layout          = layout
+      it_fieldcat        = i_fcat
+    TABLES
+      t_outtab           = it_alv
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.                    " ALV
