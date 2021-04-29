@@ -240,18 +240,15 @@ DATA : e_amount_total LIKE  j_1itaxvar-j_1itaxam1.
 DATA : rt_amnt TYPE j_1itaxvar-j_1itaxam1.
 
 ******************************************************
-***GDP 7.1.2020
+
 DATA : flag(1).
 IMPORT flag FROM MEMORY ID 'CF'.
-** end gdp7.1.2020
-
-*GDP 15.3.2021 leave
 DATA :v_sl TYPE pa2001-kaltg,
       v_cl TYPE pa2001-kaltg,
       v_el TYPE pa2001-kaltg,
       v_ml TYPE pa2001-kaltg,
       v_pl TYPE pa2001-kaltg.
-** end gdp 15.3.2021
+
 *BREAK-POINT.
 
 START-OF-SELECTION.
@@ -275,11 +272,11 @@ START-OF-SELECTION.
 *GET PAYROLL.
 END-OF-SELECTION.
   PERFORM group_wise.
-  IF flag  NE 'X'. "GDP 7.1.2020/28.1.2020
+  IF flag  NE 'X'.
     PERFORM field_cat.
 *  PERFORM LOGO.
     PERFORM alv_display.
-  ENDIF."GDP 7.1.2010
+  ENDIF.
 
 
 *&---------------------------------------------------------------------*
