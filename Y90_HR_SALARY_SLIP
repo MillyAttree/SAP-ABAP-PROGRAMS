@@ -17,11 +17,11 @@ tables : pernr,zsalary_slip.", PYORGSCREEN, PYTIMESCREEN.
 
 infotypes : 0001.
 
-DATA : HRA1          TYPE PRBETRG,   "Add By Pawan Kumar
+DATA : HRA1          TYPE PRBETRG,  
        HRA2          TYPE PRBETRG,
        SPL1          TYPE PRBETRG,
        SPL2          TYPE PRBETRG,
-       ca_9220       TYPE PRBETRG,    "Add By Pawan Kumar 05.11.2019
+       ca_9220       TYPE PRBETRG,   
        ca_9car       TYPE PRBETRG,
        ca1_m260      TYPE PRBETRG,
        ca1_9ear      TYPE PRBETRG,
@@ -386,7 +386,7 @@ form get_data .
     if  wa_tsp3-tagty = '1' and wa_tsp3-awart = 'LWP'.
     else.
       delete table t_psp3 from wa_tsp3.
-      delete t_psp3 where tprog = 'OFF'.           "Add By Pawan Kumar 06.11.2019
+      delete t_psp3 where tprog = 'OFF'.         
     endif.
   endloop.
 *  DELETE T_PSP3 WHERE TAGTY = '0' AND AWART NE 'LWP'."
@@ -504,7 +504,7 @@ form get_data .
 
 ***********************************************************
 *Get Uan No. Add By Pawan kumar.
-SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA = '99991231'.    "endda Add By Pawan Kumar 19.07.2019
+SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA = '99991231'.  
 
 ***********************************************************
 
@@ -685,7 +685,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
 *    IF wa_pa0587-eepfn IS NOT INITIAL.
 *      it_final-pfn   = wa_pa0587-eepfn.
 *      ELSE.
-        it_final-pfn   = wa_pa0587-eepfm.    ""Change by Pawan Kumar 18.07.2019
+        it_final-pfn   = wa_pa0587-eepfm.  
 *    ENDIF.
 ****************************************************
     v_tlday = wpbp-ksoll.
@@ -894,7 +894,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
       READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9WAL' INTO WA_PAY.
       IF SY-SUBRC = 0.
         wa_9wal = wa_pay-betrg.
-        READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9WAR' INTO WA_PAY.       "Add By Pawan Kumar 05.11.2019
+        READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9WAR' INTO WA_PAY.     
           IF SY-SUBRC = 0.
             wa_9war = wa_pay-betrg.
           ENDIF.
@@ -907,7 +907,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
     READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '1SPL' INTO WA_PAY.
     IF SY-SUBRC = 0.
       sa_1spl = wa_pay-betrg.
-      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '1SAR' INTO WA_PAY.        "Add By Pawan Kumar 05.11.2019
+      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '1SAR' INTO WA_PAY.      
         IF SY-SUBRC = 0.
           sa_1sar = wa_pay-betrg.
         ENDIF.
@@ -930,7 +930,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
     READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = 'M260' INTO WA_PAY.
     IF SY-SUBRC = 0."CHILDREN EDUCATION
       ca1_m260 = wa_pay-betrg.
-        READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9EAR' INTO WA_PAY.        "Add By Pawan Kumar 5.11.2019
+        READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9EAR' INTO WA_PAY.      
           IF SY-SUBRC = 0.
             ca1_9ear = wa_pay-betrg.
           ENDIF.
@@ -959,7 +959,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
       READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9220' INTO WA_PAY.
       IF SY-SUBRC = 0."CONVEYANCE ALLOWANCE-NEW
         ca_9220 = wa_pay-betrg.
-         READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9CAR' INTO WA_PAY.      "Add By Pawan Kumar 5.11.2019
+         READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9CAR' INTO WA_PAY.     
            IF SY-SUBRC = 0..
              ca_9car = wa_pay-betrg.
            ENDIF.
@@ -972,7 +972,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
     READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9260' INTO WA_PAY.
     IF SY-SUBRC = 0."DEVELOPMENT ALLOWANCE
       da_9260 = wa_pay-betrg.
-      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9DAR' INTO WA_PAY.         "Add By Pawan Kumar 5.11.2019
+      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9DAR' INTO WA_PAY.       
         IF SY-SUBRC = 0.
           da_9dar = wa_pay-betrg.
         ENDIF.
@@ -984,7 +984,7 @@ SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND ENDDA =
     READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9221' INTO WA_PAY.
     IF SY-SUBRC = 0."FOOD ALLOWANCE
       fa_9221 = wa_pay-betrg.
-      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9FAR' INTO WA_PAY.          "Add By Pawan Kumar 5.11.2019
+      READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '9FAR' INTO WA_PAY.      
         IF SY-SUBRC = 0..
           fa_9far = wa_pay-betrg.
         ENDIF.
