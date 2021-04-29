@@ -16,11 +16,11 @@ TABLES : pernr.", PYORGSCREEN, PYTIMESCREEN.
 
 INFOTYPES : 0001.
 
-DATA : hra1     TYPE prbetrg,   "Add By Pawan Kumar
+DATA : hra1     TYPE prbetrg, 
        hra2     TYPE prbetrg,
        spl1     TYPE prbetrg,
        spl2     TYPE prbetrg,
-       ca_9220  TYPE prbetrg,    "Add By Pawan Kumar 05.11.2019
+       ca_9220  TYPE prbetrg,  
        ca_9car  TYPE prbetrg,
        ca1_m260 TYPE prbetrg,
        ca1_9ear TYPE prbetrg,
@@ -49,7 +49,7 @@ DATA : esi TYPE hrpayin_esi WITH HEADER LINE.
 DATA : it_pa2001 TYPE TABLE OF pa2001.
 DATA : wa_pa2001 TYPE pa2001.
 DATA : gt_pa2001 TYPE pa2001.
-DATA : wa_pa0587 TYPE pa0587.    "Added By Pawan Kumar 2.07.2019
+DATA : wa_pa0587 TYPE pa0587.  
 
 
 DATA wa_t549q TYPE t549q.
@@ -185,7 +185,7 @@ TYPES : BEGIN OF ty_final,
           net_rtpayroll    TYPE  prbetrg,
           bonus            TYPE  prbetrg,
           lww              TYPE  prbetrg,
-          1arr             TYPE  prbetrg, "Basic Arrear 16.6.2020
+          1arr             TYPE  prbetrg, 
 *     TAX TYPE  PRBETRG,
 
         END OF ty_final.
@@ -242,7 +242,7 @@ DATA : rt_amnt TYPE j_1itaxvar-j_1itaxam1.
 ******************************************************
 ***GDP 7.1.2020
 DATA : flag(1).
-IMPORT flag FROM MEMORY ID 'CF'."GDP 28.1.20
+IMPORT flag FROM MEMORY ID 'CF'.
 ** end gdp7.1.2020
 
 *GDP 15.3.2021 leave
@@ -386,7 +386,7 @@ FORM get_data .
     IF  wa_tsp3-tagty = '1' AND wa_tsp3-awart = 'LWP'.
     ELSE.
       DELETE TABLE t_psp3 FROM wa_tsp3.
-      DELETE t_psp3 WHERE tprog = 'OFF'.           "Add By Pawan Kumar 06.11.2019
+      DELETE t_psp3 WHERE tprog = 'OFF'.         
     ENDIF.
   ENDLOOP.
 *  DELETE T_PSP3 WHERE TAGTY = '0' AND AWART NE 'LWP'."
@@ -515,7 +515,7 @@ FORM get_data .
 
 ************************************************************
 *Get Uan No. Add By Pawan kumar. Date: 2.07.2019
-  SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND endda = '99991231'.    "endda Add By Pawan Kumar 19.07.2019
+  SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND endda = '99991231'.   
 
 ************************************************************
 
@@ -574,11 +574,11 @@ FORM get_data .
 *    IF wa_pa0587-eepfn IS NOT INITIAL.
 *      it_final-pfn   = wa_pa0587-eepfn.
 *      ELSE.
-    it_final-pfn   = wa_pa0587-eepfm.    ""Change by Pawan Kumar 18.07.2019
+    it_final-pfn   = wa_pa0587-eepfm.   
 *    ENDIF.
 ******************************************************
 
-************** OUTDATED LOGIC****************************** "COMMENTED BY BABU
+************** OUTDATED LOGIC****************************** 
 
 *    IT_FINAL-LOP   =  V2_LOP.
 *    V_TLDAY = WPBP-KSOLL.
@@ -598,7 +598,7 @@ FORM get_data .
 **************************************************************
 
 
-**********************NEW LOGIC TO PRINT TIME DATA************"BABU
+**********************NEW LOGIC TO PRINT TIME DATA************
 
 ***************************************************
 ** WHEN LOP = CALENDAR DAYS
@@ -651,7 +651,7 @@ FORM get_data .
 ************TO PRINT ESI AND PF NOS.*****************************
 
 
-*    IT_FINAL-PFN = EPF-EEPFN.      "Commented By Pawan Kumar 2.07.2019
+*    IT_FINAL-PFN = EPF-EEPFN.    
     it_final-esi_no =  esi-esinm.
 
 ***************PAYROLL CALCULATION AND DISPLAY********************
@@ -714,7 +714,7 @@ FORM get_data .
       READ TABLE it_payroll-inter-rt WITH KEY lgart = '9WAL' INTO wa_pay.
       IF sy-subrc = 0.
         wa_9wal = wa_pay-betrg.
-        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9WAR' INTO wa_pay.       "Add By Pawan Kumar 05.11.2019
+        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9WAR' INTO wa_pay.      
         IF sy-subrc = 0.
           wa_9war = wa_pay-betrg.
         ENDIF.
@@ -727,7 +727,7 @@ FORM get_data .
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SPL' INTO wa_pay.
     IF sy-subrc = 0.
       sa_1spl = wa_pay-betrg.
-      READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SAR' INTO wa_pay.        "Add By Pawan Kumar 05.11.2019
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '1SAR' INTO wa_pay.       
       IF sy-subrc = 0.
         sa_1sar = wa_pay-betrg.
       ENDIF.
@@ -775,7 +775,7 @@ FORM get_data .
       READ TABLE it_payroll-inter-rt WITH KEY lgart = '9220' INTO wa_pay.
       IF sy-subrc = 0."CONVEYANCE ALLOWANCE
         ca_9220 = wa_pay-betrg.
-        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9CAR' INTO wa_pay.      "Add By Pawan Kumar 5.11.2019
+        READ TABLE it_payroll-inter-rt WITH KEY lgart = '9CAR' INTO wa_pay.     
         IF sy-subrc = 0..
           ca_9car = wa_pay-betrg.
         ENDIF.
@@ -788,7 +788,7 @@ FORM get_data .
     READ TABLE it_payroll-inter-rt WITH KEY lgart = 'M260' INTO wa_pay.
     IF sy-subrc = 0."CHILDREN EDUCATION
       ca1_m260 = wa_pay-betrg.
-      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9EAR' INTO wa_pay.        "Add By Pawan Kumar 5.11.2019
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9EAR' INTO wa_pay.       
       IF sy-subrc = 0.
         ca1_9ear = wa_pay-betrg.
       ENDIF.
@@ -800,7 +800,7 @@ FORM get_data .
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '9260' INTO wa_pay.
     IF sy-subrc = 0."DEVELOPMENT ALLOWANCE
       da_9260 = wa_pay-betrg.
-      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9DAR' INTO wa_pay.         "Add By Pawan Kumar 5.11.2019
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9DAR' INTO wa_pay.       
       IF sy-subrc = 0.
         da_9dar = wa_pay-betrg.
       ENDIF.
@@ -812,7 +812,7 @@ FORM get_data .
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '9221' INTO wa_pay.
     IF sy-subrc = 0."FOOD ALLOWANCE
       fa_9221 = wa_pay-betrg.
-      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9FAR' INTO wa_pay.          "Add By Pawan Kumar 5.11.2019
+      READ TABLE it_payroll-inter-rt WITH KEY lgart = '9FAR' INTO wa_pay.        
       IF sy-subrc = 0..
         fa_9far = wa_pay-betrg.
       ENDIF.
@@ -943,7 +943,7 @@ FORM get_data .
 *    ENDIF.
 *****************************************************************
 
-***********************NEW LOGIC********************************* "11.02.2012
+***********************NEW LOGIC*********************************
 
 
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '1EPF' INTO wa_pay.
@@ -1011,7 +1011,7 @@ FORM get_data .
     ENDIF.
 
 
-**********************NEW LOGIC************************************** "11.02.2012
+**********************NEW LOGIC*************************************
 
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '1LWF' INTO wa_pay.
     IF sy-subrc = 0.
@@ -1050,7 +1050,7 @@ FORM get_data .
     ENDIF.
 
 
-***************************NEW LOGIC************************************** "11.02.2012
+***************************NEW LOGIC**************************************
 
     LOOP AT it_payroll-inter-rt INTO wa_pay WHERE lgart = '/LEP'.
       v_1lep  = v_1lep + wa_pay-betrg.
@@ -1070,7 +1070,7 @@ FORM get_data .
 
 ***************************************************************************
 
-*************************NEW LOGIC****************************************"11.02.2012
+*************************NEW LOGIC****************************************
 
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '2LID' INTO wa_pay.
     IF sy-subrc = 0.
@@ -1479,7 +1479,7 @@ FORM field_cat .
   w_fcat-col_pos       =  pos.
   w_fcat-fieldname = 'PFN'.
   w_fcat-tabname = 'IT_FINAL'.
-  w_fcat-seltext_m = 'UAN NO.'.   "Change PF NO to UAN NO By Pawan Kumar 2.07.2019
+  w_fcat-seltext_m = 'UAN NO.'.  
 *   W_FCAT-EMPHASIZE = 'X'.
 *  W_FCAT-OUTPUTLEN = 8.
   APPEND w_fcat TO i_fcat.
