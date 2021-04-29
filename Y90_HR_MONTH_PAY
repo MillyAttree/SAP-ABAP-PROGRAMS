@@ -491,7 +491,7 @@ FORM get_data .
 
     ENDIF.
 
-** Leave bifurcation : Pic 15.3.2021
+
     CASE gt_pa2001-subty.
       WHEN 'SL'.
         v_sl = v_sl + gt_pa2001-abwtg.
@@ -504,7 +504,7 @@ FORM get_data .
       WHEN 'PL'.
         v_pl = v_pl + gt_pa2001-abwtg.
     ENDCASE.
-***  End Changes for Leave Bifurcation Pic 15.3.21
+
   ENDLOOP.
 
   v2_lop = v_hlwp + v_lwp.
@@ -567,7 +567,7 @@ FORM get_data .
     it_final-ename = wa_pa0001-ename.
     it_final-egroup = wa_pa0001-persg.
 *****************************************************
-    "Added By Pawan Kumar 3.07.2019
+  
 *    IF wa_pa0587-eepfn IS NOT INITIAL.
 *      it_final-pfn   = wa_pa0587-eepfn.
 *      ELSE.
