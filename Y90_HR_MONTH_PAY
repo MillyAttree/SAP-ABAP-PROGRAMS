@@ -511,7 +511,7 @@ FORM get_data .
   v1_leave  = v_ernlv.
 
 ************************************************************
-*Get Uan No. Add By Pawan kumar. Date: 2.07.2019
+
   SELECT SINGLE * FROM pa0587 INTO wa_pa0587 WHERE pernr = pernr-pernr AND endda = '99991231'.   
 
 ************************************************************
@@ -817,14 +817,14 @@ FORM get_data .
     it_final-food_alwnc = fa_9221 + fa_9far.
     CLEAR : fa_9221 , fa_9far.
 
-****Leave with wages*****Add by  Pawan Kumar 29.02.2020
+****Leave with wages*****
     READ TABLE it_payroll-inter-rt WITH KEY lgart = '1LEV' INTO wa_pay.
     IF sy-subrc = 0.
       it_final-lww = wa_pay-betrg.
     ENDIF.
 
 ***********************************************************
-*       ADD WAGE TYPE FOR ARREARS ********REMOVED********** "11.02.2012
+*       ADD WAGE TYPE FOR ARREARS ********
 ************************************************************
 
 *    READ TABLE IT_PAYROLL-INTER-RT WITH KEY LGART = '8WES' INTO WA_PAY.
