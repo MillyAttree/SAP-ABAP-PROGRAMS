@@ -1,0 +1,263 @@
+
+  METHOD xls_set_cell_header.
+
+    DATA lv_coli TYPE i.
+    DATA lv_coli2 TYPE i.
+    DATA lv_coli3 TYPE i.
+    DATA lv_abcde TYPE char30.
+
+    lv_coli = iv_tabix - 1.
+
+    IF iv_tabix > 26 AND iv_tabix <= 52.
+
+      lv_coli2 = iv_tabix - 27.
+      CONCATENATE sy-abcde+0(1) sy-abcde+lv_coli2(1) INTO lv_abcde.
+
+    ELSEIF iv_tabix > 52.
+
+      lv_coli3 = iv_tabix - 53.
+      CONCATENATE sy-abcde+1(1) sy-abcde+lv_coli3(1) INTO lv_abcde.
+
+    ELSE.
+      lv_abcde = sy-abcde+lv_coli(1).
+    ENDIF.
+
+
+
+    ao_xls_worksheet->set_cell(
+          EXPORTING
+            ip_column    = lv_abcde "sy-abcde+lv_coli(1)
+            ip_row       = 5
+        ip_value     = ls_column_final
+        ip_style = ao_xls_style_h6->get_guid( )
+ ).
+*  CATCH zcx_excel.    "
+  ENDMETHOD.
+
+
+-----------------------------------------------------------------------------------------
+method SET_CELL.
+
+  DATA: lv_column                 TYPE zexcel_cell_column,
+        ls_sheet_content          TYPE zexcel_s_cell_data,
+        lv_row_alpha              TYPE string,
+        lv_col_alpha              TYPE zexcel_cell_column_alpha,
+        lv_value                  TYPE zexcel_cell_value,
+        lv_data_type              TYPE zexcel_cell_data_type,
+        lv_value_type             TYPE abap_typekind,
+        lo_style                  TYPE REF TO zcl_excel_style,
+        lv_style_guid             TYPE zexcel_cell_style,
+        lo_addit                  TYPE REF TO cl_abap_elemdescr,
+        lo_value                  TYPE REF TO data,
+        lo_value_new              TYPE REF TO data.
+
+  FIELD-SYMBOLS: <fs_sheet_content> TYPE zexcel_s_cell_data,
+                 <fs_numeric>       TYPE numeric,
+                 <fs_date>          TYPE d,
+                 <fs_time>          TYPE t,
+                 <fs_value>         TYPE simple.
+
+  IF ip_value  IS NOT SUPPLIED AND ip_formula IS NOT SUPPLIED.
+    RAISE EXCEPTION TYPE zcx_excel
+      EXPORTING
+        error = 'Please provide the value or formula'.
+  ENDIF.
+
+* Begin of change issue #152 - don't touch exisiting style if only value is passed
+*  lv_style_guid = ip_style.
+  lv_column = zcl_excel_common=>convert_column2int( ip_column ).
+  READ TABLE sheet_content ASSIGNING <fs_sheet_content> WITH TABLE KEY cell_row    = ip_row      " Changed to access via table key , Stefan SchmÃÂ¶cker, 2013-08-03
+                                                                       cell_column = lv_column.
+  IF sy-subrc = 0.
+    IF ip_style IS INITIAL.
+      " If no style is provided as method-parameter and cell is found use cell's current style
+      lv_style_guid = <fs_sheet_content>-cell_style.
+    ELSE.
+      " Style provided as method-parameter --> use this
+      lv_style_guid = ip_style.
+    ENDIF.
+  ELSE.
+    " No cell found --> use supplied style even if empty
+    lv_style_guid = ip_style.
+  ENDIF.
+* End of change issue #152 - don't touch exisiting style if only value is passed
+
+  IF ip_value IS SUPPLIED.
+    "if data type is passed just write the value. Otherwise map abap type to excel and perform conversion
+    "IP_DATA_TYPE is passed by excel reader so source types are preserved
+*First we get reference into local var.
+    CREATE DATA lo_value LIKE ip_value.
+    ASSIGN lo_value->* TO <fs_value>.
+    <fs_value> = ip_value.
+    IF ip_data_type IS SUPPLIED.
+      IF ip_abap_type IS NOT SUPPLIED.
+        get_value_type( EXPORTING ip_value      = ip_value
+                        IMPORTING ep_value      = <fs_value> ) .
+      ENDIF.
+      lv_value = <fs_value>.
+      lv_data_type = ip_data_type.
+    ELSE.
+      IF ip_abap_type IS SUPPLIED.
+        lv_value_type = ip_abap_type.
+      ELSE.
+        get_value_type( EXPORTING ip_value      = ip_value
+                        IMPORTING ep_value      = <fs_value>
+                                  ep_value_type = lv_value_type ).
+      ENDIF.
+      CASE lv_value_type.
+        WHEN cl_abap_typedescr=>typekind_int OR cl_abap_typedescr=>typekind_int1 OR cl_abap_typedescr=>typekind_int2.
+          lo_addit = cl_abap_elemdescr=>get_i( ).
+          CREATE DATA lo_value_new TYPE HANDLE lo_addit.
+          ASSIGN lo_value_new->* TO <fs_numeric>.
+          IF sy-subrc = 0.
+            <fs_numeric> = <fs_value>.
+            lv_value = zcl_excel_common=>number_to_excel_string( ip_value = <fs_numeric> ).
+          ENDIF.
+
+        WHEN cl_abap_typedescr=>typekind_float OR cl_abap_typedescr=>typekind_packed.
+          lo_addit = cl_abap_elemdescr=>get_f( ).
+          CREATE DATA lo_value_new TYPE HANDLE lo_addit.
+          ASSIGN lo_value_new->* TO <fs_numeric>.
+          IF sy-subrc = 0.
+            <fs_numeric> = <fs_value>.
+            lv_value = zcl_excel_common=>number_to_excel_string( ip_value = <fs_numeric> ).
+          ENDIF.
+
+        WHEN cl_abap_typedescr=>typekind_char OR cl_abap_typedescr=>typekind_string OR cl_abap_typedescr=>typekind_num OR
+             cl_abap_typedescr=>typekind_hex.
+          lv_value = <fs_value>.
+          lv_data_type = 's'.
+
+        WHEN cl_abap_typedescr=>typekind_date.
+          lo_addit = cl_abap_elemdescr=>get_d( ).
+          CREATE DATA lo_value_new TYPE HANDLE lo_addit.
+          ASSIGN lo_value_new->* TO <fs_date>.
+          IF sy-subrc = 0.
+            <fs_date> = <fs_value>.
+            lv_value = zcl_excel_common=>date_to_excel_string( ip_value = <fs_date> ) .
+          ENDIF.
+* Begin of change issue #152 - don't touch exisiting style if only value is passed
+* Moved to end of routine - apply date-format even if other styleinformation is passed
+*          IF ip_style IS NOT SUPPLIED. "get default date format in case parameter is initial
+*            lo_style = excel->add_new_style( ).
+*            lo_style->number_format->format_code = get_default_excel_date_format( ).
+*            lv_style_guid = lo_style->get_guid( ).
+*          ENDIF.
+* End of change issue #152 - don't touch exisiting style if only value is passed
+
+        WHEN cl_abap_typedescr=>typekind_time.
+          lo_addit = cl_abap_elemdescr=>get_t( ).
+          CREATE DATA lo_value_new TYPE HANDLE lo_addit.
+          ASSIGN lo_value_new->* TO <fs_time>.
+          IF sy-subrc = 0.
+            <fs_time> = <fs_value>.
+            lv_value = zcl_excel_common=>time_to_excel_string( ip_value = <fs_time> ).
+          ENDIF.
+* Begin of change issue #152 - don't touch exisiting style if only value is passed
+* Moved to end of routine - apply time-format even if other styleinformation is passed
+*          IF ip_style IS NOT SUPPLIED. "get default time format for user in case parameter is initial
+*            lo_style = excel->add_new_style( ).
+*            lo_style->number_format->format_code = zcl_excel_style_number_format=>c_format_date_time6.
+*            lv_style_guid = lo_style->get_guid( ).
+*          ENDIF.
+* End of change issue #152 - don't touch exisiting style if only value is passed
+
+        WHEN OTHERS.
+          RAISE EXCEPTION TYPE zcx_excel
+            EXPORTING
+              error = 'Invalid data type of input value'.
+      ENDCASE.
+    ENDIF.
+
+  ENDIF.
+
+  IF ip_hyperlink IS BOUND.
+    ip_hyperlink->set_cell_reference( ip_column = ip_column
+                                      ip_row = ip_row ).
+    me->hyperlinks->add( ip_hyperlink ).
+  ENDIF.
+
+* Begin of change issue #152 - don't touch exisiting style if only value is passed
+* Read table moved up, so that current style may be evaluated
+*  lv_column = zcl_excel_common=>convert_column2int( ip_column ).
+
+*  READ TABLE sheet_content ASSIGNING <fs_sheet_content> WITH KEY cell_row    = ip_row
+*                                                                 cell_column = lv_column.
+*
+*  IF sy-subrc EQ 0.
+  IF <fs_sheet_content> IS ASSIGNED.
+* End of change issue #152 - don't touch exisiting style if only value is passed
+    <fs_sheet_content>-cell_value   = lv_value.
+    <fs_sheet_content>-cell_formula = ip_formula.
+    <fs_sheet_content>-cell_style   = lv_style_guid.
+    <fs_sheet_content>-data_type    = lv_data_type.
+  ELSE.
+    ls_sheet_content-cell_row     = ip_row.
+    ls_sheet_content-cell_column  = lv_column.
+    ls_sheet_content-cell_value   = lv_value.
+    ls_sheet_content-cell_formula = ip_formula.
+    ls_sheet_content-cell_style   = lv_style_guid.
+    ls_sheet_content-data_type    = lv_data_type.
+    lv_row_alpha = ip_row.
+*    SHIFT lv_row_alpha RIGHT DELETING TRAILING space."del #152 - replaced with condense - should be faster
+*    SHIFT lv_row_alpha LEFT DELETING LEADING space.  "del #152 - replaced with condense - should be faster
+    CONDENSE lv_row_alpha NO-GAPS.                    "ins #152 - replaced 2 shifts      - should be faster
+    lv_col_alpha = zcl_excel_common=>convert_column2alpha( ip_column ).       " issue #155 - less restrictive typing for ip_column
+    CONCATENATE lv_col_alpha lv_row_alpha INTO ls_sheet_content-cell_coords.  " issue #155 - less restrictive typing for ip_column
+    INSERT ls_sheet_content INTO TABLE sheet_content ASSIGNING <fs_sheet_content>. "ins #152 - Now <fs_sheet_content> always holds the data
+*    APPEND ls_sheet_content TO sheet_content.
+*    SORT sheet_content BY cell_row cell_column.
+    " me->update_dimension_range( ).
+
+  ENDIF.
+
+* Begin of change issue #152 - don't touch exisiting style if only value is passed
+* For Date- or Timefields change the formatcode if nothing is set yet
+* Enhancement option:  Check if existing formatcode is a date/ or timeformat
+*                      If not, use default
+  DATA: lo_format_code_datetime TYPE zexcel_number_format.
+  DATA: stylemapping    TYPE zexcel_s_stylemapping.
+  CASE lv_value_type.
+    WHEN cl_abap_typedescr=>typekind_date.
+      TRY.
+          stylemapping = me->excel->get_style_to_guid( <fs_sheet_content>-cell_style ).
+        CATCH zcx_excel .
+      ENDTRY.
+      IF stylemapping-complete_stylex-number_format-format_code IS INITIAL OR
+         stylemapping-complete_style-number_format-format_code IS INITIAL.
+        lo_format_code_datetime = zcl_excel_style_number_format=>c_format_date_std.
+      ELSE.
+        lo_format_code_datetime = stylemapping-complete_style-number_format-format_code.
+      ENDIF.
+      me->change_cell_style( ip_column                      = ip_column
+                             ip_row                         = ip_row
+                             ip_number_format_format_code   = lo_format_code_datetime ).
+
+    WHEN cl_abap_typedescr=>typekind_time.
+      TRY.
+          stylemapping = me->excel->get_style_to_guid( <fs_sheet_content>-cell_style ).
+        CATCH zcx_excel .
+      ENDTRY.
+      IF stylemapping-complete_stylex-number_format-format_code IS INITIAL OR
+         stylemapping-complete_style-number_format-format_code IS INITIAL.
+        lo_format_code_datetime = zcl_excel_style_number_format=>c_format_date_time6.
+      ELSE.
+        lo_format_code_datetime = stylemapping-complete_style-number_format-format_code.
+      ENDIF.
+      me->change_cell_style( ip_column                      = ip_column
+                             ip_row                         = ip_row
+                             ip_number_format_format_code   = lo_format_code_datetime ).
+
+  ENDCASE.
+* End of change issue #152 - don't touch exisiting style if only value is passed
+
+* Fix issue #162
+  lv_value = ip_value.
+  IF lv_value CS cl_abap_char_utilities=>cr_lf.
+    me->change_cell_style( ip_column               = ip_column
+                           ip_row                  = ip_row
+                           ip_alignment_wraptext   = abap_true ).
+  ENDIF.
+* End of Fix issue #162
+
+  endmethod.
