@@ -1,0 +1,27 @@
+  METHOD xls_set_drawings.
+
+    DATA lo_drawing              TYPE REF TO zcl_excel_drawing.
+
+
+    " create global drawing, set position and media from web repository
+    lo_drawing = ao_xls->add_new_drawing( ).
+    lo_drawing->set_position( ip_from_row = 1
+                              ip_from_col = 'A' ).
+
+
+
+
+    lo_drawing->set_media( ip_media       = ao_logo_xstring
+*                              ip_media_type = zcl_excel_drawing=>c_media_type_bmp
+*                              ip_width = 258
+*                              ip_height = 70 ).
+                              ip_media_type = zcl_excel_drawing=>C_MEDIA_TYPE_JPG
+                              ip_width = 258
+                              ip_height = 42 ).
+
+
+*    assign drawing to the worksheet
+    ao_xls_worksheet->add_drawing( lo_drawing ).
+
+
+  ENDMETHOD.
