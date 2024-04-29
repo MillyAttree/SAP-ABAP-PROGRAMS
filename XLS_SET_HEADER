@@ -1,0 +1,217 @@
+METHOD xls_set_header.
+
+* Add content
+  DATA lv_coli TYPE i.
+  DATA lv_colc TYPE char2.
+  DATA lv_text TYPE char100.
+
+* Header 1
+*  ao_xls_worksheet->set_cell( ip_column = 'E' ip_row = '1' ip_value = 'Gehaltsübersicht MMSD' ip_style = ao_xls_style_h1->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_column = 'E' ip_row = '1' ip_value = 'Gehaltsübersicht' ip_style = ao_xls_style_h1->get_guid( ) ).
+  CLEAR lv_text.
+  WRITE av_date TO lv_text DD/MM/YYYY.
+  CONCATENATE 'Stand:' lv_text INTO lv_text SEPARATED BY space.
+  ao_xls_worksheet->set_cell( ip_column = 'BI' ip_row = '1' ip_value = lv_text ip_style = ao_xls_style_h5->get_guid( ) ).
+
+* Header 2
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'A' ip_value = 'Stammdaten' ip_style = ao_xls_style_h2->get_guid( ) ).
+  DO 17 TIMES. "B to R
+    lv_coli = sy-index.
+    ao_xls_worksheet->set_cell_style( ip_column = sy-abcde+lv_coli(1) ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+  ENDDO.
+
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'T' ip_value = 'Vorletzte Gehaltsanpassung' ip_style = ao_xls_style_h2->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'U' ip_value = '' ip_style = ao_xls_style_h2->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'V' ip_value = '' ip_style = ao_xls_style_h2->get_guid( ) ).
+
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'X' ip_value = 'Letzte Gehaltsanpassung' ip_style = ao_xls_style_h2->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'Y' ip_value = '' ip_style = ao_xls_style_h2->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'Z' ip_value = '' ip_style = ao_xls_style_h2->get_guid( ) ).
+
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'AB' ip_value = 'aktuelles Gehalt' ip_style = ao_xls_style_h2->get_guid( ) ).
+  "HRADM-5844 - IT9002 new fields XLS
+*Start HRADM-6644 Add contract element and text
+  DO 24 TIMES. "AC to AZ
+    lv_coli = sy-index + 1.
+    lv_colc = 'A' && sy-abcde+lv_coli(1).
+    ao_xls_worksheet->set_cell_style( ip_column = lv_colc ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+  ENDDO.
+  DO 24 TIMES. "AC to AZ
+    lv_coli = sy-index + 1.
+    lv_colc = 'A' && sy-abcde+lv_coli(1).
+    ao_xls_worksheet->set_cell_style( ip_column = lv_colc ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+  ENDDO.
+  DO 4 TIMES. "BA to BE
+    lv_coli = sy-index - 1.
+    lv_colc = 'B' && sy-abcde+lv_coli(1).
+    ao_xls_worksheet->set_cell_style( ip_column = lv_colc ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+  ENDDO.
+  "HRADM-5844 - IT9002 new fields XLS
+  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'BF' ip_value = 'Zusatzinformationen (Kalenderjahr)' ip_style = ao_xls_style_h2->get_guid( ) ).
+*  DO 2 TIMES. "AX to BI
+**    lv_coli = sy-index + 19.
+*    lv_coli = sy-index + 23.
+*    lv_colc = 'A' && sy-abcde+lv_coli(1).
+*    ao_xls_worksheet->set_cell_style( ip_column = lv_colc ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+*  ENDDO.
+*  "HRADM-5844 - IT9002 new fields XLS
+*  ao_xls_worksheet->set_cell( ip_row = 2 ip_column = 'BA' ip_value = '' ip_style = ao_xls_style_h2->get_guid( ) ).
+  DO 15 TIMES.
+    lv_coli = sy-index + 5.
+    lv_colc = 'B' && sy-abcde+lv_coli(1).
+    ao_xls_worksheet->set_cell_style( ip_column = lv_colc ip_row = '2' ip_style  = ao_xls_style_h2->get_guid( ) ).
+  ENDDO.
+*End HRADM-6644 Add contract element and text
+
+* Header 3
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'A' ip_value = 'Anrede'(h01) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'B' ip_value = 'Personalnr'(h02) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'C' ip_value = 'Name'(h03) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'D' ip_value = 'Vorname'(h04) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'E' ip_value = 'Kostenstelle'(h05) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'F' ip_value = 'Abteilung'(h06) && cl_abap_char_utilities=>cr_lf && 'Org.Einheit Nummer'(h07) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'G' ip_value = 'Abteilung Org.Einheit'(h08) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'H' ip_value = 'Stellenbezeichnung'(h09) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'I' ip_value = 'FTE'(h10) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'J' ip_value = 'Beschäftigungs'(h11) && '-' && cl_abap_char_utilities=>cr_lf && 'grad in %'(h74) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'K' ip_value = 'Monatl.'(h12) && cl_abap_char_utilities=>cr_lf && 'Sollstunden'(h13) && cl_abap_char_utilities=>cr_lf && 'aktuell'(h14) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'L' ip_value = 'Ruhend'(h86) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'M' ip_value = 'Zeiterfassung'(h15) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'N' ip_value = 'Eintritt Jubiläum'(h16) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'O' ip_value = 'Austritt'(h17) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'P' ip_value = 'Wett'(h18) && cl_abap_char_utilities=>cr_lf && 'bewerbs'(h19) && cl_abap_char_utilities=>cr_lf && 'verbot'(h20) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'Q' ip_value = 'PKW'(h21) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'R' ip_value = 'Gehalts'(h22) && '-' && cl_abap_char_utilities=>cr_lf && 'änderung'(h73) && cl_abap_char_utilities=>cr_lf && '(Zukunft)'(h23) ip_style = ao_xls_style_h3->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'S' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'T' ip_value = 'Datum'(h24) && cl_abap_char_utilities=>cr_lf && 'vorletzte'(h25) && cl_abap_char_utilities=>cr_lf && 'Gehaltsanpassung'(h26) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'U' ip_value = 'Monatsgehalt'(h27) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'V' ip_value = 'Jahresgehalt'(h28) ip_style = ao_xls_style_h3->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'W' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'X' ip_value = 'Datum'(h70) && cl_abap_char_utilities=>cr_lf && 'letzte'(h71) && cl_abap_char_utilities=>cr_lf && 'Gehaltsanpassung'(h29) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'Y' ip_value = 'Monatsgehalt'(h30) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'Z' ip_value = 'Jahresgehalt'(h31) ip_style = ao_xls_style_h3->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AA' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AB' ip_value = 'Datum'(h32) && cl_abap_char_utilities=>cr_lf && 'Anpassung'(h33) && cl_abap_char_utilities=>cr_lf && 'Gehalt'(h34) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AC' ip_value = 'Tarif'(h35) && '-' && cl_abap_char_utilities=>cr_lf && 'gruppe'(h36) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AD' ip_value = 'Tarif'(h37) && '-' && cl_abap_char_utilities=>cr_lf && 'stufe'(h38) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AE' ip_value = 'Monatsgehalt'(h39) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AF' ip_value = 'Übertarifliche'(h40) && cl_abap_char_utilities=>cr_lf && 'Zulage'(h41) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AG' ip_value = 'Funktions'(h42) && cl_abap_char_utilities=>cr_lf && 'zulage'(h43) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AH' ip_value = 'Summe Monatsgehalt'(h44) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AI' ip_value = 'Jahresgehalt'(h45) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AJ' ip_value = 'Urlaubsgeld'(h46) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AK' ip_value = 'Weihnachtsgeld'(h47) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AL' ip_value = 'Vereinbarte Prämie'(h48) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AM' ip_value = 'Vereinbarte'(h49) && cl_abap_char_utilities=>cr_lf && 'Individuelle'(h50) && cl_abap_char_utilities=>cr_lf && 'Zielvereinbarung'(h51) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AN' ip_value = 'Vereinbarte'(h52) && cl_abap_char_utilities=>cr_lf && 'Festtantieme'(h53) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AO' ip_value = 'Vereinbarte'(h52) && cl_abap_char_utilities=>cr_lf && 'Erfolgsbeteiligung %'(h82) && cl_abap_char_utilities=>cr_lf && '(Zielwert)'(h84) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AP' ip_value = 'Erfolgsbeteiligung %'(h83) && cl_abap_char_utilities=>cr_lf && '(Berechnungsgrundlage)'(h85) ip_style = ao_xls_style_h3->get_guid( ) ).
+*Start HRADM-6644 Add contract element and text
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AQ' ip_value = 'Contract element'(h91) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AR' ip_value = 'Contract element text'(h92) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AS' ip_value = 'Vereinbarte'(h54) && cl_abap_char_utilities=>cr_lf && 'Tantieme % (Zielwert)'(h55) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AT' ip_value = 'Tantieme %'(h56) && cl_abap_char_utilities=>cr_lf && '(Berechnungsgrundlage)'(h57) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AU' ip_value = 'Contract element'(h91) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AV' ip_value = 'Contract element text'(h92) ip_style = ao_xls_style_h3->get_guid( ) ).
+  "HRADM-5844 - IT9002 new fields XLS
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AW' ip_value = 'Vereinbarte'(h52) && cl_abap_char_utilities=>cr_lf && 'Erfolgsbeteiligung %'(h82) && cl_abap_char_utilities=>cr_lf && '(Zielwert)'(h84) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AX' ip_value = 'Erfolgsbeteiligung %'(h83) && cl_abap_char_utilities=>cr_lf && '(Berechnungsgrundlage)'(h85) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AY' ip_value = 'Contract element'(h91) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'AZ' ip_value = 'Contract element text'(h92) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BA' ip_value = 'Vereinbarte'(h54) && cl_abap_char_utilities=>cr_lf && 'Tantieme % (Zielwert)'(h55) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BB' ip_value = 'Tantieme %'(h56) && cl_abap_char_utilities=>cr_lf && '(Berechnungsgrundlage)'(h57) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BC' ip_value = 'Contract element'(h91) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BD' ip_value = 'Contract element text'(h92) ip_style = ao_xls_style_h3->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BE' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BF' ip_value = 'Sonderzahlungen'(h58) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BG' ip_value = 'Laufende Zulagen'(h59) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BH' ip_value = 'Dienstwagen'(h60) && '-' && cl_abap_char_utilities=>cr_lf && 'verzicht'(h81) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BI' ip_value = 'Zuschuß' && cl_abap_char_utilities=>cr_lf && '(Kindergarten/Schule)' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BJ' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BK' ip_value = 'Mietkosten/Umzug laufend'(h62) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BL' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BM' ip_value = 'Zusatzleistung'(h63) && cl_abap_char_utilities=>cr_lf && 'Altersvorsorge AG'(h64) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BN' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BO' ip_value = 'HPK'(h65) && cl_abap_char_utilities=>cr_lf && 'AG-Anteil'(h66) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BP' ip_value = 'VWL'(h67) && cl_abap_char_utilities=>cr_lf && 'AG-Anteil'(h68) ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 3 ip_column = 'BQ' ip_value = 'Anmerkungen'(h69) ip_style = ao_xls_style_h3->get_guid( ) ).
+*End HRADM-6644 Add contract element and text
+*  'Kindergartenzuschuß einmalig'(h72).
+
+
+*  Header 4
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'A' ip_value = '' ip_style = ao_xls_style_h3->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'B' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'C' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'D' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'E' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'F' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'G' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'H' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'I' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'J' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'K' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'L' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'M' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'N' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'O' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'P' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'Q' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'R' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'S' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'T' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'U' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'V' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'W' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'X' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'Y' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'Z' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AA' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AB' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AC' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AD' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AE' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AF' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AG' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AH' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AI' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AJ' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AK' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AL' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AM' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AN' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AO' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AP' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AQ' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AR' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  "HRADM-5844 - IT9002 new fields XLS
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AS' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AT' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AU' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AV' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+
+*Start HRADM-6644 Add contract element and text
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AW' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AX' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AY' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'AZ' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BA' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BB' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BC' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BD' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+*  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BE' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BF' ip_value = 'Kalenderjahr'(h77) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BG' ip_value = 'Monatswert'(h78) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BH' ip_value = 'Monatswert'(h78) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BI' ip_value = 'Laufend'(h75) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BJ' ip_value = 'Einmalig'(h76) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BK' ip_value = 'Laufend'(h75) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BL' ip_value = 'Einmalig'(h76) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BM' ip_value = 'Laufend'(h75) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BN' ip_value = 'Einmalig'(h76) ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BO' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BP' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+  ao_xls_worksheet->set_cell( ip_row = 4 ip_column = 'BQ' ip_value = '' ip_style = ao_xls_style_h4->get_guid( ) ).
+*End HRADM-6644 Add contract element and text
+
+ENDMETHOD.
