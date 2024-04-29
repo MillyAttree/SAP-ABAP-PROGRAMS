@@ -1,0 +1,136 @@
+*&---------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT yms_scrive_doc_create.
+
+DATA gv_rc TYPE i.
+DATA gt_file TYPE filetable.
+
+FIELD-SYMBOLS <ls_parties> TYPE zms_scrive_party.
+
+DATA gv_file_xstring TYPE xstring.
+
+DATA gv_user TYPE uname.
+
+PARAMETERS p_docscn TYPE abap_bool AS CHECKBOX.
+PARAMETERS p_projid TYPE /nextevo/fbd_e_project_id DEFAULT 'HRDE'.
+PARAMETERS p_form TYPE /nextevo/fbd_e_form DEFAULT 'IT_0001'.
+PARAMETERS p_formid TYPE /nextevo/fbd_e_project_id DEFAULT '0000006388'.
+
+SELECT-OPTIONS s_signee FOR gv_user.
+PARAMETERS p_file TYPE localfile.
+PARAMETERS p_deadl TYPE i.
+PARAMETERS p_rmndr TYPE i.
+
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  cl_gui_frontend_services=>file_open_dialog(
+    EXPORTING
+      file_filter = |pdf (*.pdf)\|*.pdf\|{ cl_gui_frontend_services=>filetype_all }|
+      multiselection = abap_false
+    CHANGING
+      file_table = gt_file
+      rc = gv_rc ).
+
+  IF gv_rc > 0.
+    p_file = gt_file[ 1 ]-filename.
+  ENDIF.
+
+
+START-OF-SELECTION.
+
+* Create instance of Scrive API Control class
+  DATA(lr_api_control) = NEW zms_cl_scrive_api_control( ).
+  CONCATENATE p_projid p_form p_formid
+    INTO DATA(lv_scenario_key) RESPECTING BLANKS.
+
+  IF p_docscn = abap_true.
+    "Setting document scenario and context if required
+    lr_api_control->set_document_scenario(
+      EXPORTING
+*        iv_scenario_key = CONV #( p_projid  && p_form  && p_formid )
+        iv_scenario_key = CONV zms_scrive_scenario_id( lv_scenario_key )
+        iv_scenario_context = CONV #( 'P2D_TEST' ) ).
+  ENDIF.
+
+* Create new Scrive Document (Scrive process)
+  TRY.
+      DATA(lr_document) = lr_api_control->documents_new( ).
+
+*   Rename the title of the document and update diretcly via API on Scrive
+      DATA(lv_date) = |Test { sy-datum+6(2) }.{ sy-datum+4(2) }.|.
+      lr_document->set_document_title( iv_document_title = lv_date ).
+
+*   Get the initial document parties
+      DATA(lt_parties) = lr_document->get_document_parties( ).
+
+*   Add new parties to sign the document
+      READ TABLE lt_parties ASSIGNING <ls_parties> INDEX 1.
+      <ls_parties>-signatory_role = 'V'.
+
+      SELECT name_first, name_last, smtp_addr FROM /nextevo/zcmuser
+        INTO TABLE @DATA(gt_signee)
+        WHERE bname IN @s_signee.
+
+      LOOP AT gt_signee INTO DATA(gs_signee).
+        APPEND INITIAL LINE TO lt_parties ASSIGNING <ls_parties>.
+        <ls_parties>-signing_pos = sy-tabix.
+        <ls_parties>-id = ''.
+        <ls_parties>-user_id = ''.
+        <ls_parties>-signatory_role = 'S'.
+        <ls_parties>-is_author = ''.
+        <ls_parties>-vorna = gs_signee-name_first.
+        <ls_parties>-nachn = gs_signee-name_last.
+        <ls_parties>-name2 = ''.
+        <ls_parties>-email = gs_signee-smtp_addr.
+      ENDLOOP.
+
+      lr_document->set_document_parties( lt_parties ).
+
+      IF p_deadl > 0.
+        lr_document->set_document_deadline( CONV #( p_deadl ) ).
+      ENDIF.
+
+      IF p_rmndr > 0.
+        lr_document->set_document_reminder( CONV #( p_rmndr ) ).
+      ENDIF.
+
+      lr_api_control->documents_update( lr_document ). "Update all changes at once (API and database)
+*
+*    "Test delete.
+*  *  lr_api_control->documents_trash( lr_document ).
+*  *  lr_api_control->documents_delete( lr_document ).
+*
+*
+      DATA gt_bin_data TYPE STANDARD TABLE OF tbl1024.
+      DATA gv_file_length TYPE i.
+*
+      CALL FUNCTION 'GUI_UPLOAD'
+        EXPORTING
+          filename   = CONV string( p_file )
+          filetype   = 'BIN'
+        IMPORTING
+          filelength = gv_file_length
+*         HEADER     =
+        TABLES
+          data_tab   = gt_bin_data.
+
+      CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
+        EXPORTING
+          input_length = gv_file_length
+        IMPORTING
+          buffer       = gv_file_xstring
+        TABLES
+          binary_tab   = gt_bin_data.
+
+      lr_api_control->documents_appendfile(
+        iv_file = gv_file_xstring
+        ir_document = lr_document ).
+
+      lr_api_control->documents_start( lr_document ).
+
+    CATCH zcx_hr_root INTO DATA(gx_hr_root).
+
+  ENDTRY.
