@@ -1,0 +1,2117 @@
+
+************************************************************************
+REPORT zde_gehaltsrunde.
+
+************************************************************************
+* data definition
+************************************************************************
+INCLUDE: icons.
+" in Verwendung:
+"   ICON_GREEN_LIGHT
+"   ICON_RED_LIGHT
+"   ICON_LED_RED
+"   ICON_DUMMY
+" OK:
+"   ICON_YELLOW_LIGHT
+"   ICON_LIGHT_OUT
+
+INCLUDE zde_gehaltsrunde_data.
+
+
+************************************************************************
+* select options
+************************************************************************
+DATA l_massg TYPE pa0000-massg.
+DATA l_icon_d TYPE char4.
+DATA l_lgart TYPE p0008-lga01.
+
+SELECTION-SCREEN BEGIN OF SCREEN 010 AS SUBSCREEN.  "Parameters
+PARAMETERS p_hq RADIOBUTTON GROUP sel DEFAULT 'X' USER-COMMAND act.   "HQ-Logik verwenden
+PARAMETERS p_stre RADIOBUTTON GROUP sel.                              "Marktlogik ohne AT verwenden
+PARAMETERS p_streat RADIOBUTTON GROUP sel.                            "Marktlogik mit AT verwenden
+SELECTION-SCREEN SKIP.
+PARAMETERS p_stchtg TYPE datum OBLIGATORY DEFAULT sy-datum.           "Stichtag für die Einspielung der Erhöhung
+PARAMETERS p_proz TYPE prozt OBLIGATORY DEFAULT '10'.                 "Erhöhungsprozente
+SELECTION-SCREEN SKIP.
+PARAMETERS p_test AS CHECKBOX DEFAULT 'X'.                            "Testlauf, kein Update
+SELECTION-SCREEN SKIP.
+PARAMETERS p_kulanz TYPE maxbt DEFAULT '12'.                          "Kulanzbetrag Erhöhung (JG auf 100%)
+PARAMETERS p_inc_ut AS CHECKBOX DEFAULT 'X'.                          "uebertarifliche Zulage mit einbeziehen
+PARAMETERS p_anr_ut AS CHECKBOX DEFAULT ''.                           "uebertarifliche Zulage anrechnen
+SELECTION-SCREEN SKIP.
+PARAMETERS p_vorstg AS CHECKBOX DEFAULT 'X'.                          "Anzeige der Sätze vor Stichtag
+PARAMETERS p_ignerh AS CHECKBOX.                                      "Ignoriere Erhöhungsmeldung!
+SELECT-OPTIONS s_shwabs FOR p2001-awart.                              "Anzeige von Abwesenheiten
+SELECTION-SCREEN END OF SCREEN 010.
+
+SELECTION-SCREEN BEGIN OF SCREEN 020 AS SUBSCREEN.  "Zusatz HQ
+PARAMETERS p_file TYPE localfile OBLIGATORY DEFAULT 'C:\temp\Gehaltsrange.csv' MODIF ID hq.
+PARAMETERS p_perf TYPE zhr_perf9009 DEFAULT '2'  MODIF ID hq.
+SELECTION-SCREEN SKIP.
+PARAMETERS p_abinsb TYPE i OBLIGATORY DEFAULT 3  MODIF ID hq.         "Anpassungen für Ab-ins-Band
+PARAMETERS p_spreiz TYPE prozt OBLIGATORY DEFAULT '20'  MODIF ID hq.  "Spreizung der Bänder
+SELECTION-SCREEN END OF SCREEN 020.
+
+SELECTION-SCREEN BEGIN OF SCREEN 050 AS SUBSCREEN.  "Lohnartendefinition
+SELECT-OPTIONS s_sollbz FOR l_lgart OBLIGATORY.
+SELECT-OPTIONS s_tarif FOR l_lgart OBLIGATORY.
+SELECT-OPTIONS s_zulage FOR l_lgart OBLIGATORY.
+SELECT-OPTIONS s_atghlt FOR l_lgart OBLIGATORY.
+SELECTION-SCREEN END OF SCREEN 050.
+
+SELECTION-SCREEN BEGIN OF SCREEN 030 AS SUBSCREEN.  "Ausschlusskriterien
+SELECT-OPTIONS s_epersk FOR p0001-persk.
+SELECT-OPTIONS s_eawart FOR p2001-awart.
+SELECTION-SCREEN SKIP.
+SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE TEXT-b03.
+PARAMETERS p_ebegda  TYPE sy-datum DEFAULT sy-datum.
+PARAMETERS p_eendda TYPE sy-datum DEFAULT sy-datum.
+SELECT-OPTIONS s_emassg FOR l_massg.
+SELECTION-SCREEN END OF BLOCK b3.
+SELECTION-SCREEN BEGIN OF BLOCK b4 WITH FRAME TITLE TEXT-b04.
+PARAMETERS p_abegd1  TYPE sy-datum DEFAULT sy-datum.
+PARAMETERS p_aendd1 TYPE sy-datum DEFAULT sy-datum.
+SELECT-OPTIONS s_amass1 FOR l_massg.
+SELECTION-SCREEN END OF BLOCK b4.
+SELECTION-SCREEN BEGIN OF BLOCK b6 WITH FRAME TITLE TEXT-b06.
+PARAMETERS p_abegd2  TYPE sy-datum.
+PARAMETERS p_aendd2 TYPE sy-datum.
+SELECT-OPTIONS s_amass2 FOR l_massg.
+SELECTION-SCREEN END OF BLOCK b6.
+SELECTION-SCREEN BEGIN OF BLOCK b7 WITH FRAME TITLE TEXT-b07.
+PARAMETERS p_abegd3  TYPE sy-datum.
+PARAMETERS p_aendd3 TYPE sy-datum.
+SELECT-OPTIONS s_amass3 FOR l_massg.
+SELECTION-SCREEN END OF BLOCK b7.
+SELECTION-SCREEN END OF SCREEN 030.
+
+SELECTION-SCREEN BEGIN OF SCREEN 040 AS SUBSCREEN.  "Rundung
+SELECT-OPTIONS s_persk FOR p0001-persk.                               "Personenkreis Std-Lohn (exkl. Rundung!)
+PARAMETERS p_no_ru  RADIOBUTTON GROUP run DEFAULT 'X'.                "keine Rundung
+PARAMETERS p_ru_auf RADIOBUTTON GROUP run.                            "aufrunden
+PARAMETERS p_ru_ab  RADIOBUTTON GROUP run.                            "abrunden
+PARAMETERS p_ru_kfm RADIOBUTTON GROUP run.                            "kfm. runden
+PARAMETERS p_ru_val TYPE anzhl DEFAULT 1.                             "Rundungsfaktor
+SELECTION-SCREEN END OF SCREEN 040.
+
+SELECTION-SCREEN BEGIN OF SCREEN 060 AS SUBSCREEN.  "Dokumenterzeugung
+PARAMETERS p_2d_cre AS CHECKBOX DEFAULT ''.
+SELECTION-SCREEN END OF SCREEN 060.
+
+" Main-Screen
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-b01.
+SELECTION-SCREEN: BEGIN OF TABBED BLOCK mytab FOR 15 LINES,
+                  TAB (20) block01 USER-COMMAND block01,
+                  TAB (20) block02 USER-COMMAND block02 MODIF ID hq,
+                  TAB (20) block05 USER-COMMAND block05,
+                  TAB (20) block03 USER-COMMAND block03,
+                  TAB (20) block04 USER-COMMAND block04,
+                  TAB (20) block06 USER-COMMAND block06,
+                  END OF BLOCK mytab.
+SELECT-OPTIONS s_vtrbt FOR p9003-vtrbt NO-DISPLAY.
+SELECTION-SCREEN END OF BLOCK b1.
+
+************************************************************************
+AT SELECTION-SCREEN.
+************************************************************************
+  CASE sy-dynnr.
+    WHEN 1000.
+      CASE sscrfields-ucomm.
+        WHEN 'BLOCK01'.
+          mytab-dynnr = 010.
+        WHEN 'BLOCK02'.
+          mytab-dynnr = 020.
+        WHEN 'BLOCK03'.
+          mytab-dynnr = 030.
+        WHEN 'BLOCK04'.
+          mytab-dynnr = 040.
+        WHEN 'BLOCK05'.
+          mytab-dynnr = 050.
+        WHEN 'BLOCK06'.
+          mytab-dynnr = 060.
+        WHEN OTHERS.
+          "nix...
+      ENDCASE.
+  ENDCASE.
+
+
+************************************************************************
+AT SELECTION-SCREEN OUTPUT.
+************************************************************************
+  LOOP AT SCREEN.
+    IF p_hq IS INITIAL.
+      CASE screen-group1.
+        WHEN 'HQ'.
+          screen-active = '0'.
+        WHEN 'STR'.
+          screen-active = '1'.
+        WHEN OTHERS.
+          "nix...
+      ENDCASE.
+    ELSE.
+      CASE screen-group1.
+        WHEN 'HQ'.
+          screen-active = '1'.
+        WHEN 'STR'.
+          screen-active = '0'.
+        WHEN OTHERS.
+          "nix...
+      ENDCASE.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+************************************************************************
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+************************************************************************
+  DATA lt_file_table TYPE filetable.
+  DATA lv_return_code TYPE i.
+  DATA lv_user_action TYPE i.
+
+  cl_gui_frontend_services=>file_open_dialog(
+    EXPORTING
+      file_filter    = |csv (*.csv)\|*.csv\|{ cl_gui_frontend_services=>filetype_all }|
+      multiselection = abap_false
+    CHANGING
+      file_table = lt_file_table
+      rc = lv_return_code
+      user_action = lv_user_action
+    EXCEPTIONS
+      file_open_dialog_failed = 1
+      cntl_error              = 2
+      error_no_gui            = 3
+      not_supported_by_gui    = 4
+      OTHERS                  = 5 ).
+
+  CASE lv_user_action.
+    WHEN cl_gui_frontend_services=>action_ok.
+      TRY.
+          p_file = lt_file_table[ 1 ].
+        CATCH cx_sy_itab_line_not_found.
+      ENDTRY.
+    WHEN cl_gui_frontend_services=>action_cancel.
+    WHEN OTHERS.
+  ENDCASE.
+
+
+
+
+************************************************************************
+* Macros
+************************************************************************
+  DEFINE fill_sel_opt.
+    &1-sign = &2.
+    &1-option = &3.
+    &1-low = &4.
+    &1-high = &5.
+    APPEND &1.
+  end-OF-DEFINITION.
+
+************************************************************************
+INITIALIZATION.
+************************************************************************
+
+*--- start - standard check of reports
+  INCLUDE z_check_program.
+*--- end - standard check of reports
+
+  PERFORM initialization.
+
+************************************************************************
+START-OF-SELECTION.
+************************************************************************
+
+  "Sichheitsabfrage beim Echtlauf
+  IF p_test IS INITIAL AND sy-batch IS INITIAL.
+    DATA l_answer TYPE c.
+    CALL FUNCTION 'POPUP_TO_CONFIRM'
+      EXPORTING
+        text_question  = 'Sie wollen den Report im Änderungsmodus starten?'
+      IMPORTING
+        answer         = l_answer
+      EXCEPTIONS
+        text_not_found = 1
+        OTHERS         = 2.
+    IF sy-subrc NE 0 OR l_answer NE '1'.
+      EXIT.
+    ENDIF.
+  ENDIF.
+
+
+  "Einlesen des Gehaltsbandes
+  IF p_hq EQ 'X'.
+    PERFORM upload_gehaltsband.
+  ENDIF.
+
+  DATA lr_praem TYPE REF TO zpraem_cl_utl.
+  CREATE OBJECT lr_praem.
+
+  "Initialisieren der Datumsfelder
+  DATA ls_aper_ug TYPE pc2aper.
+  DATA ls_aper_wg TYPE pc2aper.
+  PERFORM init_dates.
+
+  "Initialisieren der Einschränkungen (mindestens 1 Eintrag!)
+  fill_sel_opt s_shwabs 'I' 'EQ' 'ZZZZ' ''.
+  fill_sel_opt s_epersk 'I' 'EQ' 'ZZ' ''.
+  fill_sel_opt s_eawart 'I' 'EQ' 'ZZZZ' ''.
+  fill_sel_opt s_emassg 'I' 'EQ' '99' ''.
+  fill_sel_opt s_amass1 'I' 'EQ' '99' ''.
+  fill_sel_opt s_amass2 'I' 'EQ' '99' ''.
+
+
+
+  "Initalisierung der Rundung
+  DATA l_rutyp     TYPE t5czm-rutyp.  "Rundungstyp
+  DATA l_rudiv     TYPE t5czm-rudiv.
+  DATA l_ru_betrag TYPE pc207-betrg.
+  CASE 'X'.
+    WHEN p_ru_auf.
+      l_rutyp = 'C'.
+    WHEN p_ru_ab.
+      l_rutyp = 'A'.
+    WHEN p_ru_kfm.
+      l_rutyp = 'B'.
+    WHEN OTHERS.
+      CLEAR: l_rutyp.
+  ENDCASE.
+  l_rudiv = p_ru_val * 100.
+
+
+
+************************************************************************
+GET peras.
+************************************************************************
+
+  DATA l_entrydate TYPE d.
+  DATA l_firedate TYPE d.
+  DATA l_stell_stchtg TYPE stell.
+  DATA l_stltx_stchtg TYPE stltx.
+  CLEAR: gs_save_gehalt, gs_save_9002, l_entrydate, l_firedate, l_stell_stchtg, l_stltx_stchtg.
+
+  CALL FUNCTION 'HR_ENTRY_DATE'
+    EXPORTING
+      persnr               = pernr-pernr
+      varky                = 'Z1'
+    IMPORTING
+      entrydate            = l_entrydate
+    EXCEPTIONS
+      entry_date_not_found = 1
+      pernr_not_assigned   = 2
+      OTHERS               = 3.
+  IF sy-subrc <> 0.
+    CLEAR l_entrydate.
+  ENDIF.
+
+  CALL FUNCTION 'HR_LEAVING_DATE'
+    EXPORTING
+      persnr                 = pernr-pernr
+      rclas                  = 'ZP2D'
+*     VARKY                  =
+    IMPORTING
+      leavingdate            = l_firedate
+    EXCEPTIONS
+      leaving_date_not_found = 1
+      pernr_not_assigned     = 2
+      OTHERS                 = 3.
+  IF sy-subrc <> 0 OR gs_data-firedate(4) EQ '9999'.
+    CLEAR gs_data-firedate.
+  ENDIF.
+
+  "Stelle Stichtag befüllen
+  rp_provide_from_frst p0001 space p_stchtg pn-endda.
+  l_stell_stchtg = p0001-stell.
+  SELECT SINGLE stltx FROM t513s INTO l_stltx_stchtg
+                            WHERE sprsl EQ sy-langu
+                              AND stell EQ l_stell_stchtg
+                              AND endda GE p_stchtg
+                              AND begda LE p_stchtg.
+
+  "Durchlaufzähler
+  DATA l_seqnr TYPE seqnr.
+  l_seqnr = 1.
+
+  "Löschen von stornierten Sätzen
+  LOOP AT p9004 WHERE subty EQ '0005'.
+    DELETE p9003 WHERE vtrnr EQ p9004-vtrnr.
+  ENDLOOP.
+
+  SORT p0008 BY endda ASCENDING.
+  SORT p9003 BY endda ASCENDING.
+
+  PROVIDE * FROM p0008
+          * FROM p9003 BETWEEN pn-begda AND pn-endda
+            WHERE p0008-subty EQ '0' AND p0008-sprps EQ space AND p9003-sprps EQ space AND p9003-vtrbt IN s_vtrbt.
+
+
+    CLEAR: gs_data.
+    "IT-Sätze positionieren
+    rp_provide_from_frst p0000 space p0008-begda p0008-endda.
+    rp_provide_from_frst p0001 space p0008-begda p0008-endda.
+    rp_provide_from_frst p0002 space p0008-begda p0008-endda.
+    rp_provide_from_frst p0006 '1' p0008-begda p0008-endda.
+    rp_provide_from_frst p0007 space p0008-begda p0008-endda.
+    rp_provide_from_frst p0105 '0010' p0008-begda p0008-endda.
+    rp_provide_from_last p9009 space p_stchtg p_stchtg.
+
+    "Split-(PROVIDE)-Zeitraum übernehmen.
+    gs_data-split_begda = p0008-begda.
+    gs_data-split_endda = p0008-endda.
+    gs_data-split_seqnr = l_seqnr.
+
+    "Daten in Struktur übernehmen
+    MOVE-CORRESPONDING p0006 TO gs_data.
+    MOVE-CORRESPONDING p0002 TO gs_data.
+    MOVE-CORRESPONDING p0001 TO gs_data.
+    gs_data-icon = icon_light_out.
+    SELECT SINGLE anrlt INTO gs_data-anrlt FROM t522t WHERE sprsl EQ sy-langu AND anred EQ p0002-anred.
+    gs_data-usrid_long = p0105-usrid_long.
+    gs_data-stat2 = p0000-stat2.
+    gs_data-mostd = p0007-mostd.
+    gs_data-wostd = p0007-wostd.
+    gs_data-0041_z3 = l_entrydate.
+    gs_data-firedate = l_firedate.
+    "Org.-Daten in Struktur übernehmen
+    gs_data-stell_stchtg = l_stell_stchtg.
+    gs_data-stltx_stchtg = l_stltx_stchtg.
+    SELECT SINGLE plstx FROM t528t INTO gs_data-plstx
+                                   WHERE sprsl EQ sy-langu
+                                     AND otype EQ 'S'
+                                     AND plans EQ gs_data-plans
+                                     AND endda GE gs_data-split_begda
+                                     AND begda LE gs_data-split_begda.
+    SELECT SINGLE stltx FROM t513s INTO gs_data-stltx
+                                   WHERE sprsl EQ sy-langu
+                                     AND stell EQ gs_data-stell
+                                     AND endda GE gs_data-split_begda
+                                     AND begda LE gs_data-split_begda.
+    SELECT SINGLE orgtx FROM t527x INTO gs_data-orgtx
+                                   WHERE sprsl EQ sy-langu
+                                     AND orgeh EQ gs_data-orgeh
+                                     AND endda GE gs_data-split_begda
+                                     AND begda LE gs_data-split_begda.
+    "Ermittle Vorgesetzten zur Person anhand A002
+    DATA lt_manager_tab TYPE zp2d_de_t_manager.
+    FIELD-SYMBOLS <manager_tab> TYPE zp2d_de_s_manager.
+    CLEAR lt_manager_tab[].
+    lt_manager_tab = zp2d_de_cl_get_org_stru=>get_manager_s_by_plans( iv_plans = gs_data-plans iv_seldat = gs_data-split_begda ).
+    LOOP AT lt_manager_tab  ASSIGNING <manager_tab>.
+      gs_data-a002_pernr = <manager_tab>-pernr.
+      gs_data-a002_ename = <manager_tab>-ename.
+      EXIT.
+    ENDLOOP.
+
+
+    "Grade-Ermittlung
+    IF p9009-grade IS INITIAL.
+      SELECT SINGLE grade FROM zhr_it9009_grade INTO gs_data-grade
+        WHERE job_id EQ gs_data-stell_stchtg.
+    ELSE.
+      gs_data-grade = p9009-grade.
+    ENDIF.
+
+    IF p_perf IS INITIAL.
+      gs_data-perf = p9009-perf.
+      gs_data-perfdat = p9009-perfdat.
+    ELSE.
+      gs_data-perf = p_perf.
+    ENDIF.
+
+
+    "Bestimmte Maßnahmen sollen angezeigt werden!
+    LOOP AT p0000 WHERE begda GE p0008-begda
+                    AND ( ( massn EQ '02' AND massg EQ '98' )       "BÜ
+                       OR ( massn EQ '02' AND massg EQ '10' )       "BÜ-Verschmelzung
+                       OR ( massn EQ '02' AND massg EQ '92' )       "Übergang Arbeitsverhältnis
+                       OR ( massn EQ '10' AND massg EQ '10' ) ).    "Übertritt zu verb. Gesellschaft
+      gs_data-0000_massn = p0000-massn.
+      gs_data-0000_massg = p0000-massg.
+      gs_data-0000_begda = p0000-begda.
+    ENDLOOP.
+
+    "Bestimmte Abwesenheiten sollten angezeigt werden!
+    DATA l_begda_as_c(10) TYPE c.
+    DATA l_endda_as_c(10) TYPE c.
+    LOOP AT p2001 ASSIGNING FIELD-SYMBOL(<p2001>) WHERE endda GE p0008-begda
+                                                    AND begda LE p0008-endda
+                                                    AND abwtg GT 60.
+      WRITE <p2001>-begda TO l_begda_as_c.
+      WRITE <p2001>-endda TO l_endda_as_c.
+      gs_data-2001_absences = <p2001>-awart && ` - von ` && l_begda_as_c && ` bis ` && l_endda_as_c.
+    ENDLOOP.
+
+    "Datum aufgrund des Provides nochmals einlesen!
+    LOOP AT p0008 ASSIGNING FIELD-SYMBOL(<p0008>) WHERE endda GE p0008-begda
+                                                    AND begda LE p0008-endda.
+      gs_data-0008_begda = <p0008>-begda.
+      gs_data-0008_endda = <p0008>-endda.
+      EXIT.
+    ENDLOOP.
+
+    "Beschäftigungsgrad < 0 sollte nicht vorkommen!
+    IF p0008-bsgrd < 0.
+      gs_data-bsgrd = '100'.
+      gs_data-icon = icon_led_red.
+      gs_data-message = 'Beschäftigungsgrad prüfen!'.
+    ELSE.
+      gs_data-bsgrd = p0008-bsgrd.
+    ENDIF.
+    gs_data-divgv = p0008-divgv.
+    gs_data-trfar = p0008-trfar.
+    gs_data-trfgb = p0008-trfgb.
+    gs_data-trfgr = p0008-trfgr.
+    gs_data-trfst = p0008-trfst.
+    SELECT SINGLE zz_mostd INTO gs_data-mostd_tarif FROM t510g WHERE molga EQ '01' AND trfgb EQ p0008-trfgb.
+    gs_data-preas = p0008-preas.
+    SELECT SINGLE rtext INTO gs_data-prtxt FROM t530f WHERE sprsl EQ sy-langu AND infty EQ '0008' AND preas EQ p0008-preas.
+    gs_data-0008_ansal = p0008-ansal.
+
+    "Bestimmung der Werte aus IT0008
+    DATA lt_pbwla TYPE hrpayde_t_pbwla.
+    FIELD-SYMBOLS <pbwla> TYPE pbwla.
+    CLEAR lt_pbwla.
+    CALL FUNCTION 'RP_FILL_WAGE_TYPE_TABLE_EXT'
+      EXPORTING
+        begda                        = p0008-begda
+        endda                        = p0008-endda
+        infty                        = '0008'
+        pernr                        = p0008-pernr
+      TABLES
+        pp0001                       = p0001
+        pp0007                       = p0007
+        pp0008                       = p0008
+        ppbwla                       = lt_pbwla
+      EXCEPTIONS
+        error_at_indirect_evaluation = 1
+        OTHERS                       = 2.
+    IF sy-subrc <> 0.
+      CLEAR lt_pbwla.
+    ENDIF.
+
+    LOOP AT lt_pbwla ASSIGNING <pbwla>.
+      IF <pbwla>-lgart IN s_sollbz.
+        gs_data-0008_sollbezahlung = gs_data-0008_sollbezahlung + <pbwla>-betrg.
+      ELSEIF <pbwla>-lgart IN s_tarif.
+        gs_data-0008_tarifgehalt = gs_data-0008_tarifgehalt + <pbwla>-betrg.
+      ELSEIF <pbwla>-lgart IN s_zulage.
+        gs_data-0008_freiw_zulage = gs_data-0008_freiw_zulage + <pbwla>-betrg.
+      ELSEIF <pbwla>-lgart IN s_atghlt.
+        gs_data-0008_at_gehalt = gs_data-0008_at_gehalt + <pbwla>-betrg.
+      ENDIF.
+    ENDLOOP.
+
+    "Ermittlung UG/WG
+    PERFORM read_it9001.
+
+    "Ermittlung Tantiemen/Prämien
+    PERFORM read_it9002.
+
+    "Prüfung auf Referenzpersonalnummer
+    PERFORM check_refpernr USING pn-begda.     "Prüfung muss auf gesammten Auswertungszeitraum erfolgen!
+
+    "Prüfung auf Relevanz (Eintritt / Austritt / ATZ / Abwesenheit)
+    PERFORM check_ausschluss.
+
+    "Berechnung für die Gehaltserhöhung, aber nur wenn kein Ausschluss erfolgt ist!
+    PERFORM calc_comp_salary.
+    IF p_hq IS NOT INITIAL.
+      PERFORM do_payraise_calc_hq.
+    ELSE.
+      PERFORM do_payraise_calc_store.
+    ENDIF.
+
+    APPEND gs_data TO gt_data.
+    l_seqnr = l_seqnr + 1.
+
+  ENDPROVIDE.
+
+
+************************************************************************
+END-OF-SELECTION.
+************************************************************************
+
+  "Nacharbeiten...
+  LOOP AT gt_data ASSIGNING <data>.
+    CASE <data>-icon.
+      WHEN icon_dummy.
+        <data>-iconname = 'CROSS'.
+      WHEN icon_light_out.
+        <data>-iconname = ''.
+      WHEN icon_yellow_light.
+        <data>-iconname = 'YELLOW'.
+      WHEN icon_red_light.
+        <data>-iconname = 'RED'.
+        "Sonderlocke - Erhöhung hat bereits statt gefunden!
+        IF <data>-neu_erhoehungsproz EQ <data>-vergleichsprozente AND <data>-neu_erhoehungsproz GT 0.
+          <data>-icon = icon_system_end.
+          <data>-message = 'Erhöhung bereits durchgeführt!'.
+          <data>-iconname = 'YELLOW_ARROW'.
+        ENDIF.
+      WHEN icon_green_light.
+        <data>-iconname = 'GREEN'.
+      WHEN icon_led_red.
+        <data>-iconname = 'RED_LED'.
+      WHEN icon_locked.
+        <data>-iconname = 'LOCKED'.
+      WHEN OTHERS.
+        <data>-iconname = '???'.
+    ENDCASE.
+  ENDLOOP.
+
+  "Satz for Stichtag ausblenden!
+  IF p_vorstg IS INITIAL.
+    DELETE gt_data WHERE icon EQ icon_dummy.
+  ENDIF.
+
+  "Einspielung der Daten
+  PERFORM update_data.
+
+  "Starten der Prozesse (für Doc.Erzeugung)
+  PERFORM create_doc.
+
+
+  "Beginn ALV-Ausgabe
+  PERFORM alv_anzeigen TABLES gt_data[].
+
+
+
+************************************************************************
+*        from here only
+*        FORM-ROUTINES, CLASS and MODULES
+************************************************************************
+
+*&---------------------------------------------------------------------*
+*&      Form  INITIALIZATION
+*&---------------------------------------------------------------------*
+FORM initialization .
+
+
+  "Austritte im Std. ausschliessen
+  rp_sel_ein_aus_init.
+
+  "Datumsinitialisierung
+  pnptimed = 'I,'.  "Stichtag
+  pnpbegda = sy-datum(6) && '01'.
+  pnpendda = '99991231'.
+
+  "Tab's
+  block01 = 'Allgemein'.
+  block02 = 'Zusatz HQ'.
+  block03 = 'Ausschlusskriterien'.
+  block04 = 'Rundung'.
+  block05 = 'Lohnartendefinition'.
+  block06 = 'Dokumenterzeugung'.
+  mytab-prog = sy-repid.
+  mytab-dynnr = 010.
+  mytab-activetab = 'BLOCK01'.
+
+  IF sy-sysid EQ 'T21'.
+    fill_sel_opt pnppernr 'I' 'BT' '300' '400'.
+    pnpbegda = '20240331'.
+    p_stchtg = '20240501'.
+  ENDIF.
+
+  fill_sel_opt s_shwabs 'I' 'EQ' '0200' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0270' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0500' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0510' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0601' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0614' ''.
+  fill_sel_opt s_shwabs 'I' 'EQ' '0615' ''.
+
+  fill_sel_opt s_sollbz 'I' 'EQ' '1100' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1000' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1003' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1010' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1310' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1500' ''.
+  fill_sel_opt s_tarif  'I' 'EQ' '1520' ''.
+  fill_sel_opt s_zulage 'I' 'EQ' '1220' ''.
+  fill_sel_opt s_zulage 'I' 'EQ' '1222' ''.
+  fill_sel_opt s_zulage 'I' 'EQ' '1322' ''.
+  fill_sel_opt s_zulage 'I' 'EQ' '1522' ''.
+  fill_sel_opt s_atghlt 'I' 'EQ' '1030' ''.
+
+  fill_sel_opt s_epersk 'I' 'EQ' '16' ''.
+  fill_sel_opt s_epersk 'I' 'EQ' '46' ''.
+  fill_sel_opt s_epersk 'I' 'EQ' '48' ''.
+  fill_sel_opt s_epersk 'I' 'EQ' '50' ''.
+  fill_sel_opt s_epersk 'I' 'EQ' '52' ''.
+
+  fill_sel_opt s_eawart 'I' 'EQ' '030U' ''.
+  fill_sel_opt s_eawart 'I' 'EQ' '030W' ''.
+
+  fill_sel_opt s_emassg 'I' 'EQ' '00' ''.
+  fill_sel_opt s_emassg 'I' 'EQ' '30' ''.
+  fill_sel_opt s_amass1 'I' 'BT' '01' '09'.
+  fill_sel_opt s_amass1 'I' 'BT' '11' '14'.
+  fill_sel_opt s_amass1 'I' 'EQ' '20' ''.
+
+  fill_sel_opt s_persk 'I' 'EQ' '12' ''.
+  fill_sel_opt s_persk 'I' 'EQ' '16' ''.
+  fill_sel_opt s_persk 'I' 'EQ' '46' ''.
+  fill_sel_opt s_persk 'I' 'EQ' '48' ''.
+
+  fill_sel_opt s_vtrbt 'I' 'EQ' '0007' ''.
+  fill_sel_opt s_vtrbt 'I' 'EQ' '0011' ''.
+  fill_sel_opt s_vtrbt 'I' 'EQ' '0012' ''.
+  fill_sel_opt s_vtrbt 'I' 'EQ' '0013' ''.
+  fill_sel_opt s_vtrbt 'I' 'EQ' '0014' ''.
+
+
+ENDFORM.    " INITIALIZATION
+
+
+*&---------------------------------------------------------------------*
+*&      Form  UPLOAD_GEHALTSBAND
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM upload_gehaltsband .
+
+  "Tabelle für Einlesedaten
+  DATA(lt_upload) = VALUE string_table( ).
+
+  "eingelesene Datei zeilenweise als Stringdaten einlesen
+  cl_gui_frontend_services=>gui_upload( EXPORTING
+                                          filename                = CONV #( p_file )
+                                          filetype                = 'ASC'             " Dateityp BIN, ASC, DAT
+                                        CHANGING
+                                          data_tab                = lt_upload
+                                        EXCEPTIONS
+                                          file_open_error         = 1
+                                          file_read_error         = 2
+                                          no_batch                = 3
+                                          gui_refuse_filetransfer = 4
+                                          invalid_type            = 5
+                                          no_authority            = 6
+                                          unknown_error           = 7
+                                          bad_data_format         = 8
+                                          header_not_allowed      = 9
+                                          separator_not_allowed   = 10
+                                          header_too_long         = 11
+                                          unknown_dp_error        = 12
+                                          access_denied           = 13
+                                          dp_out_of_memory        = 14
+                                          disk_full               = 15
+                                          dp_timeout              = 16
+                                          not_supported_by_gui    = 17
+                                          error_no_gui            = 18
+                                          OTHERS                  = 19 ).
+  IF sy-subrc NE 0.
+    CLEAR: lt_upload.
+  ENDIF.
+
+  "Eingelesene Strings durchlaufen, Start bei Zeile 1 (mit Header) oder 2 (mit Header)
+  LOOP AT lt_upload ASSIGNING FIELD-SYMBOL(<upload>) FROM 2.
+
+    "String anhand des Separators aufsplitten
+    SPLIT <upload> AT ';' INTO TABLE DATA(it_columns).
+    gs_gehaltsband-grade = it_columns[ 1 ].
+    CHECK gs_gehaltsband-grade IS NOT INITIAL.
+    gs_gehaltsband-band2 = it_columns[ 2 ].
+    gs_gehaltsband-band3 = it_columns[ 3 ].
+    gs_gehaltsband-mitteu = it_columns[ 4 ].
+    gs_gehaltsband-mitteo = it_columns[ 5 ].
+    gs_gehaltsband-band5 = it_columns[ 6 ].
+    gs_gehaltsband-band6 = it_columns[ 7 ].
+    APPEND gs_gehaltsband TO gt_gehaltsband.
+  ENDLOOP.
+
+ENDFORM.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  INIT_DATES
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM init_dates .
+
+  ls_aper_ug-begda = p_stchtg(4) && '0601'.
+  ls_aper_ug-endda = p_stchtg(4) && '0630'.
+  ls_aper_ug-paper-pabrj = ls_aper_ug-endda(4).
+  ls_aper_ug-paper-pabrp = ls_aper_ug-endda+4(2).
+  ls_aper_ug-iaper-pabrj = ls_aper_ug-endda(4).
+  ls_aper_ug-iaper-pabrp = ls_aper_ug-endda+4(2).
+  ls_aper_ug-pbegd = ls_aper_ug-begda.
+  ls_aper_ug-pendd = ls_aper_ug-endda.
+
+  ls_aper_wg-begda = p_stchtg(4) && '1101'.
+  ls_aper_wg-endda = p_stchtg(4) && '1130'.
+  ls_aper_wg-paper-pabrj = ls_aper_wg-endda(4).
+  ls_aper_wg-paper-pabrp = ls_aper_wg-endda+4(2).
+  ls_aper_wg-iaper-pabrj = ls_aper_wg-endda(4).
+  ls_aper_wg-iaper-pabrp = ls_aper_wg-endda+4(2).
+  ls_aper_wg-pbegd = ls_aper_wg-begda.
+  ls_aper_wg-pendd = ls_aper_wg-endda.
+
+**  Calculate fiscal years start and end date
+*  l_fyear_begda = p_stchtg+0(4) && '1001'.
+*  IF p_stchtg < l_fyear_begda.
+*    l_fyear_begda+0(4) = l_fyear_begda+0(4) - 1.
+*  ENDIF.
+*
+*  l_fyear_endda = l_fyear_begda+0(4) && '0930'.
+*  l_fyear_endda+0(4) = l_fyear_endda+0(4) + 1.
+
+ENDFORM.    " INIT_DATES
+
+*&---------------------------------------------------------------------*
+*&      Form  READ_IT9001
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM read_it9001 .
+
+  "UG/WG soll nicht dynamisch anhand der MA-Daten berechnet werden, sondern
+  "'generell' bestimmt werden.
+
+  IF 1 = 1.
+
+    "Calculate time periode based on key date
+    DATA(l_cal_begda) = CONV datum( gs_data-split_begda+0(4) && '0101' ).
+    DATA(l_cal_endda) = CONV datum( l_cal_begda+0(4) && '1231' ).
+
+    DATA ls_pme03 TYPE pme03.
+    DATA l_szgrp TYPE zstb1_szgrp.
+    DATA l_sztrfgrp TYPE zstb1_sztrf.
+    DATA lt_p9001 TYPE TABLE OF p9001.
+    DATA ls_zstb1 TYPE zstb1.
+    DATA ls_t510 TYPE t510.
+    DATA l_ugeld TYPE maxbt.
+    DATA l_wgeld TYPE maxbt.
+    CLEAR: lt_p9001[], ls_pme03, l_szgrp, l_sztrfgrp.
+
+    rp_provide_from_last p9001 space pn-begda gs_data-split_endda.
+
+    "Fülle Struktur für Merkmal
+    ls_pme03-bukrs = p0001-bukrs.
+    ls_pme03-werks = p0001-werks.
+    ls_pme03-btrtl = p0001-btrtl.
+    ls_pme03-persg = p0001-persg.
+    ls_pme03-persk = p0001-persk.
+    ls_pme03-molga = '01'.
+*    ls_pme03-AGEJJ
+*    ls_pme03-DAUER
+    ls_pme03-trfar = gs_data-trfar.
+    ls_pme03-trfgb = gs_data-trfgb.
+    ls_pme03-trfgr = gs_data-trfgr.
+    ls_pme03-trfst = gs_data-trfst.
+    ls_pme03-urlzk = '1'.    "nochmals zu validieren!
+*    ls_pme03-ANSVH
+    CALL FUNCTION 'HR_FEATURE_BACKFIELD'
+      EXPORTING
+        feature                     = 'ZSTB1'
+        struc_content               = ls_pme03
+      IMPORTING
+        back                        = l_szgrp
+      EXCEPTIONS
+        dummy                       = 1
+        error_operation             = 2
+        no_backvalue                = 3
+        feature_not_generated       = 4
+        invalid_sign_in_funid       = 5
+        field_in_report_tab_in_pe03 = 6
+        OTHERS                      = 7.
+    IF sy-subrc <> 0.
+      l_szgrp = '01'.
+    ENDIF.
+    CALL FUNCTION 'HR_FEATURE_BACKFIELD'
+      EXPORTING
+        feature                     = 'ZSTB2'
+        struc_content               = ls_pme03
+      IMPORTING
+        back                        = l_sztrfgrp
+      EXCEPTIONS
+        dummy                       = 1
+        error_operation             = 2
+        no_backvalue                = 3
+        feature_not_generated       = 4
+        invalid_sign_in_funid       = 5
+        field_in_report_tab_in_pe03 = 6
+        OTHERS                      = 7.
+    IF sy-subrc <> 0.
+      l_szgrp = '01'.
+    ENDIF.
+
+* 0	keine Sonderzahlung
+* 1	Tarifregelung
+* 2	freie Vereinbarung
+* 3	Tarifang. mit mtl. Auszahlung UG/WG
+* 5	Auszahlung erst im März des Folgejahres
+* 7	GF: U-/W-Geld monatlich
+* 8	GF: U-/W-Geld sofort (Tarifregelung)
+* 9	GF: U-/W-Geld jährlich
+
+    CLEAR: ls_zstb1, ls_t510, l_ugeld.
+    CASE p9001-stat3.
+* UG: 50 % von Stufe xxx letzter Stufe Verkäufertätigkeit
+      WHEN 1.
+        SELECT SINGLE * FROM zstb1 INTO ls_zstb1
+                        WHERE szgrp EQ l_szgrp
+                          AND sztrfgrp EQ l_sztrfgrp
+                          AND szart EQ '0100'
+                          AND szstat EQ p9001-stat3
+                          AND endda GE gs_data-split_begda
+                          AND begda LE gs_data-split_begda.
+        SELECT SINGLE * FROM t510 INTO ls_t510
+                       WHERE molga EQ '01'
+                         AND trfar EQ gs_data-trfar
+                         AND trfgb EQ gs_data-trfgb
+                         AND trfkz EQ '3'
+                         AND lgart EQ ls_zstb1-erm1lgart
+                         AND endda GE l_cal_begda
+                         AND begda LE l_cal_begda.
+
+        l_ugeld = ls_t510-betrg / 100 * ls_zstb1-anspprznt.
+        l_ugeld = l_ugeld / 100 * gs_data-bsgrd.
+
+*          IF gs_data-trfgr EQ 'AZUBI'.
+*            l_ugeld = l_ugeld / 3 * 2.
+*          ENDIF.
+
+*      Manuelle Vorgabe des Betrags...
+        IF p9001-eventu = '3' OR
+           p9001-eventu = '5'.
+          l_ugeld = p9001-betrgu.
+        ENDIF.
+      WHEN 2.
+        l_ugeld = p9001-betrgu.
+      WHEN OTHERS.
+    ENDCASE.
+
+    CLEAR: ls_zstb1, ls_t510, l_wgeld.
+    CASE p9001-stat3w.
+* WG: 62,5 % vom aktuellen Tarifgehalt
+      WHEN 1.
+        SELECT SINGLE * FROM zstb1 INTO ls_zstb1
+                        WHERE szgrp EQ l_szgrp
+                          AND sztrfgrp EQ l_sztrfgrp
+                          AND szart EQ '0200'
+                          AND szstat EQ p9001-stat3w
+                          AND endda GE gs_data-split_begda
+                          AND begda LE gs_data-split_begda.
+        SELECT SINGLE * FROM t510 INTO ls_t510
+                       WHERE molga EQ '01'
+                         AND trfar EQ gs_data-trfar
+                         AND trfgb EQ gs_data-trfgb
+                         AND trfkz EQ '3'
+                         AND trfgr EQ gs_data-trfgr
+                         AND trfst EQ gs_data-trfst
+                         AND lgart EQ space
+                         AND endda GE gs_data-split_begda
+                         AND begda LE gs_data-split_begda.
+
+        l_wgeld = ls_t510-betrg / 100 * ls_zstb1-anspprznt.
+        l_wgeld = l_wgeld / 100 * gs_data-bsgrd.
+*      Manuelle Vorgabe des Betrags...
+        IF p9001-eventw = '3' OR
+           p9001-eventw = '5'.
+          l_wgeld = p9001-betrgw.
+        ENDIF.
+      WHEN 2.
+        l_wgeld = p9001-betrgw.
+      WHEN OTHERS.
+    ENDCASE.
+
+    gs_data-urlaubsgeld = gs_data-urlaubsgeld + l_ugeld.
+    gs_data-weihnachtsgeld = gs_data-weihnachtsgeld + l_wgeld.
+
+  ELSE.
+    "UG Berechnen
+    DATA lr_sz_automat TYPE REF TO zde_if_sz_automatik.
+    DATA lt_szit TYPE zde_tt_sz_automatik.
+    lr_sz_automat = zde_cl_sz_automatik=>zde_if_sz_automatik~factory( iv_pernr = pernr-pernr
+                                                                      it_p0000 = p0000[]
+                                                                      it_p0001 = p0001[]
+                                                                      is_aper  = ls_aper_ug
+                                                                      iv_szart = '0100' ).
+    CLEAR lt_szit[].
+    lt_szit[] = lr_sz_automat->get_urlaubsgeld( ).
+    LOOP AT lt_szit ASSIGNING FIELD-SYMBOL(<szit>).
+      gs_data-urlaubsgeld = gs_data-urlaubsgeld + <szit>-betrg.
+    ENDLOOP.
+
+    lr_sz_automat = zde_cl_sz_automatik=>zde_if_sz_automatik~factory( iv_pernr = pernr-pernr
+                                                                      it_p0000 = p0000[]
+                                                                      it_p0001 = p0001[]
+                                                                      is_aper  = ls_aper_wg
+                                                                      iv_szart = '0200' ).
+    CLEAR lt_szit[].
+    lt_szit[] = lr_sz_automat->get_weihnachtsgeld( ).
+    LOOP AT lt_szit ASSIGNING <szit>.
+      gs_data-weihnachtsgeld = gs_data-weihnachtsgeld + <szit>-betrg.
+    ENDLOOP.
+  ENDIF.
+
+ENDFORM.    " READ_IT9001
+
+*&---------------------------------------------------------------------*
+*&      Form  READ_IT9002
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM read_it9002.
+
+  DATA lt_infty_data TYPE zpraem_t_infty_data.
+  FIELD-SYMBOLS: <infty_data> LIKE LINE OF lt_infty_data.
+  DATA lt_subty_betrg_9002 TYPE zpraem_t_subty_betrg.
+  FIELD-SYMBOLS: <subty_betrg_9002> LIKE LINE OF lt_subty_betrg_9002.
+  DATA l_count TYPE i.
+  CLEAR l_count.
+
+*  rp_provide_from_last p9002 space pn-begda gs_data-split_endda.
+  LOOP AT p9002 WHERE vtrnr EQ p9003-vtrnr.
+    "Positionieren des IT-Satzes anhand der Vertragsnummer
+    EXIT.
+  ENDLOOP.
+  IF sy-subrc EQ 0.
+**********************************************************************
+    CALL METHOD lr_praem->get_infty_data
+      EXPORTING
+        iv_molga        = '01'
+        iv_begda        = p9002-begda
+        iv_endda        = p9002-endda
+        iv_pabrj        = p9002-endda(4)
+        iv_waers        = 'EUR'
+*       iv_versn        = p_versn
+        iv_year         = p9002-endda(4)
+        iv_prozt        = '100.00'
+        iv_ignore_kzprt = 'X'
+        it_p9002        = p9002[]
+        it_p9003        = p9003[]
+        it_p9004        = p9004[]
+      IMPORTING
+        et_infty_data   = lt_infty_data.
+
+
+    LOOP AT lt_infty_data ASSIGNING <infty_data> WHERE vtrbt IN s_vtrbt.
+      "Zähler, darf nur 1 Satz da sein!
+      l_count = l_count + 1.
+
+      IF <infty_data>-endda BETWEEN gs_data-split_begda AND gs_data-split_endda.
+        gs_data-9002_begda = <infty_data>-begda.
+        gs_data-9002_endda = <infty_data>-endda.
+        gs_data-9002_vtrnr = <infty_data>-vtrnr.
+        gs_data-9002_vtrbt_id = p9003-vtrbt_id.
+      ENDIF.
+
+      CASE <infty_data>-vtrbt.
+        WHEN '0007'.  "Individuelle Zielvereinbarung
+          gs_data-9002_zielvereinbarung = gs_data-9002_zielvereinbarung + <infty_data>-p9003-betrg.
+        WHEN '0008'.  "Festtantieme
+          gs_data-9002_festtantieme = gs_data-9002_festtantieme + <infty_data>-p9003-betrg.
+        WHEN OTHERS.  "Tantieme / Erfolgsbeteiligung
+          gs_data-9002_variable = gs_data-9002_variable + <infty_data>-p9003-betrg.
+      ENDCASE.
+    ENDLOOP.
+
+    "Daten merken!
+    CLEAR: gs_save_9002.
+    gs_save_9002-bsgrd = gs_data-bsgrd.
+    gs_save_9002-variable = gs_data-9002_variable.
+    gs_save_9002-zielvereinbarung = gs_data-9002_zielvereinbarung.
+    gs_save_9002-festtantieme = gs_data-9002_festtantieme.
+
+*  Add message ID for multiple components.
+    IF l_count > 1.
+      CLEAR: gs_save_9002.
+      gs_data-icon = icon_red_light.
+      gs_data-message = 'Es gibt mehr als einen IT9002-Satz!'.
+    ENDIF.
+  ELSE.
+    "Zukunftsdaten sollen einfach 'fortgeschrieben' werden. IT9002 gibt es ja nur für das aktuelle Jahr!
+    gs_data-9002_variable = gs_save_9002-variable * gs_data-bsgrd / gs_save_9002-bsgrd.
+    gs_data-9002_zielvereinbarung = gs_save_9002-zielvereinbarung * gs_data-bsgrd / gs_save_9002-bsgrd.
+    gs_data-9002_festtantieme = gs_save_9002-festtantieme * gs_data-bsgrd / gs_save_9002-bsgrd.
+  ENDIF.
+
+ENDFORM.                    " READ_IT9002
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CHECK_REFPERNR
+*&---------------------------------------------------------------------*
+FORM check_refpernr USING p_begda.
+
+  "Einlesen der Ref.PerNr.
+  DATA lt_pa0031 TYPE TABLE OF pa0031.
+  FIELD-SYMBOLS <pa0031> TYPE pa0031.
+  FIELD-SYMBOLS <rfpnr> TYPE rfpnr.
+  CLEAR lt_pa0031[].
+  CALL FUNCTION 'HR_READ_0031_DB'
+    EXPORTING
+      pernr    = pernr-pernr
+    TABLES
+      i0031_db = lt_pa0031.
+
+  LOOP AT lt_pa0031 ASSIGNING <pa0031> WHERE endda GE p_begda
+                                         AND begda LE p_begda.
+    DO 10 TIMES.
+      DATA lv_n2(2) TYPE n.
+      lv_n2 = sy-index.
+
+      ASSIGN COMPONENT |RFP{ lv_n2 }| OF STRUCTURE <pa0031> TO <rfpnr>.
+      IF <rfpnr> IS INITIAL.
+        EXIT.
+      ENDIF.
+      SELECT SINGLE pernr FROM pa0000 INTO gs_data-rfpnr WHERE pernr EQ <rfpnr>
+                                                           AND endda GE p_begda
+                                                           AND stat2 GE 1.
+      IF sy-subrc EQ 0.
+        IF gs_data-icon EQ icon_yellow_light OR gs_data-icon EQ icon_light_out.
+          gs_data-icon = icon_yellow_light.
+          gs_data-message = 'Referenz-Personalnummer vorhanden'.
+        ENDIF.
+        EXIT.
+      ENDIF.
+    ENDDO.
+  ENDLOOP.
+
+ENDFORM.    " CHECK_REFPERNR
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CHECK_AUSSCHLUSS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM check_ausschluss .
+
+  "Prüfung Abwesenheiten im Ausschlußzeitraum
+  DATA l_first_begda TYPE begda.
+  DATA l_last_endda TYPE endda.
+  DATA l_help_absence TYPE awart.
+  DATA l_help_abwtxt TYPE abwtxt.
+  DATA lv_discard TYPE boolean.
+  CLEAR: l_first_begda, l_last_endda, lv_discard, l_help_absence, l_help_abwtxt.
+
+  "Get all considered absences that employee had in the considered period
+  FIELD-SYMBOLS <pa2001> TYPE pa2001.
+  SELECT * FROM pa2001 INTO TABLE @DATA(lt_p2001)
+    WHERE pernr = @gs_data-pernr
+      AND subty IN @s_eawart
+      AND ( ( begda >= @p_stchtg AND endda <= @p_stchtg ) OR
+            ( begda >= @p_stchtg AND begda <= @p_stchtg ) OR
+            ( endda >= @p_stchtg AND endda <= @p_stchtg ) OR
+            ( begda <= @p_stchtg AND endda >= @p_stchtg ) )
+    ORDER BY begda ASCENDING.
+
+  DESCRIBE TABLE lt_p2001 LINES DATA(lv_lines).
+
+  CASE lv_lines.
+    WHEN 1. "If only one absence
+      "Discard if it takes the whole period
+      LOOP AT lt_p2001 ASSIGNING <pa2001>
+        WHERE begda <= p_stchtg
+          AND endda >= p_stchtg.
+        l_help_absence = <pa2001>-awart.
+        lv_discard = abap_true.
+      ENDLOOP.
+
+    WHEN OTHERS. "If there are 2 or more absences
+      "Create a table with time ranges from list of absences
+      LOOP AT lt_p2001 ASSIGNING <pa2001>.
+        l_help_absence = <pa2001>-awart.
+        IF sy-tabix = 1.
+          l_first_begda = <pa2001>-begda.
+          DATA(lt_daterange) = VALUE  ttet_daterange_tab(
+            ( datefrom = <pa2001>-begda dateto = <pa2001>-endda ) ).
+        ELSE.
+          l_last_endda = <pa2001>-endda.
+          lt_daterange = VALUE #( BASE lt_daterange ( datefrom = <pa2001>-begda dateto = <pa2001>-endda ) ).
+        ENDIF.
+      ENDLOOP.
+
+      "Check if there are gaps in the time ranges list
+      IF lt_daterange IS NOT INITIAL AND
+         l_first_begda LE p_stchtg AND
+         l_last_endda GE p_stchtg.
+        CALL FUNCTION 'TTE_CHK_DTRNG_GAPS_IN_DATETAB'
+          EXPORTING
+            datetab                   = lt_daterange
+          EXCEPTIONS
+            date_range_table_has_gaps = 1.
+        IF sy-subrc EQ 0. "No gaps -> Discard
+          lv_discard = abap_true.
+        ELSEIF sy-subrc EQ 1. "Gaps -> Do not discard
+          CLEAR l_help_absence.
+          lv_discard = abap_false.
+        ENDIF.
+      ENDIF.
+  ENDCASE.
+
+  REFRESH: lt_daterange, lt_p2001.
+
+  "Exit process for discarded employees
+  IF lv_discard = abap_true.
+    gs_data-icon = icon_led_red.
+    SELECT SINGLE atext FROM t554t INTO l_help_abwtxt WHERE sprsl EQ sy-langu AND moabw EQ '01' AND awart EQ l_help_absence.
+    gs_data-message = 'Abwesend mit'(011) && ` ` && l_help_absence && ` - ` && l_help_abwtxt.
+  ENDIF.
+
+
+  "Prüfung ATZ im Ausschlußzeitraum
+  DATA l_help_date TYPE datum.
+  DATA l_help_date_c(10) TYPE c.
+  CLEAR l_help_date.
+  SELECT SINGLE begda FROM pa0521 INTO l_help_date WHERE pernr EQ gs_data-pernr
+                                                     AND begda LE p_stchtg
+                                                     AND atzph EQ 'BF'.
+  IF sy-subrc EQ 0 AND l_help_date IS NOT INITIAL.
+    gs_data-icon = icon_led_red.
+    WRITE l_help_date TO l_help_date_c.
+    gs_data-message = 'ATZ Freiphase zum'(012) && ` ` && l_help_date_c.
+  ENDIF.
+
+  "Prüfung Eintritt
+  IF p_ebegda IS NOT INITIAL.
+    SELECT * FROM pa0000 INTO TABLE @DATA(lt_eintritt)
+      WHERE pernr = @gs_data-pernr
+        AND massn = '01'
+        AND massg IN @s_emassg
+        AND begda BETWEEN @p_ebegda AND @p_eendda
+      ORDER BY begda ASCENDING.
+    LOOP AT lt_eintritt ASSIGNING FIELD-SYMBOL(<eintritt>).
+      gs_data-icon = icon_led_red.
+      WRITE <eintritt>-begda TO l_help_date_c.
+      gs_data-message = 'Eintritt zum'(013) && ` ` && l_help_date_c.
+      EXIT.
+    ENDLOOP.
+  ENDIF.
+
+  "Prüfung 1 Austritt
+  IF p_abegd1 IS NOT INITIAL.
+    SELECT * FROM pa0000 INTO TABLE @DATA(lt_austritt)
+      WHERE pernr = @gs_data-pernr
+        AND massn = '10'
+        AND massg IN @s_amass1
+        AND begda BETWEEN @p_abegd1 AND @p_aendd1
+      ORDER BY begda ASCENDING.
+    LOOP AT lt_austritt ASSIGNING FIELD-SYMBOL(<austritt>).
+      gs_data-icon = icon_led_red.
+      WRITE <austritt>-begda TO l_help_date_c.
+      gs_data-message = 'Austritt(1) zum'(014) && ` ` && l_help_date_c.
+    ENDLOOP.
+  ENDIF.
+
+  "Prüfung 2 Austritt
+  IF p_abegd2 IS NOT INITIAL.
+    CLEAR: lt_austritt[].
+    SELECT * FROM pa0000 INTO TABLE @lt_austritt
+      WHERE pernr = @gs_data-pernr
+        AND massn = '10'
+        AND massg IN @s_amass2
+        AND begda BETWEEN @p_abegd2 AND @p_aendd2
+      ORDER BY begda ASCENDING.
+    LOOP AT lt_austritt ASSIGNING <austritt>.
+      gs_data-icon = icon_led_red.
+      WRITE <austritt>-begda TO l_help_date_c.
+      gs_data-message = 'Austritt(2) zum'(014) && ` ` && l_help_date_c.
+    ENDLOOP.
+  ENDIF.
+
+  "Prüfung 3 Austritt
+  IF p_abegd3 IS NOT INITIAL.
+    CLEAR: lt_austritt[].
+    SELECT * FROM pa0000 INTO TABLE @lt_austritt
+      WHERE pernr = @gs_data-pernr
+        AND massn = '10'
+        AND massg IN @s_amass3
+        AND begda BETWEEN @p_abegd3 AND @p_aendd3
+      ORDER BY begda ASCENDING.
+    LOOP AT lt_austritt ASSIGNING <austritt>.
+      gs_data-icon = icon_led_red.
+      WRITE <austritt>-begda TO l_help_date_c.
+      gs_data-message = 'Austritt(3) zum'(014) && ` ` && l_help_date_c.
+    ENDLOOP.
+  ENDIF.
+
+
+  "Ausschluss MA-Kreise
+  IF gs_data-persk IN s_epersk.
+    gs_data-icon = icon_led_red.
+    gs_data-message = 'Mitarbeiterkreis ausgeschlossen!'.
+  ENDIF.
+
+
+ENDFORM.     " CHECK_AUSSCHLUSS
+
+*&---------------------------------------------------------------------*
+*&      Form  CALC_COMP_SALARY
+*&---------------------------------------------------------------------*
+FORM calc_comp_salary .
+
+  "Vergleichsgehalt (ohne UG/WG), normiert auf 100% Besch.Grad
+  IF gs_data-divgv EQ 1.
+    gs_data-vergleichsgehalt_100 = ( gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage ) * gs_data-mostd_tarif * 12.
+  ELSE.
+    gs_data-vergleichsgehalt_100 = ( gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage + gs_data-0008_at_gehalt ) * 12.
+  ENDIF.
+  gs_data-vergleichsgehalt_100 = gs_data-vergleichsgehalt_100 + gs_data-9002_variable + gs_data-9002_zielvereinbarung + gs_data-9002_festtantieme.
+  gs_data-vergleichsgehalt_100 = gs_data-vergleichsgehalt_100 / gs_data-bsgrd * 100.
+
+  "Jahresgehalt, normiert auf 100% Besch.Grad
+  IF gs_data-divgv EQ 1.
+    gs_data-jahresgehalt_100 = ( gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage ) * gs_data-mostd_tarif * 12.
+  ELSE.
+    gs_data-jahresgehalt_100 = ( gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage + gs_data-0008_at_gehalt ) * 12.
+  ENDIF.
+  gs_data-jahresgehalt_100 = gs_data-jahresgehalt_100 + gs_data-9002_variable + gs_data-9002_zielvereinbarung + gs_data-9002_festtantieme + gs_data-urlaubsgeld + gs_data-weihnachtsgeld.
+  gs_data-jahresgehalt_100 = gs_data-jahresgehalt_100 / gs_data-bsgrd * 100.
+
+  IF gs_save_gehalt-flag_init IS NOT INITIAL.
+    gs_data-vergleichsdifferenz = gs_data-vergleichsgehalt_100 - gs_save_gehalt-vergleichsgehalt.
+    gs_data-vergleichsprozente = gs_data-vergleichsdifferenz * 100 / gs_save_gehalt-vergleichsgehalt.
+  ENDIF.
+
+  IF gs_data-jahresgehalt_100 IS INITIAL.
+    gs_data-icon = icon_red_light.
+    gs_data-message = 'Jahresgehalt konnte nicht ermittelt werden!'.
+
+  ELSEIF gs_data-icon EQ icon_yellow_light OR gs_data-icon EQ icon_light_out.
+    "Merker, zur Prüfung ob bereits Gehaltsanpassung statt gefunden hat?
+    IF gs_save_gehalt-flag_init IS INITIAL.
+      gs_save_gehalt-flag_init = 'X'.
+      gs_save_gehalt-trfar = gs_data-trfar.
+      gs_save_gehalt-trfgb = gs_data-trfgb.
+      gs_save_gehalt-trfgr = gs_data-trfgr.
+      gs_save_gehalt-trfst = gs_data-trfst.
+      gs_save_gehalt-0008_freiw_zulage = gs_data-0008_freiw_zulage.
+      gs_save_gehalt-vergleichsgehalt = gs_data-vergleichsgehalt_100.
+    ELSE.
+      "Wurde bereits das Flag "Gehaltserhöhung" gesetzt?
+      IF gs_save_gehalt-flag_payraise EQ 'X'.
+        gs_data-message = 'Gehalt wurde bereits angepasst!'.
+        IF p_ignerh EQ 'X'.
+          gs_data-icon = icon_yellow_light.
+        ELSE.
+          gs_data-icon = icon_red_light.
+        ENDIF.
+      ELSE.
+        IF gs_data-vergleichsdifferenz GT p_kulanz.    "Nur Erhöhung, Gehaltsreduzierung soll nicht berücksichtigt werden!
+          "Prüfung gegen tarifliche Umgruppierung
+          IF ( gs_save_gehalt-trfgb NE gs_data-trfgb OR
+               gs_save_gehalt-trfgr NE gs_data-trfgr OR
+               gs_save_gehalt-trfst NE gs_data-trfst ) AND
+               gs_data-0008_freiw_zulage EQ 0 AND
+               gs_save_gehalt-trfgr NE 'AT' AND gs_data-trfgr NE 'AT'.
+            "nichts weiter, ist so OK!
+            gs_data-message = 'tarifliche Umstufung!'.
+            "neue Werte für Vergleichsgehalt setzen!
+            gs_save_gehalt-trfar = gs_data-trfar.
+            gs_save_gehalt-trfgb = gs_data-trfgb.
+            gs_save_gehalt-trfgr = gs_data-trfgr.
+            gs_save_gehalt-trfst = gs_data-trfst.
+            gs_save_gehalt-0008_freiw_zulage = gs_data-0008_freiw_zulage.
+            gs_save_gehalt-vergleichsgehalt = gs_data-vergleichsgehalt_100.
+          ELSE.
+            gs_save_gehalt-flag_payraise = 'X'.
+            gs_data-message = 'Gehalt wurde bereits angepasst!'.
+            IF p_ignerh EQ 'X'.
+              gs_data-icon = icon_yellow_light.
+            ELSE.
+              gs_data-icon = icon_red_light.
+            ENDIF.
+            LOOP AT gt_data ASSIGNING <data> WHERE pernr EQ gs_data-pernr
+                                               AND icon NE icon_dummy
+                                               AND icon NE icon_red_light.
+              <data>-message = gs_data-message.
+              <data>-icon = gs_data-icon.
+              IF <data>-icon = icon_red_light.
+                CLEAR: <data>-neu_sollbezahlung, <data>-neu_tarifgehalt, <data>-neu_freiw_zulage, <data>-neu_at_gehalt,
+                       <data>-neu_ansal, <data>-neu_variable, <data>-neu_zielvereinbarung, <data>-neu_festtantieme.
+              ENDIF.
+            ENDLOOP.
+          ENDIF.
+        ENDIF.   "IF l_check_vergleichsgehalt NOT BETWEEN '1-' AND '1'.
+      ENDIF.   "IF gs_save_gehalt-flag_payraise EQ 'X'.
+    ENDIF.   "IF gs_data-0008_seqnr EQ '1'.
+  ENDIF.    " IF gs_data-jahresgehalt_100 IS INITIAL.
+
+
+ENDFORM.    "CALC_COMP_SALARY
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DO_PAYRAISE_CALC_HQ
+*&---------------------------------------------------------------------*
+FORM do_payraise_calc_hq .
+
+  "-----------------------------------------------------------------------
+  "Bestimmung des Gehaltsbands / der Erhöhungsprozente für HQ
+  "-----------------------------------------------------------------------
+
+  "Grade | Unter | Band2 | Band3 | Mitte |  Band5 | Band6 | Ueber
+  "--------------------------------------------------------------
+  "  3   |  200% |  200% |  175% |  150% |  125% |  100% |  75%
+  "  2   |  150% |  150% |  125% |  100% |  75%  |  50%  |  25%
+  "  1   |  50%  |  50%  |  25%  |  0%   |  0%   |  0%   |  0%
+
+  READ TABLE gt_gehaltsband ASSIGNING <gehaltsband> WITH KEY grade = gs_data-grade.
+  IF sy-subrc EQ 0.
+    IF gs_data-jahresgehalt_100 LT <gehaltsband>-band2.
+      gs_data-neu_band = 'BAND1'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '2.00'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '1.50'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.50'.
+      ENDIF.
+    ELSEIF gs_data-jahresgehalt_100 LT <gehaltsband>-band3.
+      gs_data-neu_band = 'BAND2'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '2.00'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '1.50'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.50'.
+      ENDIF.
+    ELSEIF gs_data-jahresgehalt_100 LT <gehaltsband>-mitteu.
+      gs_data-neu_band = 'BAND3'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '1.75'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '1.25'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.25'.
+      ENDIF.
+    ELSEIF gs_data-jahresgehalt_100 LT <gehaltsband>-mitteo.
+      gs_data-neu_band = 'MITTE'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '1.50'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '1.00'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.00'.
+      ENDIF.
+    ELSEIF gs_data-jahresgehalt_100 LT <gehaltsband>-band5.
+      gs_data-neu_band = 'BAND5'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '1.25'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '0.75'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.00'.
+      ENDIF.
+    ELSEIF gs_data-jahresgehalt_100 LT <gehaltsband>-band6.
+      gs_data-neu_band = 'BAND6'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '1.00'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '0.50'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.00'.
+      ENDIF.
+    ELSE.
+      gs_data-neu_band = 'UEBER'.
+      IF gs_data-perf GE '2.5'.
+        gs_data-neu_band_faktor = '0.75'.
+      ELSEIF gs_data-perf GE '1.5'.
+        gs_data-neu_band_faktor = '0.25'.
+      ELSE.
+        gs_data-neu_band_faktor = '0.00'.
+      ENDIF.
+    ENDIF.
+    gs_data-neu_erhoehungsproz = p_proz * gs_data-neu_band_faktor.
+
+    "Sonderlocke für BAND1 (unter Band)
+    IF gs_data-neu_band EQ 'BAND1' AND gs_data-jahresgehalt_100 GT 0.
+      "(((MidPoint*(1+Erhöhungsprozente)^(Anpassungen für Lage im Band-1))*(1-Spreizung der Bänder)-Jahresgehalt_100)/Anpassungen für Lage im Band)/Jahresgehalt_100
+      DATA l_midpoint TYPE maxbt.
+      l_midpoint = ( <gehaltsband>-mitteo + <gehaltsband>-mitteu ) / 2.
+
+      DATA l_erhoehungsproz2 TYPE prozt.
+      l_erhoehungsproz2 = ( ( ( ( l_midpoint * ( ( 1 + ( p_proz / 100 ) ) ** ( p_abinsb - 1 ) ) ) * ( 1 - ( p_spreiz / 100 ) ) - gs_data-jahresgehalt_100 ) / p_abinsb ) / gs_data-jahresgehalt_100 ) * 100.
+      IF l_erhoehungsproz2 GT gs_data-neu_erhoehungsproz.
+        gs_data-neu_erhoehungsproz = l_erhoehungsproz2.
+      ENDIF.
+    ENDIF.
+
+  ELSE.
+    gs_data-icon = icon_led_red.
+    gs_data-message = 'Kein Gehaltsband gefunden!'.
+  ENDIF.
+
+  DATA l_help_betrag TYPE maxbt.
+  IF gs_data-icon EQ icon_yellow_light OR gs_data-icon EQ icon_light_out.
+    IF gs_data-split_endda LT p_stchtg.
+      gs_data-icon = icon_dummy.
+      gs_data-message = 'Satz vor Stichtag'.
+    ELSE.
+      "Tarifler...
+      gs_data-neu_tarifgehalt    = gs_data-0008_tarifgehalt.  "Tarifgehalt kann sich nicht 'ändern'...
+
+      "Grundlage entweder nur Tarifgehalt oder Tarifgehalt + ÜT
+      IF p_inc_ut EQ 'X'.
+        l_help_betrag = gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage.
+      ELSE.
+        l_help_betrag = gs_data-0008_tarifgehalt.
+      ENDIF.
+
+      l_help_betrag = ( ( l_help_betrag * gs_data-neu_erhoehungsproz ) / 100 ).
+      l_help_betrag = gs_data-neu_tarifgehalt + l_help_betrag + gs_data-0008_freiw_zulage.
+      PERFORM runden CHANGING l_help_betrag.
+      gs_data-neu_freiw_zulage = l_help_betrag - gs_data-neu_tarifgehalt.
+
+      l_help_betrag = gs_data-neu_freiw_zulage - gs_data-0008_freiw_zulage.
+
+      IF gs_data-0008_sollbezahlung IS NOT INITIAL.
+        gs_data-neu_sollbezahlung = gs_data-0008_sollbezahlung + l_help_betrag.
+      ENDIF.
+
+      "ATler...
+      gs_data-neu_at_gehalt        = gs_data-0008_at_gehalt     * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+      PERFORM runden CHANGING gs_data-neu_at_gehalt.
+
+      "Jahresgehalt
+      IF gs_data-0008_ansal IS NOT INITIAL.
+        IF gs_data-neu_at_gehalt IS NOT INITIAL.
+          gs_data-neu_ansal          = gs_data-neu_at_gehalt * 12.
+        ELSE.
+          gs_data-neu_ansal          = gs_data-neu_sollbezahlung * 12.
+        ENDIF.
+      ENDIF.
+
+      "Tantiemen / Prämien, werden nur erhöht wenn auch ein Satz im IT9002 vorhanden ist!
+      IF gs_data-9002_vtrnr IS NOT INITIAL.
+        gs_data-neu_variable         = gs_data-9002_variable      * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+        gs_data-neu_zielvereinbarung = gs_data-9002_zielvereinbarung * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+        gs_data-neu_festtantieme     = gs_data-9002_festtantieme  * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.   " DO_PAYRAISE_CALC_HQ
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DO_PAYRAISE_CALC_STORE
+*&---------------------------------------------------------------------*
+FORM do_payraise_calc_store .
+
+  "-----------------------------------------------------------------------
+  "Bestimmung der Gehaltserhöhung für Store's
+  "-----------------------------------------------------------------------
+  gs_data-neu_erhoehungsproz = p_proz.
+
+  DATA l_help_betrag TYPE maxbt.
+  IF gs_data-icon EQ icon_yellow_light OR gs_data-icon EQ icon_light_out.
+    IF gs_data-split_endda LT p_stchtg.
+      gs_data-icon = icon_dummy.
+      gs_data-message = 'Satz vor Stichtag'.
+    ELSE.
+
+      IF gs_data-0008_at_gehalt IS INITIAL.
+        "Tarifler...
+        gs_data-neu_tarifgehalt    = gs_data-0008_tarifgehalt.  "Tarifgehalt kann sich nicht 'ändern'...
+
+        "Grundlage entweder nur Tarifgehalt oder Tarifgehalt + ÜT
+        IF p_inc_ut EQ 'X'.
+          gs_data-neu_erhoehungsbasis = gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage.
+        ELSE.
+          gs_data-neu_erhoehungsbasis = gs_data-0008_tarifgehalt.
+        ENDIF.
+
+        gs_data-neu_erhoehungswert = ( ( gs_data-neu_erhoehungsbasis * gs_data-neu_erhoehungsproz ) / 100 ).
+        IF p_anr_ut EQ 'X'.
+          l_help_betrag = gs_data-neu_erhoehungswert - gs_data-0008_freiw_zulage.
+          IF l_help_betrag > 0.
+            l_help_betrag = gs_data-neu_tarifgehalt + l_help_betrag + gs_data-0008_freiw_zulage.
+          ELSE.
+            l_help_betrag = gs_data-neu_tarifgehalt + gs_data-0008_freiw_zulage.
+          ENDIF.
+        ELSE.
+          l_help_betrag = gs_data-neu_tarifgehalt + gs_data-neu_erhoehungswert + gs_data-0008_freiw_zulage.
+        ENDIF.
+        IF l_help_betrag NE ( gs_data-0008_tarifgehalt + gs_data-0008_freiw_zulage ).
+          PERFORM runden CHANGING l_help_betrag.
+          gs_data-neu_freiw_zulage = l_help_betrag - gs_data-neu_tarifgehalt.
+          gs_data-neu_erhoehungsbetrg = gs_data-neu_freiw_zulage - gs_data-0008_freiw_zulage.
+        ELSE.
+          gs_data-neu_freiw_zulage = gs_data-0008_freiw_zulage.
+          gs_data-icon = icon_red_light.
+          gs_data-message = 'Keine Erhöhung bei Mitarbeiter!'.
+        ENDIF.
+
+        IF gs_data-0008_sollbezahlung IS NOT INITIAL.
+          gs_data-neu_sollbezahlung = gs_data-0008_sollbezahlung + gs_data-neu_erhoehungsbetrg.
+        ENDIF.
+
+      ELSE.
+        IF p_stre EQ 'X'.
+          gs_data-neu_at_gehalt =  gs_data-0008_at_gehalt.
+          gs_data-icon = icon_red_light.
+          gs_data-message = 'AT-Gehälter von Erhöhung ausgenommen!'.
+        ELSE.
+          "ATler...
+          gs_data-neu_erhoehungsbasis = gs_data-0008_at_gehalt.
+          gs_data-neu_erhoehungswert = gs_data-neu_erhoehungsbasis * gs_data-neu_erhoehungsproz / 100.
+          "keine Kürzung durch andere Lohnarten!
+          gs_data-neu_erhoehungsbetrg = gs_data-neu_erhoehungswert.
+
+          gs_data-neu_at_gehalt =  gs_data-0008_at_gehalt + gs_data-neu_erhoehungsbasis.
+          PERFORM runden CHANGING gs_data-neu_at_gehalt.
+        ENDIF.
+
+        "Jahresgehalt
+        IF gs_data-0008_ansal IS NOT INITIAL.
+          IF gs_data-neu_at_gehalt IS NOT INITIAL.
+            gs_data-neu_ansal          = gs_data-neu_at_gehalt * 12.
+          ELSE.
+            gs_data-neu_ansal          = gs_data-neu_sollbezahlung * 12.
+          ENDIF.
+        ENDIF.
+
+      ENDIF.
+
+*      !!!Sollen bei den Märkten nicht berücksichtigt werden!!!
+*      "Tantiemen / Prämien, werden nur erhöht wenn auch ein Satz im IT9002 vorhanden ist!
+*      IF gs_data-9002_vtrnr IS NOT INITIAL.
+*        gs_data-neu_variable         = gs_data-9002_variable      * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+*        gs_data-neu_zielvereinbarung = gs_data-9002_zielvereinbarung * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+*        gs_data-neu_festtantieme     = gs_data-9002_festtantieme  * ( 100 + gs_data-neu_erhoehungsproz ) / 100.
+*      ENDIF.
+    ENDIF.
+  ENDIF.
+
+
+ENDFORM.    " DO_PAYRAISE_CALC_STORE
+
+
+*&---------------------------------------------------------------------*
+*&      Form  RUNDEN
+*&---------------------------------------------------------------------*
+FORM runden  CHANGING l_betrag_rundung.
+
+  IF gs_data-persk NOT IN s_persk AND p_no_ru IS INITIAL.            "soll gerundet werden?
+    l_ru_betrag =  l_betrag_rundung.
+    CALL FUNCTION 'HR_CH_BETRAG_RUNDEN'
+      EXPORTING
+        p02_rutyp  = l_rutyp
+        p02_rudiv  = l_rudiv
+      CHANGING
+        p02_betrag = l_ru_betrag
+      EXCEPTIONS
+        error      = 1
+        OTHERS     = 2.
+    IF sy-subrc EQ 0.
+      l_betrag_rundung = l_ru_betrag.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_DATA
+*&---------------------------------------------------------------------*
+FORM update_data .
+
+  DATA ls_return TYPE bapireturn1.
+  DATA ls_key TYPE bapipakey.
+  DATA ls_p0008 TYPE p0008.
+  DATA ls_save_p0008 TYPE p0008.
+  FIELD-SYMBOLS <lgaxx> TYPE lgart.
+  FIELD-SYMBOLS <betxx> TYPE pad_amt7s.
+  FIELD-SYMBOLS <indxx> TYPE indbw.
+
+
+
+*   "Start der Infotyp-Verarbeitung
+  LOOP AT gt_data ASSIGNING <data> WHERE icon EQ icon_yellow_light OR icon EQ icon_light_out.
+
+*    TRY.
+
+    "Initialisieren des IT-Puffers
+    CALL FUNCTION 'HR_PSBUFFER_INITIALIZE'.
+
+    "Personalnummer sperren
+    CLEAR: ls_return.
+    CALL FUNCTION 'BAPI_EMPLOYEE_ENQUEUE'
+      EXPORTING
+        number = <data>-pernr
+      IMPORTING
+        return = ls_return.
+    IF ls_return-type EQ 'E'.
+      <data>-message = ls_return-message.
+      <data>-icon = icon_red_light.
+      <data>-0008_upd_stat = 'RED'.
+      <data>-9002_upd_stat = 'RED'.
+      CONTINUE.
+    ENDIF.
+
+    "-----------------------------------------------------------------------------------------------------
+    "Update IT0008
+    "-----------------------------------------------------------------------------------------------------
+    CLEAR: ls_p0008, ls_save_p0008.
+    SELECT SINGLE * FROM pa0008 INTO CORRESPONDING FIELDS OF ls_p0008 WHERE pernr EQ <data>-pernr
+                                                                        AND sprps NE 'X'
+                                                                        AND endda GE <data>-0008_endda
+                                                                        AND begda LE <data>-0008_endda.
+    ls_p0008-infty = '0008'.
+    ls_save_p0008 = ls_p0008.
+
+    "Anpassung BEGDA beim ersten Satz (Stichtag aus Sel.Screen)
+    IF ls_p0008-begda LE p_stchtg.
+      CLEAR ls_p0008-seqnr.
+      ls_p0008-begda = p_stchtg.
+    ENDIF.
+    "Mussfleder füllen
+    ls_p0008-preas = '12'.
+    ls_p0008-ansal = <data>-neu_ansal.
+
+    "Werte IT0008 anpassen
+    DO 10 TIMES.
+      DATA lv_n2(2) TYPE n.
+      lv_n2 = sy-index.
+
+      ASSIGN COMPONENT |LGA{ lv_n2 }| OF STRUCTURE ls_p0008 TO <lgaxx>.
+      ASSIGN COMPONENT |BET{ lv_n2 }| OF STRUCTURE ls_p0008 TO <betxx>.
+      ASSIGN COMPONENT |IND{ lv_n2 }| OF STRUCTURE ls_p0008 TO <indxx>.
+
+      "wenn LGART indirekt Bewertet keine Änderung!
+      CHECK <indxx> IS INITIAL.
+
+      IF <lgaxx> IN s_sollbz.
+        <betxx> = <data>-neu_sollbezahlung.
+      ELSEIF <lgaxx> IN s_tarif.
+        <betxx> = <data>-neu_tarifgehalt.
+      ELSEIF <lgaxx> IN s_zulage.
+        <betxx> = <data>-neu_freiw_zulage.
+      ELSEIF <lgaxx> IN s_atghlt.
+        <betxx> = <data>-neu_at_gehalt.
+      ELSEIF <lgaxx> IS INITIAL.
+        EXIT.
+      ENDIF.
+    ENDDO.
+
+    "Prüfung, ob Änderung schon drin ist?
+    CLEAR: ls_return, ls_key.
+    IF ls_p0008 EQ ls_save_p0008.
+      "nix weiter zu tun...
+    ELSE.
+      CALL FUNCTION 'HR_INFOTYPE_OPERATION'
+        EXPORTING
+          infty         = ls_p0008-infty
+          number        = ls_p0008-pernr
+          subtype       = ls_p0008-subty
+          objectid      = ls_p0008-objps
+          lockindicator = ls_p0008-sprps
+          validityend   = ls_p0008-endda
+          validitybegin = ls_p0008-begda
+          recordnumber  = ls_p0008-seqnr
+          record        = ls_p0008
+          operation     = 'INS'
+*         TCLAS         = 'A'
+          dialog_mode   = '0'
+          nocommit      = 'X'
+        IMPORTING
+          return        = ls_return
+          key           = ls_key.
+
+    ENDIF.
+
+    IF ls_return-type EQ 'E'.
+      IF ls_return-id EQ 'PG' AND ls_return-number EQ '175'.
+        <data>-icon = icon_locked.
+        <data>-0008_upd_stat = 'RED'.
+      ELSE.
+        <data>-icon = icon_red_light.
+        <data>-message = ls_return-message.
+        <data>-0008_upd_stat = 'RED'.
+      ENDIF.
+    ELSE.
+      <data>-0008_upd_stat = 'GREEN'.
+
+      "-----------------------------------------------------------------------------------------------------
+      "Update IT9002
+      "-----------------------------------------------------------------------------------------------------
+
+*     Prüfung IT9002!!! 66195 / 294 -> Kalenderjahr
+
+      DATA ls_pa9003 TYPE pa9003.
+      DATA ls_p9003 TYPE p9003.
+      DATA l_retcd TYPE sy-subrc.
+      DATA lt_psoper TYPE psoper_tab.
+      DATA lt_before_image TYPE prelp_tab.
+      DATA ls_psoper TYPE psoper.
+      DATA ls_prelp TYPE prelp.
+
+
+      "Änderung am IT9002 erforderlich!
+      IF <data>-neu_variable IS NOT INITIAL OR
+         <data>-neu_zielvereinbarung IS NOT INITIAL OR
+         <data>-neu_festtantieme IS NOT INITIAL.
+
+        IF <data>-9002_vtrnr IS INITIAL.
+          "neuen IT9002-Satz anlegen? Erstmal NEIN, wird ignoriert!
+          <data>-9002_upd_stat = 'YELLOW'.
+        ELSE.
+          CLEAR: ls_pa9003, lt_psoper[], lt_before_image[].
+          SELECT SINGLE * FROM pa9003 INTO ls_pa9003 WHERE pernr EQ <data>-pernr
+                                                       AND vtrnr EQ <data>-9002_vtrnr
+                                                       AND vtrbt_id EQ <data>-9002_vtrbt_id.
+          IF ls_pa9003-begda GE p_stchtg.
+
+            CLEAR: ls_psoper, ls_prelp.
+            MOVE-CORRESPONDING ls_pa9003 TO ls_p9003.
+            ls_p9003-infty = '9003'.
+            cl_hr_pnnnn_type_cast=>pnnnn_to_prelp(
+              EXPORTING
+                pnnnn = ls_p9003
+              IMPORTING
+                prelp =  ls_prelp ).
+            APPEND ls_prelp TO lt_before_image.
+
+            IF <data>-neu_variable IS NOT INITIAL.
+              ls_pa9003-betrg = <data>-neu_variable.
+            ENDIF.
+
+            IF <data>-neu_zielvereinbarung IS NOT INITIAL.
+              ls_pa9003-betrg = <data>-neu_zielvereinbarung.
+            ENDIF.
+
+            IF <data>-neu_festtantieme IS NOT INITIAL.
+              ls_pa9003-betrg = <data>-neu_festtantieme .
+            ENDIF.
+
+            ls_pa9003-uname = sy-uname.
+            ls_pa9003-aedtm = sy-datum.
+            UPDATE pa9003 FROM ls_pa9003.           "#EC CI_IMUD_NESTED
+            IF sy-subrc NE 0.
+              <data>-9002_upd_stat = 'RED'.
+            ELSE.
+              <data>-9002_upd_stat = 'GREEN'.
+              CLEAR: ls_psoper, ls_prelp.
+              MOVE-CORRESPONDING ls_pa9003 TO ls_p9003.
+              ls_p9003-infty = '9003'.
+              cl_hr_pnnnn_type_cast=>pnnnn_to_prelp(
+                EXPORTING
+                  pnnnn = ls_p9003
+                IMPORTING
+                  prelp = ls_prelp ).
+              MOVE-CORRESPONDING ls_prelp TO ls_psoper.
+              ls_psoper-opera = 'U'.
+              APPEND ls_psoper TO lt_psoper.
+
+              CLEAR: l_retcd.
+              CALL FUNCTION 'HR_INFOTYPE_LOG_CREATE'
+                EXPORTING
+                  no_commit        = 'X'
+                  tclas            = 'A'
+                IMPORTING
+                  retcd            = l_retcd
+                TABLES
+                  psoper_tab       = lt_psoper
+                  before_image_tab = lt_before_image.
+            ENDIF.
+          ELSE.
+            <data>-9002_upd_stat = 'RED'.
+          ENDIF.
+
+        ENDIF.
+      ELSE.
+        IF <data>-9002_variable IS NOT INITIAL OR
+           <data>-9002_zielvereinbarung IS NOT INITIAL OR
+           <data>-9002_festtantieme IS NOT INITIAL.
+          <data>-9002_upd_stat = 'YELLOW'.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+
+    IF <data>-icon EQ icon_yellow_light OR <data>-icon EQ icon_light_out.
+      IF p_test IS INITIAL. "Änderungen auf DB durchführen
+        COMMIT WORK AND WAIT.
+        <data>-icon = icon_green_light.
+        <data>-message = 'Erhöhung eingespielt'.
+      ELSE. "Testlauf!
+        ROLLBACK WORK.
+        <data>-message = 'Testlauf erfolgreich / ' && <data>-message.
+      ENDIF.
+    ELSE.  "Fehler bei Verarbeitung aufgetreten!
+      "nix machen...
+      ROLLBACK WORK.
+    ENDIF.
+
+    "Personalnummer entsperren
+    CLEAR: ls_return.
+    CALL FUNCTION 'BAPI_EMPLOYEE_DEQUEUE'
+      EXPORTING
+        number = <data>-pernr
+      IMPORTING
+        return = ls_return.
+
+*    ENDTRY.
+
+  ENDLOOP.
+
+ENDFORM.  "UPDATE_DATA
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_DOC
+*&---------------------------------------------------------------------*
+FORM create_doc .
+
+*   "Start des Prozesses für die Dokumenterzeugung
+  LOOP AT gt_data ASSIGNING <data> WHERE icon EQ icon_green_light AND doc_flag_2_create EQ 'X'.
+    <data>-doc_crea_stat = 'RED'.
+  ENDLOOP.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  ALV_ANZEIGEN
+*&---------------------------------------------------------------------*
+*       Online-Ausgabe als ALV-Liste
+*-----------------------------------------------------------------------
+FORM alv_anzeigen TABLES $t_data.
+
+* Feldkatalog automatisch durch SALV-Objekte erstellen lassen
+  DATA: o_salv TYPE REF TO cl_salv_table.
+
+  cl_salv_table=>factory( IMPORTING
+                            r_salv_table = o_salv
+                          CHANGING
+                            t_table      = $t_data[] ).
+
+  DATA(lt_fcat) = cl_salv_controller_metadata=>get_lvc_fieldcatalog( r_columns      = o_salv->get_columns( )
+                                                                     r_aggregations = o_salv->get_aggregations( ) ).
+
+  LOOP AT lt_fcat ASSIGNING FIELD-SYMBOL(<fcat>).
+    CASE <fcat>-fieldname.
+      WHEN 'ICON'.
+*        <fcat>-no_out = 'X'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'ICONNAME'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'MESSAGE'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'PERNR'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'VORNA'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'NACHN'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'SPLIT_BEGDA'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'SPLIT_ENDDA'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'SPLIT_SEQNR'.
+        <fcat>-fix_column = 'X'.
+      WHEN 'BESCHSTATUS'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Status'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0041_Z3'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Eintritt (Z1)'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '2001_ABSENCES'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Informationen zu Abwesenheiten'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_BEGDA'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Beginn IT0008'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_ENDDA'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Ende IT0008'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_SOLLBEZAHLUNG'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Sollbezahlung'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_TARIFGEHALT'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Tarifgehalt'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_FREIW_ZULAGE'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Freiw.Zulage'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_AT_GEHALT'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'AT-Gehalt'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_BEGDA'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Beginn IT9002'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_ENDDA'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Ende IT9002'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_VARIABLE'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Variable'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_ZIELVEREINBARUNG'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Zielvereinbarung'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_FESTTANTIEME'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Festtantieme'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'URLAUBSGELD'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Urlaubsgeld'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'WEIHNACHTSGELD'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Weihnachtsgeld'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'VERGLEICHSGEHALT_100'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Vergleichsgehalt 100%'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'VERGLEICHSDIFFERENZ'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Vergleichsdifferenz'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'JAHRESGEHALT_100'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Jahresgehalt 100%'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'PERFDAT'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Perf.Ind.Datum'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_BAND'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Lage im Band'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_BAND_FAKTOR'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Faktor Band'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ERHOEHUNGSPROZ'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Erh.Prozente'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ERHOEHUNGSBASIS'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Erh.Basis'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ERHOEHUNGSWERT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Erh.Grundbetrag'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'AKT_FREIW_ZULAGE'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'AKT - Freiw.Zulage'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ERHOEHUNGSBETRG'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Erh.Betrag'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_SOLLBEZAHLUNG'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Sollbezahlung'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_TARIFGEHALT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Tarifgehalt'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_FREIW_ZULAGE'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Freiw.Zulage'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_AT_GEHALT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - AT-Gehalt'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ANSAL'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Jahresgehalt'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_VARIABLE'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Variable'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_ZIELVEREINBARUNG'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Zielvereinbarung'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'NEU_FESTTANTIEME'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'NEU - Festtantieme'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'DOC_FLAG_2_CREATE'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'DOC - Flag erzeuge Dok.'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'A002_PERNR'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Manager - PerNr'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'A002_ENAME'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Manager - Name'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'STELL_STCHTG'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Stelle - Stichtag'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'STLTX_STCHTG'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'Stellentext - Stichtag'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '0008_UPD_STAT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'UPD.Status IT0008'.
+        <fcat>-colddictxt = 'M'.
+      WHEN '9002_UPD_STAT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'UPD.Status IT9002'.
+        <fcat>-colddictxt = 'M'.
+      WHEN 'DOC_CREA_STAT'.
+        <fcat>-key = 'X'.
+        <fcat>-scrtext_s = <fcat>-scrtext_m = <fcat>-scrtext_l = 'CREATE.Status Doc'.
+        <fcat>-colddictxt = 'M'.
+      WHEN OTHERS.
+        "nix...
+    ENDCASE.
+  ENDLOOP.
+
+* Layout des ALV setzen
+  DATA(ls_layout) = VALUE lvc_s_layo( zebra      = abap_true             " ALV-Control: Alternierende Zeilenfarbe (Zebramuster)
+                                      cwidth_opt = 'A'                   " ALV-Control: Spaltenbreite optimieren
+                                      grid_title = 'Simulation der Tariferhöhung' ). " ALV-Control: Text der Titelzeile
+
+** ALV anzeigen
+** ALV-Gitter-Objekt erzeugen
+*  DATA(o_alv) = NEW cl_gui_alv_grid( i_parent      = cl_gui_container=>default_screen " in default container einbetten
+*                                     i_appl_events = abap_true ).                     " Ereignisse als Applikationsevents registrieren
+*  o_alv->set_table_for_first_display( EXPORTING
+*                                        i_bypassing_buffer = abap_false  " Puffer ausschalten
+*                                        i_save             = 'A'         " Anzeigevariante sichern
+*                                        is_layout          = ls_layout   " Layout
+*                                      CHANGING
+*                                        it_fieldcatalog    = lt_fcat     " Feldkatalog
+*                                        it_outtab          = $t_data[] ).  " Ausgabetabelle
+*
+** Focus auf ALV setzen
+*  cl_gui_alv_grid=>set_focus( control = o_alv ).
+*
+** leere SAP-Toolbar ausblenden
+*  cl_abap_list_layout=>suppress_toolbar( ).
+** erzwingen von cl_gui_container=>default_screen
+*  WRITE: space.
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+    EXPORTING
+*     i_interface_check  = 'I'
+      i_callback_program = sy-repid
+      is_layout_lvc      = ls_layout    "Layout ALV
+      it_fieldcat_lvc    = lt_fcat      "Tabellen mit Feldern der Liste
+      "IT_EXCLUDING               = lt_excluding "Funktionscodes, die ausgeschlossen werden sollen
+      "it_sort_lvc                = lt_sort      "Sortierung
+      i_default          = 'X'          "Default Variante kann abgespeichert werden
+      i_save             = 'A'          "Benutzerabhängige Varianten können gespeichert werden
+*     is_variant         = ls_variant   "Layoutvariante ziehen
+*     IT_EVENTS          = lt_events    "Event-Tabelle
+      "i_screen_start_column      = 10
+      "i_screen_start_line        = 10
+      "i_screen_end_column        = 50
+      "i_screen_end_line          = 50
+    TABLES
+      t_outtab           = $t_data[]    "Daten Ausgabetabelle
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+
+  IF sy-subrc <> 0.
+    MESSAGE i531(0u) WITH 'Problem beim Fuba REUSE_ALV_GRID_DISPLAY_LVC'.
+  ENDIF.
+
+
+
+ENDFORM.  "alv_anzeigen.
