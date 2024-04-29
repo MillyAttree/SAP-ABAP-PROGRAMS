@@ -1,0 +1,139 @@
+METHOD xls_add_styles.
+
+* Add style header 1
+  ao_xls_style_h1 = ao_xls->add_new_style( ).
+  ao_xls_style_h1->font->bold = abap_true.
+  ao_xls_style_h1->font->italic = abap_false.
+  ao_xls_style_h1->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h1->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h1->font->size = '14'.
+  ao_xls_style_h1->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+
+* Add style header 2
+  ao_xls_style_h2 = ao_xls->add_new_style( ).
+  ao_xls_style_h2->font->bold = abap_true.
+  ao_xls_style_h2->font->italic = abap_false.
+  ao_xls_style_h2->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h2->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h2->font->size = '11'.
+  ao_xls_style_h2->font->color-rgb = zcl_excel_style_color=>c_white.
+  ao_xls_style_h2->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+  ao_xls_style_h2->fill->fgcolor-rgb = 'A6A6A6'.
+  ao_xls_style_h2->borders->down = ao_xls_border_thick_blue.
+  ao_xls_style_h2->borders->left = ao_xls_border_thin_grey.
+  ao_xls_style_h2->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+  ao_xls_style_h2->alignment->horizontal = zcl_excel_style_alignment=>c_horizontal_center.
+  ao_xls_style_h2->alignment->wraptext = 'X'.
+
+* Add style header 3
+  ao_xls_style_h3 = ao_xls->add_new_style( ).
+  ao_xls_style_h3->font->bold = abap_true.
+  ao_xls_style_h3->font->italic = abap_false.
+  ao_xls_style_h3->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h3->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h3->font->size = '10'.
+  ao_xls_style_h3->font->color-rgb = '404040'.
+  ao_xls_style_h3->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+  ao_xls_style_h3->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_h3->borders->left = ao_xls_border_thin_grey.
+  ao_xls_style_h3->borders->right = ao_xls_border_thin_grey.
+  ao_xls_style_h3->borders->down = ao_xls_border_thin_grey.
+  ao_xls_style_h3->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+  ao_xls_style_h3->alignment->wraptext = 'X'.
+
+*  Add style header 4
+  ao_xls_style_h4 = ao_xls->add_new_style( ).
+  ao_xls_style_h4->font->bold = abap_false.
+  ao_xls_style_h4->font->italic = abap_false.
+  ao_xls_style_h4->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h4->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h4->font->size = '7'.
+  ao_xls_style_h4->font->color-rgb = '404040'.
+  ao_xls_style_h4->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+  ao_xls_style_h4->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_h4->borders->left = ao_xls_border_thin_grey.
+  ao_xls_style_h4->borders->right = ao_xls_border_thin_grey.
+  ao_xls_style_h4->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+
+* Add style header 5
+  ao_xls_style_h5 = ao_xls->add_new_style( ).
+  ao_xls_style_h5->font->bold = abap_false.
+  ao_xls_style_h5->font->italic = abap_false.
+  ao_xls_style_h5->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h5->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h5->font->size = '10'.
+  ao_xls_style_h5->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+  ao_xls_style_h5->alignment->horizontal = zcl_excel_style_alignment=>c_horizontal_right.
+
+
+
+*  Add style header 6
+  ao_xls_style_h6 = ao_xls->add_new_style( ).
+  ao_xls_style_h6->font->bold = abap_true.
+  ao_xls_style_h6->font->italic = abap_false.
+  ao_xls_style_h6->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_h6->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_h6->font->size = '10'.
+  ao_xls_style_h6->font->color-rgb = '404040'.
+  ao_xls_style_h6->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_h6->alignment->vertical = zcl_excel_style_alignment=>c_horizontal_center_continuous.
+  ao_xls_style_h6->borders->left = ao_xls_border_thin_grey.
+  ao_xls_style_h6->borders->right = ao_xls_border_thin_grey.
+  ao_xls_style_h6->borders->down = ao_xls_border_thin_grey.
+  ao_xls_style_h6->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+*  ao_xls_style_h6
+*  ao_xls_style_h6
+
+
+* Add style body 1
+  ao_xls_style_b1 = ao_xls->add_new_style( ).
+  ao_xls_style_b1->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_b1->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_b1->font->size = '10'.
+  ao_xls_style_b1->font->color-rgb = '000000'.
+  ao_xls_style_b1->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+  ao_xls_style_b1->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_b1->borders->allborders = ao_xls_border_thin_grey.
+*  ao_xls_style_b1->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+*  ao_xls_style_b1->alignment->wraptext = 'X'.
+
+* Add style body 2
+  ao_xls_style_b2 = ao_xls->add_new_style( ).
+  ao_xls_style_b2->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_b2->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_b2->font->size = '10'.
+  ao_xls_style_b2->font->color-rgb = '000000'.
+*  ao_xls_style_b2->fill->filltype = zcl_excel_style_fill=>c_fill_gradient_diagonal45b.
+*  ao_xls_style_b2->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_b2->borders->allborders = ao_xls_border_thin_grey.
+*  ao_xls_style_b2->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+*  ao_xls_style_b2->alignment->wraptext = 'X'.
+
+
+* Add style body 3
+  ao_xls_style_b3 = ao_xls->add_new_style( ).
+  ao_xls_style_b3->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_b3->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_b3->font->size = '10'.
+  ao_xls_style_b3->font->color-rgb = '000000'.
+  ao_xls_style_b3->fill->filltype = zcl_excel_style_fill=>c_fill_solid.
+  ao_xls_style_b3->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_b3->borders->allborders = ao_xls_border_thin_grey.
+*  ao_xls_style_b3->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+*  ao_xls_style_b3->alignment->wraptext = 'X'.
+  ao_xls_style_b3->number_format->format_code = zcl_excel_style_number_format=>c_format_number_comma_sep2.
+
+* Add style body 4
+  ao_xls_style_b4 = ao_xls->add_new_style( ).
+  ao_xls_style_b4->font->name = zcl_excel_style_font=>c_name_arial.
+  ao_xls_style_b4->font->scheme = zcl_excel_style_font=>c_scheme_none.
+  ao_xls_style_b4->font->size = '10'.
+  ao_xls_style_b4->font->color-rgb = '000000'.
+*  ao_xls_style_b2->fill->filltype = zcl_excel_style_fill=>c_fill_gradient_diagonal45b.
+*  ao_xls_style_b2->fill->fgcolor-rgb = 'F2F2F2'.
+  ao_xls_style_b4->borders->allborders = ao_xls_border_thin_grey.
+*  ao_xls_style_b2->alignment->vertical = zcl_excel_style_alignment=>c_vertical_center.
+*  ao_xls_style_b2->alignment->wraptext = 'X'.
+  ao_xls_style_b4->number_format->format_code = zcl_excel_style_number_format=>c_format_number_comma_sep2.
+
+ENDMETHOD.
