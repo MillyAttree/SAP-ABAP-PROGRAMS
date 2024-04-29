@@ -1,0 +1,11 @@
+METHOD xls_create_borders.
+
+  CREATE OBJECT ao_xls_border_thick_blue.
+  ao_xls_border_thick_blue->border_color-rgb = '538DD5'.
+  ao_xls_border_thick_blue->border_style = zcl_excel_style_border=>c_border_thick.
+
+  CREATE OBJECT ao_xls_border_thin_grey.
+  ao_xls_border_thin_grey->border_color-rgb = 'A6A6A6'.
+  ao_xls_border_thin_grey->border_style = zcl_excel_style_border=>c_border_thin.
+
+ENDMETHOD.
