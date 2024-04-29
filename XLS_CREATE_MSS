@@ -1,0 +1,104 @@
+  METHOD xls_create_mss.
+
+    CREATE OBJECT ao_xls.
+
+* Get acitve worksheet
+    ao_xls_worksheet = ao_xls->get_active_worksheet( ).
+
+* Set worksheet properties
+    ao_xls_worksheet->set_title( 'First Worksheet' ).
+    ao_xls_worksheet->freeze_panes( ip_num_columns = '4' ip_num_rows = '4' ).
+
+* Create borders
+    xls_create_borders( ).
+
+*     Add styles
+    xls_add_styles( ).
+
+
+*Set Header
+    xls_set_header_mss( lt_column_final ).
+
+*    ao_xls_worksheet->set_merge( ip_column_start = 'E' ip_column_end = 'BN' ip_row = '1' ip_row_to = '4' ).
+
+*    Set body
+    xls_set_body_mss(
+      EXPORTING
+        it_data         =    it_data  " Salary details table
+        lt_column_final =   lt_column_final  " SALV_WD_T_COLUMN_REF
+    ).
+
+
+
+*  Set drawing
+    xls_set_drawings( ).
+
+*    ao_xls_worksheet->calculate_column_widths( ).
+
+
+* Set column width
+    ao_xls_worksheet->set_column_width( ip_column = 'A' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'B' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'C' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'D' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'E' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'F' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'G' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'H' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'I' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'J' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'K' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'L' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'M' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'N' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'O' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'P' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'Q' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'R' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'S' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'T' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'U' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'V' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'W' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'X' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'Y' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'Z' ip_width_autosize = abap_true ).
+
+    ao_xls_worksheet->set_column_width( ip_column = 'AA' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AB' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AC' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AD' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AE' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AF' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AG' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AH' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AI' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AJ' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AK' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AL' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AM' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AN' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AO' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AP' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AP' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AQ' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AR' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AR' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AS' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AT' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AU' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AV' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AW' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AX' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AY' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'AZ' ip_width_autosize = abap_true ).
+
+    ao_xls_worksheet->set_column_width( ip_column = 'BA' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'BB' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'BC' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'BD' ip_width_autosize = abap_true ).
+    ao_xls_worksheet->set_column_width( ip_column = 'BE' ip_width_autosize = abap_true ).
+
+
+
+  ENDMETHOD.
