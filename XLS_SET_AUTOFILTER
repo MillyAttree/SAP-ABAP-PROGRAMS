@@ -1,0 +1,36 @@
+  METHOD xls_set_autofilter.
+
+    DATA: lo_autofilter TYPE REF TO zcl_excel_autofilter.
+
+
+    DATA lt_test TYPE TABLE OF t005t.
+
+
+    DATA: l_cell_value TYPE zexcel_cell_value,
+          ls_area      TYPE zexcel_s_autofilter_area.
+
+
+
+
+    lo_autofilter = AO_XLS->add_new_autofilter( io_sheet = ao_xls_worksheet ) .
+
+
+    ls_area-row_start = 4.
+    ls_area-col_start = 1.
+    ls_area-row_end = ao_xls_worksheet->get_highest_row( ).
+    ls_area-col_end = ao_xls_worksheet->get_highest_column( ).
+
+
+    lo_autofilter->set_filter_area( is_area = ls_area ).
+*    lo_autofilter->set_value(
+*      EXPORTING
+*        i_column = 1
+*        i_value  =
+*    ).
+
+*lo_autofilter->set_value(
+*  EXPORTING
+*    i_column = 1
+*    i_value  = 'Frau'
+*).
+  ENDMETHOD.
