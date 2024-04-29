@@ -1,0 +1,131 @@
+METHOD xls_create.
+
+  CREATE OBJECT ao_xls.
+
+* Get acitve worksheet
+  ao_xls_worksheet = ao_xls->get_active_worksheet( ).
+
+* Set worksheet properties
+  ao_xls_worksheet->set_title( 'First Worksheet' ).
+  ao_xls_worksheet->freeze_panes( ip_num_columns = '4' ip_num_rows = '4' ).
+
+*  ao_xls_worksheet->set_row_height( ip_row = '1' ip_height_fix = '57.00' ).
+  ao_xls_worksheet->set_row_height( ip_row = '1' ip_height_fix = '37.00' ).
+  ao_xls_worksheet->set_row_height( ip_row = '2' ip_height_fix = '33.00' ).
+  ao_xls_worksheet->set_row_height( ip_row = '3' ip_height_fix = '63.00' ).
+
+* Set zoom scale
+  ao_xls_worksheet->zif_excel_sheet_properties~zoomscale = '80'.
+
+* Create borders
+  xls_create_borders( ).
+
+* Add styles
+  xls_add_styles( ).
+
+* Set header
+  xls_set_header( ).
+
+* Set body
+  xls_set_body( it_data )  .
+
+*Set drawing
+  xls_set_drawings( ).
+*   Set Autofilter
+*  xls_set_autofilter( ).
+
+* Set merges
+  ao_xls_worksheet->set_merge( ip_column_start = 'A' ip_column_end = 'D' ip_row = '1' ip_row_to = '1' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'E' ip_column_end = 'BA' ip_row = '1' ip_row_to = '1' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'A' ip_column_end = 'R' ip_row = '2' ip_row_to = '2' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'T' ip_column_end = 'V' ip_row = '2' ip_row_to = '2' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'X' ip_column_end = 'Z' ip_row = '2' ip_row_to = '2' ).
+"HRADM-5844 - new fields IT9002
+*Start HRADM-6644  Contract element and text
+  ao_xls_worksheet->set_merge( ip_column_start = 'AB' ip_column_end = 'BD' ip_row = '2' ip_row_to = '2' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'BF' ip_column_end = 'BQ' ip_row = '2' ip_row_to = '2' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'BI' ip_column_end = 'BJ' ip_row = '3' ip_row_to = '3' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'BK' ip_column_end = 'BL' ip_row = '3' ip_row_to = '3' ).
+  ao_xls_worksheet->set_merge( ip_column_start = 'BM' ip_column_end = 'BN' ip_row = '3' ip_row_to = '3' ).
+*End HRADM-6644  Contract element and text
+
+* Set column width
+  ao_xls_worksheet->set_column_width( ip_column = 'A' ip_width_fix = '9' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'B' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'C' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'D' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'E' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'F' ip_width_fix = '11' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'G' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'H' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'I' ip_width_fix = '6' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'J' ip_width_fix = '15' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'K' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'L' ip_width_fix = '10' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'M' ip_width_fix = '14' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'N' ip_width_fix = '14' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'O' ip_width_fix = '11' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'P' ip_width_fix = '9' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'Q' ip_width_fix = '6' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'R' ip_width_fix = '14' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'S' ip_width_fix = '1' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'T' ip_width_fix = '18' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'U' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'V' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'W' ip_width_fix = '1' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'X' ip_width_fix = '18' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'Y' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'Z' ip_width_fix = '13' ).
+
+  ao_xls_worksheet->set_column_width( ip_column = 'AA' ip_width_fix = '1' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AB' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AC' ip_width_fix = '7' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AD' ip_width_fix = '7' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AE' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AF' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AG' ip_width_fix = '9.5' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AH' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AI' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AJ' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AK' ip_width_fix = '15' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AL' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AM' ip_width_fix = '16' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AN' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AO' ip_width_fix = '19' ).
+*  ao_xls_worksheet->set_column_width( ip_column = 'AP' ip_width_fix = '23' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AP' ip_width_autosize = abap_true ).
+*Start HRADM-6644  Contract element and text
+  ao_xls_worksheet->set_column_width( ip_column = 'AQ' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AR' ip_width_fix = '18' ).
+  "HRADM-5844 - IT9002 new fields XLS display
+  ao_xls_worksheet->set_column_width( ip_column = 'AS' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AT' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AU' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AV' ip_width_fix = '18' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AW' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AX' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AY' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'AZ' ip_width_fix = '18' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BA' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BB' ip_width_autosize = abap_true ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BC' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BD' ip_width_fix = '18' ).
+
+  ao_xls_worksheet->set_column_width( ip_column = 'BE' ip_width_fix = '1' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BF' ip_width_fix = '18' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BG' ip_width_fix = '11' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BH' ip_width_fix = '13' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BI' ip_width_fix = '10' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BJ' ip_width_fix = '12' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BK' ip_width_fix = '10' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BL' ip_width_fix = '10' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BM' ip_width_fix = '9' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BN' ip_width_fix = '9' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BO' ip_width_fix = '8' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BP' ip_width_fix = '8' ).
+  ao_xls_worksheet->set_column_width( ip_column = 'BQ' ip_width_fix = '30' ).
+*End HRADM-6644  Contract element and text
+
+  ao_xls_worksheet->calculate_column_widths( ).
+
+ENDMETHOD.
