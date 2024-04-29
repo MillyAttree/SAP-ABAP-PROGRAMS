@@ -1,0 +1,396 @@
+************************************************************************
+
+REPORT zms_license NO STANDARD PAGE HEADING MESSAGE-ID zms.
+
+TABLES: usr02, usr06, usr21, adrp, adr6, tutyp, somlreci1, sscrfields.
+
+************************************************************************
+* type definition:
+************************************************************************
+TYPE-POOLS: slis.
+
+TYPES: BEGIN OF ty_usr02,
+         mandt TYPE mandt,
+         bname TYPE xubname,
+         ustyp TYPE xuustyp,
+         gltgv TYPE xugltgv, " user valid from
+         gltgb TYPE xugltgb, " user valid to
+       END OF ty_usr02.
+
+TYPES: BEGIN OF ty_usr06,
+         mandt    TYPE mandt,
+         bname    TYPE xubname,
+         lic_type TYPE usertypen,
+       END OF ty_usr06.
+
+TYPES: BEGIN OF ty_usr21,
+         mandt      TYPE mandt,
+         bname      TYPE xubname,
+         persnumber TYPE ad_persnum,
+         addrnumber TYPE ad_addrnum,
+       END OF ty_usr21.
+
+TYPES: BEGIN OF ty_adrp,
+         client     TYPE mandt,
+         persnumber TYPE ad_persnum,
+         date_from  TYPE ad_date_fr,
+         nation     TYPE ad_nation,
+         name_first TYPE ad_namefir,
+         name_last  TYPE ad_namelas,
+       END OF ty_adrp.
+
+TYPES: BEGIN OF ty_final,
+         mandt      TYPE mandt,
+         bname      TYPE xubname,
+         lic_type   TYPE usertypen,
+         utyptext   TYPE utyptext,
+         name_first TYPE ad_namefir,
+         name_last  TYPE ad_namelas,
+         smtp_addr  TYPE ad_smtpadr,
+         gltgv      TYPE xugltgv, " user valid from
+         gltgb      TYPE xugltgb, " user valid to
+       END OF ty_final.
+
+************************************************************************
+* data definition:
+************************************************************************
+
+
+DATA gv_repid TYPE sy-repid.
+DATA gv_layout TYPE slis_layout_alv.
+DATA gt_fcat TYPE slis_t_fieldcat_alv.
+DATA gs_fcat LIKE LINE OF gt_fcat.
+DATA gv_smtp_addr TYPE ad_smtpadr.
+DATA gv_utyptext TYPE utyptext.
+DATA: gt_usr02 TYPE STANDARD TABLE OF ty_usr02,
+      gs_usr02 TYPE ty_usr02,
+      gt_usr06 TYPE STANDARD TABLE OF ty_usr06,
+      gs_usr06 TYPE ty_usr06,
+      gt_usr21 TYPE STANDARD TABLE OF ty_usr21,
+      gs_usr21 TYPE ty_usr21,
+      gt_adrp  TYPE STANDARD TABLE OF ty_adrp,
+      gs_adrp  TYPE ty_adrp,
+      gt_final TYPE STANDARD TABLE OF ty_final,
+      gs_final TYPE ty_final.
+DATA vcomm TYPE sscrfields-ucomm.
+DATA gt_email TYPE TABLE OF string WITH HEADER LINE.
+DATA gr_table TYPE REF TO cl_salv_table.
+
+CONSTANTS:
+  gc_tab  TYPE c VALUE cl_bcs_convert=>gc_tab,
+  gc_crlf TYPE c VALUE cl_bcs_convert=>gc_crlf.
+
+DATA send_request   TYPE REF TO cl_bcs.
+DATA document       TYPE REF TO cl_document_bcs.
+DATA recipient      TYPE REF TO if_recipient_bcs.
+DATA bcs_exception  TYPE REF TO cx_bcs.
+
+DATA main_text      TYPE bcsy_text.
+DATA binary_content TYPE solix_tab.
+DATA size           TYPE so_obj_len.
+DATA sent_to_all    TYPE os_boolean.
+
+************************************************************************
+* Initialization:
+************************************************************************
+INITIALIZATION.
+  INCLUDE z_check_program.  "standard check of reports
+
+************************************************************************
+* Selection Screen:
+************************************************************************
+  SELECTION-SCREEN BEGIN OF BLOCK 001 WITH FRAME TITLE TEXT-001.
+  SELECTION-SCREEN SKIP.
+  SELECT-OPTIONS s_mandt FOR usr06-mandt.
+  SELECT-OPTIONS s_lic FOR usr06-lic_type.
+  SELECT-OPTIONS s_ustyp FOR usr02-ustyp.
+  SELECTION-SCREEN END OF BLOCK 001.
+
+  SELECTION-SCREEN BEGIN OF BLOCK 002 WITH FRAME TITLE TEXT-002.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  SELECTION-SCREEN: COMMENT 2(25) TEXT-004.
+  PARAMETERS p_email AS CHECKBOX USER-COMMAND chk. " DEFAULT 'X'.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  SELECTION-SCREEN: COMMENT 2(25) TEXT-005 MODIF ID 001.
+  PARAMETERS: p_recept TYPE ad_smtpadr MODIF ID 001.
+  SELECTION-SCREEN END OF LINE.
+
+  SELECTION-SCREEN BEGIN OF LINE.
+  SELECTION-SCREEN: COMMENT 2(75) TEXT-006 MODIF ID 001.
+  SELECTION-SCREEN END OF LINE.
+  SELECTION-SCREEN END OF BLOCK 002.
+
+
+AT SELECTION-SCREEN OUTPUT.
+
+*------- send per mail or not ? ----------------------
+  IF p_email = 'X'.
+    PERFORM enable_fields USING '001'.
+  ELSE.
+    PERFORM disable_fields USING '001'.
+  ENDIF.
+
+*------- start of selection -> get data ----------------------
+START-OF-SELECTION.
+
+  PERFORM get_data.
+
+*------- end of selection -> display data ----------------------
+END-OF-SELECTION.
+
+  PERFORM show_data USING gt_final.
+
+*&---------------------------------------------------------------------*
+*&      Form  enable_fields
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->UV_GROUP   text
+*----------------------------------------------------------------------*
+FORM enable_fields USING pv_group.
+  DATA: BEGIN OF ls_screen.
+          INCLUDE STRUCTURE screen.
+        DATA: END OF ls_screen.
+
+  CLEAR ls_screen.
+
+  LOOP AT SCREEN INTO ls_screen.
+    IF ls_screen-group1   = pv_group.
+      ls_screen-active    = '1'.
+      ls_screen-invisible = '0'.
+      ls_screen-input     = '1'.
+      ls_screen-output    = '1'.
+      MODIFY SCREEN FROM ls_screen.
+    ENDIF.
+  ENDLOOP.
+
+ENDFORM.                    "enable_fields
+
+*&---------------------------------------------------------------------*
+*&      Form  disable_fields
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->UV_GROUP   text
+*----------------------------------------------------------------------*
+FORM disable_fields USING pv_group.
+  DATA: BEGIN OF ls_screen.
+          INCLUDE STRUCTURE screen.
+        DATA: END OF ls_screen.
+
+  CLEAR ls_screen.
+
+  LOOP AT SCREEN INTO ls_screen.
+    IF ls_screen-group1   = pv_group.
+      ls_screen-active    = '0'.
+      ls_screen-invisible = '1'.
+      ls_screen-input     = '0'.
+      ls_screen-output    = '0'.
+      MODIFY SCREEN FROM ls_screen.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.                    "disable_fields
+
+*&---------------------------------------------------------------------*
+*&      Form  get_data
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data.
+
+*-------- Selecting data from usr02 table ------------------------
+  SELECT mandt bname ustyp gltgv gltgb
+    FROM usr02 CLIENT SPECIFIED INTO TABLE gt_usr02
+    WHERE mandt IN s_mandt AND ustyp IN s_ustyp.
+  IF sy-subrc EQ 0.
+    SORT gt_usr02 BY mandt.
+  ENDIF.
+
+
+  LOOP AT gt_usr02 INTO gs_usr02.
+    CLEAR: gs_usr06, gs_usr21, gs_adrp, gs_final.
+*-------- getting data from table usr06 ------------------------
+    SELECT SINGLE mandt bname lic_type
+      FROM usr06 CLIENT SPECIFIED INTO gs_usr06
+      WHERE mandt = gs_usr02-mandt
+        AND bname = gs_usr02-bname.
+
+      CHECK gs_usr06-lic_type IN s_lic. " check license type in selection screen
+
+      CLEAR gv_utyptext.
+      SELECT SINGLE utyptext FROM tutyp INTO gv_utyptext
+      WHERE usertyp = gs_usr06-lic_type AND langu EQ sy-langu.
+      IF sy-subrc EQ 0.
+        gs_final-utyptext = gv_utyptext.
+      ENDIF.
+      MOVE-CORRESPONDING gs_usr06 TO gs_final.
+
+
+    SELECT SINGLE mandt bname persnumber addrnumber
+      FROM usr21 INTO gs_usr21
+      WHERE bname = gs_usr02-bname.
+
+    IF sy-subrc = 0. " if there is data in usr21 table
+      CLEAR gv_smtp_addr.
+      SELECT SINGLE smtp_addr FROM adr6 INTO gv_smtp_addr
+      WHERE addrnumber = gs_usr21-addrnumber AND persnumber = gs_usr21-persnumber.
+      IF sy-subrc EQ 0. " if there is data in adr6 table
+        gs_final-smtp_addr = gv_smtp_addr.
+      ENDIF.
+
+      SELECT SINGLE client persnumber date_from nation name_first name_last
+      FROM adrp INTO gs_adrp
+      WHERE persnumber = gs_usr21-persnumber.
+      IF sy-subrc = 0. " if there is data in adrp table
+        gs_final-name_first = gs_adrp-name_first.
+        gs_final-name_last = gs_adrp-name_last.
+      ENDIF.
+    ENDIF.
+
+    MOVE-CORRESPONDING gs_usr02 TO gs_final.
+    APPEND gs_final TO gt_final.
+
+  ENDLOOP.
+**********************************************************************
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  sent_email
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM sent_email.
+
+  DATA: lv_xml      TYPE xstring,
+        lv_xml_type TYPE salv_bs_constant.
+
+  DATA lp_xls_size TYPE so_obj_len.
+  DATA xls_content TYPE solix_tab.
+  DATA lv_text TYPE c LENGTH 100.
+  DATA lv_address  TYPE  ad_smtpadr.
+
+*-------- split the email address by comma and put it in table ------------------------
+  SPLIT p_recept AT ',' INTO TABLE gt_email.
+
+*-------- convert the alv data into xml form (xstring) ------------------------
+  lv_xml_type = if_salv_bs_xml=>c_type_xlsx.
+  lv_xml = gr_table->to_xml( xml_type = lv_xml_type ).
+  lp_xls_size = xstrlen( lv_xml ).
+  xls_content = cl_document_bcs=>xstring_to_solix( ip_xstring = lv_xml ).
+
+
+  TRY.
+
+*-------- create persistent send request ------------------------
+      send_request = cl_bcs=>create_persistent( ).
+
+*-------- create Mail Body Text ------------------------
+      APPEND 'Dear User,' TO main_text.
+      APPEND ' ' TO main_text.
+      CONCATENATE 'Please find attached the SAP User License which are not allowed to be in system ' sy-sysid INTO lv_text.
+      APPEND lv_text TO main_text.
+      APPEND ' ' TO main_text.
+      APPEND 'Best Regards' TO main_text.
+      APPEND ' ' TO main_text.
+      APPEND 'Your System administrator' TO main_text.
+
+*     ---------- create document ---------------------------------------
+      document = cl_document_bcs=>create_document(
+            i_type = 'RAW'
+            i_text = main_text
+            i_subject = 'SAP License Monitoring' ).
+
+*     ---------- add attachment ---------------------------------------
+      document->add_attachment(
+            i_attachment_type = 'EXT'   " EXT stands for Extension for All PC application
+            i_attachment_subject = 'USER_LICENSE.xlsx'
+            i_attachment_size = lp_xls_size
+            i_att_content_hex = xls_content ).
+
+      send_request->set_document( document ).
+
+*     ---------- email recipients ---------------------------------------
+      LOOP AT gt_email.
+        lv_address = gt_email.
+
+        recipient = cl_cam_address_bcs=>create_internet_address( i_address_string = lv_address ).
+        send_request->add_recipient( i_recipient = recipient ).
+      ENDLOOP.
+
+*     ---------- block email delivery notification ---------------------------------------
+      CALL METHOD send_request->set_status_attributes
+        EXPORTING
+          i_requested_status = 'N'.  " N stand for turnoff
+
+*     ---------- send document ---------------------------------------
+      sent_to_all = send_request->send( i_with_error_screen = 'X' ).
+
+      IF sent_to_all = 'X'.
+        MESSAGE s022(so).
+      ENDIF.
+      COMMIT WORK.
+
+*   ------------ exception handling ----------------------------------
+
+    CATCH cx_bcs INTO bcs_exception.
+      MESSAGE i865(so) WITH bcs_exception->error_type.
+  ENDTRY.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  SHOW_DATA
+*&---------------------------------------------------------------------*
+FORM show_data USING ut_data TYPE STANDARD TABLE.
+
+  DATA lr_functions TYPE REF TO cl_salv_functions.
+  DATA lr_columns TYPE REF TO cl_salv_columns_table.
+  DATA lr_column TYPE REF TO cl_salv_column_table.
+  TRY.
+      cl_salv_table=>factory(
+        IMPORTING
+          r_salv_table = gr_table
+        CHANGING
+          t_table = ut_data ).
+
+    CATCH cx_salv_msg.
+
+  ENDTRY.
+
+* --------------Set functions ---------------------------
+  lr_functions = gr_table->get_functions( ).
+  lr_functions->set_all( 'X' ).
+
+
+* -------------Get columns object ---------------------------
+  lr_columns = gr_table->get_columns( ).
+
+* ------------Optimize column width ---------------------------
+  lr_columns->set_optimize( ).
+
+* ----------- Set column attributs ---------------------------
+  lr_column ?= lr_columns->get_column( 'SMTP_ADDR' ).
+  lr_column->set_output_length( '50' ).
+
+* ------------if alv as well as email address is not empty -> send email --------------
+  IF NOT gt_final IS INITIAL.
+    IF p_email = 'X'.
+      PERFORM sent_email.
+    ENDIF.
+  ENDIF.
+
+* -----------Show ALV grid -----------------------------------------
+  gr_table->display( ).
+
+ENDFORM.                    " SHOW_DATA
